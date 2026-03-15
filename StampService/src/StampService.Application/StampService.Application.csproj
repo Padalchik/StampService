@@ -6,4 +6,8 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\StampService.Domain\StampService.Domain.csproj" />
+    </ItemGroup>
+
 </Project>
