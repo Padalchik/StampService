@@ -11,12 +11,12 @@ public class UserIdentity : BaseEntity
     public string Key { get; private set; }
     public string Metadata { get; private set; }
 
-    private UserIdentity(User user, IdentityType type, string identityKey, string metadata)
+    private UserIdentity(User user, IdentityType type, string key, string metadata)
     {
         User = user;
         UserId = user.Id;
         Type = type;
-        Key = identityKey;
+        Key = key;
         Metadata = string.IsNullOrWhiteSpace(metadata) ? "{}" : metadata;
     }
         
