@@ -4,9 +4,9 @@ namespace StampService.Domain.Brand;
 
 public class Location : BaseEntity
 {
-    public LocationName Name { get; private set; }
+    public LocationName Name { get; private set; } = null!;
     
-    public Brand Brand { get; private set; }
+    public Brand Brand { get; private set; } = null!;
 
     public Guid BrandId { get; private set; }
     

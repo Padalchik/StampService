@@ -19,4 +19,6 @@ public abstract class BaseEntity : ISoftDelete
         Id = Guid.NewGuid();
         CreatedAt = DateTime.UtcNow;
     }
+
+    protected void Touch() => UpdatedAt = DateTime.UtcNow;
 }
