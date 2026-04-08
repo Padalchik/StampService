@@ -19,7 +19,9 @@
 
 ## 1. Фундамент (`StampService.Domain.Shared`)
 - `ISoftDelete`: интерфейс с `DateTime? DeletedAt`.
-- `BaseEntity`: абстрактный класс, реализует `ISoftDelete`, содержит `Guid Id`, `DateTime CreatedAt`, `DateTime? UpdatedAt`.
+- `BaseEntity`: абстрактный класс, реализует `ISoftDelete`, содержит `Guid Id`, `DateTime CreatedAt`, `DateTime? UpdatedAt`, `DateTime? DeletedAt`.
+  - Метод `Touch()`: обновляет `UpdatedAt` (вызывается при изменении сущности, НЕ при создании).
+  - **Note:** `UpdatedAt` — nullable, при создании `null`, проставляется только через `Touch()`.
 
 ## 2. Структура Бизнеса (`StampService.Domain.Brand`)
 - **`Brand`**: Агрегат верхнего уровня.
@@ -46,26 +48,35 @@
 ## 4. Лояльность (`StampService.Domain.Loyalty`)
 - **`LoyaltyMetricDefinition`**: Определение того, ЧТО начисляем (конфигурация бренда).
   - Поля: `BrandId`, `Code` (уникальный код, напр. "COFFEE"), `Name` (напр. "Чашка кофе"), `IsActive`.
+  - Методы: `Create()`, `Deactivate()`, `Activate()`, `UpdateName()`, `UpdateCode()`.
   - Логика: Бренд сам создает нужные ему метрики.
-- **`CustomerBalance`**: Текущий баланс пользователя по конкретной метрике.
+  - ✅ **Реализовано**
+- **`MetricBalance`**: Текущий баланс пользователя по конкретной метрике.
   - Поля: `UserId`, `BrandId`, `MetricDefinitionId`, `Value` (int).
+  - Навигационные свойства: `User` (UserEntity), `Brand` (BrandEntity), `MetricDefinition`.
   - Уникальность: `UserId + BrandId + MetricDefinitionId`.
-  - Методы: `Add(int)`, `Subtract(int)` (с проверкой на отрицательный баланс).
-- **`BalanceTransaction`**: История операций.
-  - Поля: `CustomerBalanceId`, `MetricDefinitionId`, `Amount`, `Comment`, `CreatedAt`.
+  - Методы: `Add(int)` / `Subtract(int)` (с проверкой на отрицательный баланс). `StampTransaction` создаётся в Application слое.
+  - **Note:** Используется `using alias` для namespace конфликта (`UserEntity` = `StampService.Domain.User.User`, `BrandEntity` = `StampService.Domain.Brand.Brand`).
+  - ✅ **Реализовано**
+- **`StampTransaction`**: История операций с балансом.
+  - Поля: `AccountBalanceId` (FK к MetricBalance), `MetricDefinitionId` (дублируется для быстрого поиска), `Amount` (int, может быть отрицательным), `Comment`.
+  - Создаётся в Application-слое при каждом изменении баланса.
+  - ✅ **Реализовано**
 
 # ТЕКУЩИЙ СТАТУС
-✅ **Готово:** 
-- Интерфейсы и `BaseEntity`.
-- Сущности `Brand` и `Location` (исправлены связи, убраны зависимости от старых проектов).
-- Понимание архитектуры гибких метрик.
+✅ **Готово:**
+- Интерфейсы и `BaseEntity` (с методом `Touch()`).
+- Сущности `Brand` и `Location` (Value Objects, инкапсуляция).
+- `LoyaltyMetricDefinition` (создание, активация/деактивация, обновление).
+- `MetricBalance` (баланс по метрике, Add/Subtract, навигационные свойства).
+- `StampTransaction` (история изменений баланса).
 
 🚧 **Следующие шаги (в порядке приоритета):**
-1. Написать сущность `LoyaltyMetricDefinition` (так как она нужна для балансов).
-2. Написать сущность `CustomerBalance`.
-3. Написать сущность `BalanceTransaction`.
-4. Дописать сущности `User`, `UserIdentity`, `Role`, `BrandMembership` (если они еще не финализированы).
-5. Настроить `AppDbContext` (глобальные фильтры, маппинг JSON, связи).
+1. Дописать сущности `User` (`Name`, `AvatarUrl`, коллекция `_userIdentities`).
+2. Написать сущности `Role`, `BrandMembership` (Access-блок).
+3. Настроить `AppDbContext` (глобальные фильтры Soft Delete, маппинг JSON, связи, уникальные индексы).
+4. Добавить EF Core пакеты и миграцию.
+5. ⚠️ `Brand` — добавить `Slug`, `Settings` (JSON), метод `AddLocation()`. (Отложено)
 
 # ТВОЯ ЗАДАЧА
 - Помогать мне писать код следующих сущностей, следуя принципу YAGNI.
