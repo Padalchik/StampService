@@ -1,0 +1,53 @@
+Ты — Senior .NET Architect и ментор. Я разрабатываю SaaS лояльности "StampService" на **.NET 10 / C# 13**.
+Мы следуем принципу **YAGNI**: никаких полей "на будущее", только необходимый минимум для MVP.
+Архитектура уже определена: Multi-tenancy через `Brand`, гибкие метрики через `LoyaltyMetricDefinition`, проверка прав через `PermissionCode` (enum) + статический маппинг ролей.
+
+# ЗАДАЧА
+Мне нужно реализовать слой контроля доступа (Access Control). Создай код для трех элементов:
+
+## 1. Enum `PermissionCode`
+Файл: `StampService.Domain/Access/PermissionCode.cs`
+Определи базовые права для MVP:
+- `BrandManage` (полное управление брендом)
+- `MetricCreate` (создание метрик лояльности)
+- `StaffManage` (управление сотрудниками)
+- `StampIssue` (выдача штампов/баллов)
+- `BalanceView` (просмотр балансов клиентов)
+
+## 2. Сущность `Role`
+Файл: `StampService.Domain/Access/Role.cs`
+- Наследование: `BaseEntity` (из `StampService.Domain.Shared`).
+- Поля:
+  - `SystemName` (string): Уникальный код ("OWNER", "STAFF", "CUSTOMER").
+  - `DisplayName` (string): Человекочитаемое имя ("Владелец", "Сотрудник", "Клиент").
+- Конструктор: Защищенный конструктор с валидацией (SystemName не пустой).
+- Фабрика: Статический метод `Create(string systemName, string displayName)`.
+- *Примечание:* Не добавляй лишние поля (Description, Color и т.д.).
+
+## 3. Сущность `BrandMembership`
+Файл: `StampService.Domain/Access/BrandMembership.cs`
+- Наследование: `BaseEntity` (обязательно нужен Soft Delete для увольнения сотрудников).
+- Поля (Foreign Keys):
+  - `UserId` (Guid)
+  - `BrandId` (Guid)
+  - `RoleId` (Guid)
+  - `LocationId` (Guid?): Опционально. Если null — доступ ко всему бренду. Если заполнено — только к конкретной точке.
+- Навигационные свойства (Без `virtual`, так как Lazy Loading отключен):
+  - `User User`
+  - `Brand Brand`
+  - `Role Role`
+  - `Location? Location` (nullable)
+- Конструктор: Принимает все ID. Инициализирует значения.
+- Фабрика: `Create(Guid userId, Guid brandId, Guid roleId, Guid? locationId = null)`.
+- Методы:
+  - `Revoke()`: Помечает запись как удаленную (вызывает метод `Touch()` и устанавливает `DeletedAt` через интерфейс или прямой доступ, если он protected). *Уточнение: Просто оставь логику удаления на уровне DbContext или добавь метод `Deactivate()`, который ставит DeletedAt, если это возможно в BaseEntity.* -> **Исправление:** Просто убедись, что сущность готова к Soft Delete (наследуется от BaseEntity). Явного метода удаления писать не надо, это делает сервис через DbContext.
+
+# ТРЕБОВАНИЯ КОДУ
+1. **Инкапсуляция:** Все свойства только для чтения снаружи (`private set` или `protected set`). Изменение состояния только через конструктор или специальные методы (если нужны).
+2. **Навигация:** Используй обычные свойства (без `virtual`), инициализируй их как `= null!`.
+3. **Валидация:** В фабричных методах проверяй GUID на пустоту и строки на whitespace.
+4. **Namespace:** Используй правильные неймспейсы (`StampService.Domain.Access`, `StampService.Domain.Brand`, `StampService.Domain.User`, `StampService.Domain.Loyalty`).
+5. **Без лишнего:** Не добавляй поля `CreatedAt`, `UpdatedAt` вручную (они в BaseEntity). Не добавляй описания и флаги, которые не нужны прямо сейчас.
+
+# ВЫВОД
+Предоставь код трех файлов полностью. После кода кратко объясни, как мы будем использовать `PermissionCode` в сервисах (статический маппинг), чтобы я убедился, что ты понял контекст.
