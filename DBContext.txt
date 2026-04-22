@@ -1,0 +1,30 @@
+Ты — Senior .NET Architect. Я разрабатываю SaaS лояльности "StampService" на **.NET 10 / EF Core 10 / PostgreSQL**.
+Следуй принципу **YAGNI**: только необходимый минимум конфигурации.
+
+# ЗАДАЧА
+Создать класс `AppDbContext` для работы с готовыми сущностями слоя Domain.
+
+# СПИСОК СУЩНОСТЕЙ (зарегистрировать как DbSet)
+- StampService.Domain.User.User
+- StampService.Domain.User.UserIdentity
+- StampService.Domain.Brand.Brand
+- StampService.Domain.Brand.Location
+- StampService.Domain.Access.Role
+- StampService.Domain.Access.BrandMembership
+- StampService.Domain.Loyalty.LoyaltyMetricDefinition
+- StampService.Domain.Loyalty.MetricBalance
+- StampService.Domain.Loyalty.StampTransaction
+
+# ТРЕБОВАНИЯ К НАСТРОЙКЕ
+
+## 1. Конструктор и Options
+- Принимать `DbContextOptions<AppDbContext>` в конструкторе.
+
+## 2. Global Query Filters (ОБЯЗАТЕЛЬНО)
+В методе `OnModelCreating` настроить автоматический фильтр для ВСЕХ сущностей, реализующих `ISoftDelete`:
+```csharp
+foreach (var entityType in Model.GetEntityTypes()) {
+    if (typeof(ISoftDelete).IsAssignableFrom(entityType.ClrType)) {
+        // Добавить фильтр: WHERE DeletedAt IS NULL
+    }
+}

@@ -17,6 +17,8 @@ public class Role : BaseEntity
     // EF Core
     protected Role()
     {
+        SystemName = null!;
+        DisplayName = null!;
     }
 
     public static Result<Role> Create(string systemName, string displayName)
@@ -24,8 +26,14 @@ public class Role : BaseEntity
         if (string.IsNullOrWhiteSpace(systemName))
             return Result.Fail("SystemName не может быть пустым");
 
+        if (systemName.Length > Constants.MAX_ROLE_SYSTEM_NAME_LENGTH)
+            return Result.Fail($"SystemName не должен превышать {Constants.MAX_ROLE_SYSTEM_NAME_LENGTH} символов");
+
         if (string.IsNullOrWhiteSpace(displayName))
             return Result.Fail("DisplayName не может быть пустым");
+
+        if (displayName.Length > Constants.MAX_ROLE_DISPLAY_NAME_LENGTH)
+            return Result.Fail($"DisplayName не должен превышать {Constants.MAX_ROLE_DISPLAY_NAME_LENGTH} символов");
 
         var role = new Role(systemName.Trim(), displayName.Trim());
         return Result.Ok(role);

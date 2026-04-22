@@ -1,12 +1,24 @@
+using Microsoft.EntityFrameworkCore;
+using StampService.Infrastructure;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+// Infrastructure
+builder.Services.AddInfrastructure(builder.Configuration);
+
 var app = builder.Build();
+
+// Auto-migrate in Development
+if (app.Environment.IsDevelopment())
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -15,9 +27,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();

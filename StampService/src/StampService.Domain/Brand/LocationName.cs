@@ -14,15 +14,15 @@ public record LocationName
     public static Result<LocationName> Create(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
-            return Result.Fail("name");
+            return Result.Fail("Название точки не может быть пустым");
 
         if (name.Length < Constants.MIN_LOCATION_NAME_LENGTH)
-            return Result.Fail("name");
+            return Result.Fail($"Название точки должно быть не менее {Constants.MIN_LOCATION_NAME_LENGTH} символов");
 
         if (name.Length > Constants.MAX_LOCATION_NAME_LENGTH)
-            return Result.Fail("name");
+            return Result.Fail($"Название точки не должно превышать {Constants.MAX_LOCATION_NAME_LENGTH} символов");
 
-        var locationName = new LocationName(name);
+        var locationName = new LocationName(name.Trim());
         return Result.Ok(locationName);
     }
 }

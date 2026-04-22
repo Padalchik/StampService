@@ -26,5 +26,6 @@ public class Location : BaseEntity
     // EF C0RE
     private Location()
     {
+        Address = null!;
     }
 }
