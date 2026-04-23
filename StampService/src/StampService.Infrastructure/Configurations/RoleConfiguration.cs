@@ -29,14 +29,5 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
         builder.HasIndex(r => r.SystemName)
             .IsUnique()
             .HasDatabaseName("ix_roles_system_name");
-
-        builder.Property(r => r.CreatedAt)
-            .HasColumnName("created_at");
-
-        builder.Property(r => r.UpdatedAt)
-            .HasColumnName("updated_at");
-
-        builder.Property(r => r.DeletedAt)
-            .HasColumnName("deleted_at");
     }
 }

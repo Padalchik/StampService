@@ -1,15 +1,16 @@
 using FluentResults;
-using StampService.Domain.Shared;
 
 namespace StampService.Domain.Access;
 
-public class Role : BaseEntity
+public class Role
 {
+    public Guid Id { get; private set; }
     public string SystemName { get; private set; }
     public string DisplayName { get; private set; }
 
     private Role(string systemName, string displayName)
     {
+        Id = Guid.NewGuid();
         SystemName = systemName;
         DisplayName = displayName;
     }
@@ -17,6 +18,7 @@ public class Role : BaseEntity
     // EF Core
     protected Role()
     {
+        Id = Guid.Empty;
         SystemName = null!;
         DisplayName = null!;
     }
