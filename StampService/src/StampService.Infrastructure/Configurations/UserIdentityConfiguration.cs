@@ -35,12 +35,13 @@ public class UserIdentityConfiguration : IEntityTypeConfiguration<UserIdentity>
             .HasColumnType("jsonb")
             .HasColumnName("metadata");
 
-        builder.HasIndex(ui => new { ui.UserId, ui.Type, ui.Key })
+        builder.HasIndex(ui => new { ui.Type, ui.Key })
             .IsUnique()
-            .HasDatabaseName("ix_user_identities_user_id_type_key");
+            .HasFilter("\"deleted_at\" IS NULL")
+            .HasDatabaseName("ix_user_identities_type_key");
 
         builder.HasOne(ui => ui.User)
-            .WithMany()
+            .WithMany(u => u.Identities)
             .HasForeignKey(ui => ui.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 

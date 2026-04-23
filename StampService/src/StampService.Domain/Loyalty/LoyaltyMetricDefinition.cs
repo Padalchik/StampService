@@ -49,12 +49,28 @@ public class LoyaltyMetricDefinition : BaseEntity
 
     public void Deactivate()
     {
+        if (IsActive == false)
+            return;
+
         IsActive = false;
+        Touch();
     }
 
     public void Activate()
     {
+        if (IsActive)
+            return;
+
         IsActive = true;
+        Touch();
+    }
+
+    public void Restore(bool activate = false)
+    {
+        base.Restore();
+
+        if (activate)
+            Activate();
     }
 
     public Result UpdateName(string name)
@@ -66,6 +82,7 @@ public class LoyaltyMetricDefinition : BaseEntity
             return Result.Fail($"Name не должен превышать {Constants.MAX_METRIC_NAME_LENGTH} символов");
 
         Name = name.Trim();
+        Touch();
         return Result.Ok();
     }
 
@@ -78,6 +95,7 @@ public class LoyaltyMetricDefinition : BaseEntity
             return Result.Fail($"Code не должен превышать {Constants.MAX_METRIC_CODE_LENGTH} символов");
 
         Code = code.Trim();
+        Touch();
         return Result.Ok();
     }
 }

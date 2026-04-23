@@ -19,7 +19,7 @@ public class UserIdentity : BaseEntity
         Key = key;
         Metadata = metadata;
     }
-        
+
     // EF Core
     protected UserIdentity()
     {
@@ -30,17 +30,20 @@ public class UserIdentity : BaseEntity
 
     public static Result<UserIdentity> Create(User user, IdentityType type, string key, string metadata)
     {
+        if (type == IdentityType.None)
+            return Result.Fail("Invalid identity type");
+
         if (string.IsNullOrWhiteSpace(key))
-            return Result.Fail("Key не может быть пустым");
+            return Result.Fail("Key cannot be empty");
 
         if (key.Length > Constants.MAX_IDENTITY_KEY_LENGTH)
-            return Result.Fail($"Key не должен превышать {Constants.MAX_IDENTITY_KEY_LENGTH} символов");
+            return Result.Fail($"Key must not exceed {Constants.MAX_IDENTITY_KEY_LENGTH} characters");
 
         if (string.IsNullOrWhiteSpace(metadata))
-            return Result.Fail("Metadata не может быть пустым");
+            return Result.Fail("Metadata cannot be empty");
 
         if (metadata.Length > Constants.MAX_IDENTITY_METADATA_LENGTH)
-            return Result.Fail($"Metadata не должен превышать {Constants.MAX_IDENTITY_METADATA_LENGTH} символов");
+            return Result.Fail($"Metadata must not exceed {Constants.MAX_IDENTITY_METADATA_LENGTH} characters");
 
         var userIdentity = new UserIdentity(user, type, key, metadata);
         return Result.Ok(userIdentity);

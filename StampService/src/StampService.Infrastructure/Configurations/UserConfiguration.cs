@@ -16,6 +16,18 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasColumnName("id");
 
+        builder.Property(u => u.Name)
+            .IsRequired()
+            .HasColumnName("name");
+
+        builder.HasMany(u => u.Identities)
+            .WithOne(ui => ui.User)
+            .HasForeignKey(ui => ui.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Navigation(u => u.Identities)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+
         builder.Property(u => u.CreatedAt)
             .HasColumnName("created_at");
 
