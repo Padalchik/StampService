@@ -5,11 +5,11 @@ namespace StampService.Domain.User;
 
 public class User : BaseEntity
 {
-    private HashSet<UserIdentity> _userIdentities = [];
+    private HashSet<UserIdentity> _identities = [];
 
     public string Name { get; private set; }
 
-    public IReadOnlyCollection<UserIdentity> Identities => _userIdentities;
+    public IReadOnlyCollection<UserIdentity> Identities => _identities;
 
     private User(string name)
     {
@@ -39,11 +39,11 @@ public class User : BaseEntity
 
         var identity = identityResult.Value;
 
-        var hasDuplicate = _userIdentities.Any(x => x.Type == identity.Type && x.Key == identity.Key);
+        var hasDuplicate = _identities.Any(x => x.Type == identity.Type && x.Key == identity.Key);
         if (hasDuplicate)
             return Result.Fail("Identity already exists for this user");
 
-        _userIdentities.Add(identity);
+        _identities.Add(identity);
         Touch();
 
         return Result.Ok(identity);

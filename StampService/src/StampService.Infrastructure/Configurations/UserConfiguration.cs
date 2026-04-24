@@ -26,6 +26,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.Navigation(u => u.Identities)
+            .HasField("_identities")
             .UsePropertyAccessMode(PropertyAccessMode.Field);
 
         builder.Property(u => u.CreatedAt)
