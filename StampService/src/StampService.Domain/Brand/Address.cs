@@ -17,16 +17,25 @@ public record Address
 
     public static Result<Address> Create(string city, string street, string houseNumber)
     {
-        if (string.IsNullOrEmpty(city))
-            return Result.Fail("city");
+        if (string.IsNullOrWhiteSpace(city))
+            return Result.Fail("Город не может быть пустым");
 
-        if (string.IsNullOrEmpty(street))
-            return Result.Fail("street");
+        if (city.Length > Constants.MAX_ADDRESS_CITY_LENGTH)
+            return Result.Fail($"Город не должен превышать {Constants.MAX_ADDRESS_CITY_LENGTH} символов");
 
-        if (string.IsNullOrEmpty(houseNumber))
-            return Result.Fail("houseNumber");
+        if (string.IsNullOrWhiteSpace(street))
+            return Result.Fail("Улица не может быть пустой");
 
-        var address = new Address(city, street, houseNumber);
+        if (street.Length > Constants.MAX_ADDRESS_STREET_LENGTH)
+            return Result.Fail($"Улица не должна превышать {Constants.MAX_ADDRESS_STREET_LENGTH} символов");
+
+        if (string.IsNullOrWhiteSpace(houseNumber))
+            return Result.Fail("Номер дома не может быть пустым");
+
+        if (houseNumber.Length > Constants.MAX_ADDRESS_HOUSE_NUMBER_LENGTH)
+            return Result.Fail($"Номер дома не должен превышать {Constants.MAX_ADDRESS_HOUSE_NUMBER_LENGTH} символов");
+
+        var address = new Address(city.Trim(), street.Trim(), houseNumber.Trim());
         return Result.Ok(address);
     }
 

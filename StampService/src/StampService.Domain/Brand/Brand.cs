@@ -16,10 +16,10 @@ public class Brand : BaseEntity
         Name = name;
     }
     
-    // EF Core  
+    // EF Core
     protected Brand()
     {
-        
+        Name = null!;
     }
     
     public static Result<Brand> Create(string name)
@@ -27,7 +27,10 @@ public class Brand : BaseEntity
         if (string.IsNullOrWhiteSpace(name))
             return Result.Fail("Name не может быть пустым");
 
-        var brand = new Brand(name);
+        if (name.Length < Constants.MIN_BRAND_NAME_LENGTH || name.Length > Constants.MAX_BRAND_NAME_LENGTH)
+            return Result.Fail($"Name должен быть от {Constants.MIN_BRAND_NAME_LENGTH} до {Constants.MAX_BRAND_NAME_LENGTH} символов");
+
+        var brand = new Brand(name.Trim());
         return Result.Ok(brand);
     }
 }

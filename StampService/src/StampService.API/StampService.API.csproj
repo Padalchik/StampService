@@ -7,7 +7,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3"/>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.7" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.7" />
+        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.1.7" />
     </ItemGroup>
 
     <ItemGroup>
@@ -16,7 +18,9 @@
 
     <ItemGroup>
       <ProjectReference Include="..\StampService.Application\StampService.Application.csproj" />
+      <ProjectReference Include="..\StampService.Contracts\StampService.Contracts.csproj" />
       <ProjectReference Include="..\StampService.Domain\StampService.Domain.csproj" />
+      <ProjectReference Include="..\StampService.Infrastructure\StampService.Infrastructure.csproj" />
     </ItemGroup>
 
 </Project>

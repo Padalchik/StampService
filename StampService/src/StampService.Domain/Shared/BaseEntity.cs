@@ -20,5 +20,11 @@ public abstract class BaseEntity : ISoftDelete
         CreatedAt = DateTime.UtcNow;
     }
 
+    public void Restore()
+    {
+        DeletedAt = null;
+        Touch();
+    }
+
     protected void Touch() => UpdatedAt = DateTime.UtcNow;
 }

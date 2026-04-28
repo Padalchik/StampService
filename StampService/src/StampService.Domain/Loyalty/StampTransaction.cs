@@ -1,3 +1,4 @@
+using FluentResults;
 using StampService.Domain.Shared;
 
 namespace StampService.Domain.Loyalty;
@@ -22,10 +23,26 @@ public class StampTransaction : BaseEntity
     // EF Core
     protected StampTransaction()
     {
+        Comment = null!;
     }
 
-    public static StampTransaction Create(Guid accountBalanceId, Guid metricDefinitionId, int amount, string comment)
+    public static Result<StampTransaction> Create(Guid accountBalanceId, Guid metricDefinitionId, int amount, string comment)
     {
-        return new StampTransaction(accountBalanceId, metricDefinitionId, amount, comment);
+        if (accountBalanceId == Guid.Empty)
+            return Result.Fail("MetricBalanceId cannot be empty GUID");
+
+        if (metricDefinitionId == Guid.Empty)
+            return Result.Fail("MetricDefinitionId cannot be empty GUID");
+
+        if (amount == 0)
+            return Result.Fail("Amount cannot be zero");
+
+        if (string.IsNullOrWhiteSpace(comment))
+            return Result.Fail("Comment cannot be empty");
+
+        if (comment.Length > Constants.MAX_TRANSACTION_COMMENT_LENGTH)
+            return Result.Fail($"Comment must not exceed {Constants.MAX_TRANSACTION_COMMENT_LENGTH} characters");
+
+        return Result.Ok(new StampTransaction(accountBalanceId, metricDefinitionId, amount, comment.Trim()));
     }
 }

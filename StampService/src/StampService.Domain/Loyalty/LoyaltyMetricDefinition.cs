@@ -22,6 +22,8 @@ public class LoyaltyMetricDefinition : BaseEntity
     // EF Core
     protected LoyaltyMetricDefinition()
     {
+        Code = null!;
+        Name = null!;
     }
 
     public static Result<LoyaltyMetricDefinition> Create(Guid brandId, string code, string name)
@@ -32,8 +34,14 @@ public class LoyaltyMetricDefinition : BaseEntity
         if (string.IsNullOrWhiteSpace(code))
             return Result.Fail("Code не может быть пустым");
 
+        if (code.Length > Constants.MAX_METRIC_CODE_LENGTH)
+            return Result.Fail($"Code не должен превышать {Constants.MAX_METRIC_CODE_LENGTH} символов");
+
         if (string.IsNullOrWhiteSpace(name))
             return Result.Fail("Name не может быть пустым");
+
+        if (name.Length > Constants.MAX_METRIC_NAME_LENGTH)
+            return Result.Fail($"Name не должен превышать {Constants.MAX_METRIC_NAME_LENGTH} символов");
 
         var definition = new LoyaltyMetricDefinition(brandId, code.Trim(), name.Trim());
         return Result.Ok(definition);
@@ -41,12 +49,28 @@ public class LoyaltyMetricDefinition : BaseEntity
 
     public void Deactivate()
     {
+        if (IsActive == false)
+            return;
+
         IsActive = false;
+        Touch();
     }
 
     public void Activate()
     {
+        if (IsActive)
+            return;
+
         IsActive = true;
+        Touch();
+    }
+
+    public void Restore(bool activate = false)
+    {
+        base.Restore();
+
+        if (activate)
+            Activate();
     }
 
     public Result UpdateName(string name)
@@ -54,7 +78,11 @@ public class LoyaltyMetricDefinition : BaseEntity
         if (string.IsNullOrWhiteSpace(name))
             return Result.Fail("Name не может быть пустым");
 
+        if (name.Length > Constants.MAX_METRIC_NAME_LENGTH)
+            return Result.Fail($"Name не должен превышать {Constants.MAX_METRIC_NAME_LENGTH} символов");
+
         Name = name.Trim();
+        Touch();
         return Result.Ok();
     }
 
@@ -63,7 +91,11 @@ public class LoyaltyMetricDefinition : BaseEntity
         if (string.IsNullOrWhiteSpace(code))
             return Result.Fail("Code не может быть пустым");
 
+        if (code.Length > Constants.MAX_METRIC_CODE_LENGTH)
+            return Result.Fail($"Code не должен превышать {Constants.MAX_METRIC_CODE_LENGTH} символов");
+
         Code = code.Trim();
+        Touch();
         return Result.Ok();
     }
 }

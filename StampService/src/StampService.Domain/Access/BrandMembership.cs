@@ -12,7 +12,6 @@ public class BrandMembership : BaseEntity
     public Guid BrandId { get; private set; }
     public Guid RoleId { get; private set; }
 
-    // Навигационные свойства
     public UserEntity User { get; private set; } = null!;
     public BrandEntity Brand { get; private set; } = null!;
     public Role Role { get; private set; } = null!;
@@ -32,15 +31,28 @@ public class BrandMembership : BaseEntity
     public static Result<BrandMembership> Create(Guid userId, Guid brandId, Guid roleId)
     {
         if (userId == Guid.Empty)
-            return Result.Fail("UserId не может быть пустым GUID");
+            return Result.Fail("UserId cannot be empty GUID");
 
         if (brandId == Guid.Empty)
-            return Result.Fail("BrandId не может быть пустым GUID");
+            return Result.Fail("BrandId cannot be empty GUID");
 
         if (roleId == Guid.Empty)
-            return Result.Fail("RoleId не может быть пустым GUID");
+            return Result.Fail("RoleId cannot be empty GUID");
 
         var membership = new BrandMembership(userId, brandId, roleId);
         return Result.Ok(membership);
+    }
+
+    public Result ChangeRole(Guid roleId)
+    {
+        if (roleId == Guid.Empty)
+            return Result.Fail("RoleId cannot be empty GUID");
+
+        if (RoleId == roleId)
+            return Result.Ok();
+
+        RoleId = roleId;
+        Touch();
+        return Result.Ok();
     }
 }
