@@ -18,6 +18,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\StampService.Application\StampService.Application.csproj" />
+      <ProjectReference Include="..\StampService.Contracts\StampService.Contracts.csproj" />
       <ProjectReference Include="..\StampService.Domain\StampService.Domain.csproj" />
       <ProjectReference Include="..\StampService.Infrastructure\StampService.Infrastructure.csproj" />
     </ItemGroup>

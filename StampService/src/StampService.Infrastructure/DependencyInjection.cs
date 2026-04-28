@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using StampService.Application.Brand;
 using StampService.Infrastructure;
+using StampService.Infrastructure.Repositories;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -15,6 +17,8 @@ public static class DependencyInjection
             new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
                 .UseNpgsql(connectionString)
                 .Options));
+
+        services.AddScoped<IBrandService, BrandService>();
 
         return services;
     }

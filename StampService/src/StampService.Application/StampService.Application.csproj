@@ -7,7 +7,12 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\StampService.Contracts\StampService.Contracts.csproj" />
       <ProjectReference Include="..\StampService.Domain\StampService.Domain.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="FluentResults" Version="4.0.0" />
     </ItemGroup>
 
 </Project>
