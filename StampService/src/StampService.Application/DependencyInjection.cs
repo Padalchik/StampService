@@ -9,25 +9,12 @@ public static class DependencyInjection
     {
         var assembly = typeof(DependencyInjection).Assembly;
 
-        var handlerTypes = assembly.GetTypes()
-            .Where(type => type is { IsClass: true, IsAbstract: false })
-            .Select(type => new
-            {
-                Implementation = type,
-                Interfaces = type.GetInterfaces()
-                    .Where(interfaceType =>
-                        interfaceType.IsGenericType &&
-                        (interfaceType.GetGenericTypeDefinition() == typeof(ICommandHandler<,>) ||
-                         interfaceType.GetGenericTypeDefinition() == typeof(IQueryHandler<,>)))
-                    .ToArray()
-            })
-            .Where(type => type.Interfaces.Length > 0);
-
-        foreach (var handlerType in handlerTypes)
-        {
-            foreach (var handlerInterface in handlerType.Interfaces)
-                services.AddScoped(handlerInterface, handlerType.Implementation);
-        }
+        services.Scan(scan => scan
+            .FromAssemblies(assembly)
+            .AddClasses(c => c.AssignableTo(typeof(ICommandHandler<,>)))
+            .AddClasses(c => c.AssignableTo(typeof(IQueryHandler<,>)))
+            .AsSelfWithInterfaces()
+            .WithScopedLifetime());
 
         return services;
     }
