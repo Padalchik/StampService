@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using StampService.Application;
 using StampService.Infrastructure;
 using StampService.Infrastructure.Seeding;
 
@@ -9,6 +10,7 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi("v1");
 
 // Infrastructure
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();

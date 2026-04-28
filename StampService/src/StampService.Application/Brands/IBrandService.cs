@@ -1,9 +1,9 @@
 using FluentResults;
-using StampService.Contracts.DTOs.Brands;
+using StampService.Domain.Brand;
 
-namespace StampService.Application.Brand;
+namespace StampService.Application.Brands;
 
 public interface IBrandService
 {
-    Task<Result<CreateBrandResponse>> CreateAsync(CreateBrandRequest request, Guid userId);
+    Task<Result<Guid>> AddAsync(Brand brand, CancellationToken cancellationToken);
 }

@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using StampService.Application.Brand;
+using StampService.Application.Brands;
 using StampService.Infrastructure;
 using StampService.Infrastructure.Repositories;
 
