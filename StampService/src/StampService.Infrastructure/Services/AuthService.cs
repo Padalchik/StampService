@@ -1,11 +1,6 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using System.Text.Json;
 using FluentResults;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
 using StampService.Application.Auth;
 using StampService.Application.Services;
 using StampService.Contracts.DTOs.Auth;
@@ -16,20 +11,22 @@ namespace StampService.Infrastructure.Services;
 public class AuthService : IAuthService
 {
     private readonly AppDbContext _dbContext;
-    private readonly IConfiguration _configuration;
+    private readonly IJwtTokenService _jwtTokenService;
     private readonly ITelegramValidationService _telegramValidationService;
 
     public AuthService(
         AppDbContext dbContext,
-        IConfiguration configuration,
+        IJwtTokenService jwtTokenService,
         ITelegramValidationService telegramValidationService)
     {
         _dbContext = dbContext;
-        _configuration = configuration;
+        _jwtTokenService = jwtTokenService;
         _telegramValidationService = telegramValidationService;
     }
 
-    public async Task<Result<AuthResponse>> LoginAsync(TelegramLoginRequest request)
+    public async Task<Result<AuthResponse>> LoginAsync(
+        TelegramLoginRequest request,
+        CancellationToken cancellationToken)
     {
         if (!_telegramValidationService.Validate(request))
             return Result.Fail("Invalid Telegram login data");
@@ -38,7 +35,8 @@ public class AuthService : IAuthService
         var userIdentity = await _dbContext.UserIdentities
             .Include(identity => identity.User)
             .FirstOrDefaultAsync(
-                identity => identity.Type == IdentityType.Telegram && identity.Key == providerKey);
+                identity => identity.Type == IdentityType.Telegram && identity.Key == providerKey,
+                cancellationToken);
 
         var user = userIdentity?.User;
         if (user is null)
@@ -63,47 +61,12 @@ public class AuthService : IAuthService
                 return Result.Fail(identityResult.Errors);
 
             _dbContext.Users.Add(user);
-            await _dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        var expiresAt = DateTime.UtcNow.AddMinutes(GetExpiresInMinutes());
-        var token = GenerateJwtToken(user, expiresAt);
+        var token = _jwtTokenService.CreateToken(user);
 
-        return Result.Ok(new AuthResponse(token, user.Id, expiresAt));
-    }
-
-    private string GenerateJwtToken(User user, DateTime expiresAt)
-    {
-        var jwtSection = _configuration.GetSection("Jwt");
-        var key = jwtSection["Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured");
-        var issuer = jwtSection["Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is not configured");
-        var audience = jwtSection["Audience"] ?? throw new InvalidOperationException("Jwt:Audience is not configured");
-
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.UniqueName, user.Name)
-        };
-
-        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
-        var credentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
-
-        var token = new JwtSecurityToken(
-            issuer: issuer,
-            audience: audience,
-            claims: claims,
-            expires: expiresAt,
-            signingCredentials: credentials);
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    private int GetExpiresInMinutes()
-    {
-        var value = _configuration["Jwt:ExpiresInMinutes"];
-
-        return int.TryParse(value, out var expiresInMinutes) ? expiresInMinutes : 1440;
+        return Result.Ok(new AuthResponse(token.Value, user.Id, token.ExpiresAt));
     }
 
     private static string GetDisplayName(TelegramLoginRequest request)

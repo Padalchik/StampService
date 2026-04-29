@@ -15,13 +15,14 @@ public static class DependencyInjection
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")!;
 
-        services.AddScoped<AppDbContext>(_ =>
-            new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
-                .UseNpgsql(connectionString)
-                .Options));
+        services.AddDbContext<AppDbContext>(options =>
+        {
+            options.UseNpgsql(connectionString);
+        });
 
         services.AddScoped<IBrandService, BrandService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
 
         return services;
     }
