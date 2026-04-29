@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using StampService.Application.Abstractions;
+using StampService.Application.Services;
 
 namespace StampService.Application;
 
@@ -19,6 +20,8 @@ public static class DependencyInjection
             .AddClasses(c => c.AssignableTo(typeof(IQueryHandler<,>)))
             .AsImplementedInterfaces()
             .WithScopedLifetime());
+
+        services.AddScoped<ITelegramValidationService, TelegramValidationService>();
 
         return services;
     }

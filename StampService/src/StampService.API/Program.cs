@@ -1,15 +1,15 @@
 using Microsoft.EntityFrameworkCore;
+using StampService.API.Extensions;
 using StampService.Application;
 using StampService.Infrastructure;
 using StampService.Infrastructure.Seeding;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddControllers();
-builder.Services.AddOpenApi("v1");
+builder.Services.AddApiOpenApi();
+builder.Services.AddJwtAuthentication(builder.Configuration);
 
-// Infrastructure
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -25,7 +25,6 @@ await using (var scope = app.Services.CreateAsyncScope())
     await RoleSeeder.SeedSystemRolesAsync(dbContext);
 }
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -36,6 +35,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
