@@ -9,11 +9,15 @@ public static class DependencyInjection
     {
         var assembly = typeof(DependencyInjection).Assembly;
 
+        // В DirectoryService здесь используется другая цепочка регистрации;
+        // оставляем обработчики раздельно, чтобы каждый selector явно регистрировался по интерфейсам.
         services.Scan(scan => scan
             .FromAssemblies(assembly)
             .AddClasses(c => c.AssignableTo(typeof(ICommandHandler<,>)))
+            .AsImplementedInterfaces()
+            .WithScopedLifetime()
             .AddClasses(c => c.AssignableTo(typeof(IQueryHandler<,>)))
-            .AsSelfWithInterfaces()
+            .AsImplementedInterfaces()
             .WithScopedLifetime());
 
         return services;
