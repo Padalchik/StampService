@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using StampService.Application.Access;
 using StampService.Application.Auth;
 using StampService.Application.Brands;
 using StampService.Infrastructure;
@@ -23,6 +24,8 @@ public static class DependencyInjection
         services.AddScoped<IBrandService, BrandService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<IBrandAccessService, BrandAccessService>();
+        services.AddScoped<IBrandMembershipService, BrandMembershipService>();
 
         return services;
     }
