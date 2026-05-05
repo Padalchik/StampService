@@ -1,25 +1,24 @@
 using System.Text.Json;
 using FluentResults;
-using Microsoft.EntityFrameworkCore;
-using StampService.Application.Auth;
 using StampService.Application.Services;
+using StampService.Application.Users;
 using StampService.Contracts.DTOs.Auth;
 using StampService.Domain.User;
 
-namespace StampService.Infrastructure.Services;
+namespace StampService.Application.Auth;
 
 public class AuthService : IAuthService
 {
-    private readonly AppDbContext _dbContext;
+    private readonly IUserRepository _userRepository;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly ITelegramValidationService _telegramValidationService;
 
     public AuthService(
-        AppDbContext dbContext,
+        IUserRepository userRepository,
         IJwtTokenService jwtTokenService,
         ITelegramValidationService telegramValidationService)
     {
-        _dbContext = dbContext;
+        _userRepository = userRepository;
         _jwtTokenService = jwtTokenService;
         _telegramValidationService = telegramValidationService;
     }
@@ -32,13 +31,11 @@ public class AuthService : IAuthService
             return Result.Fail("Invalid Telegram login data");
 
         var providerKey = request.Id.ToString();
-        var userIdentity = await _dbContext.UserIdentities
-            .Include(identity => identity.User)
-            .FirstOrDefaultAsync(
-                identity => identity.Type == IdentityType.Telegram && identity.Key == providerKey,
-                cancellationToken);
+        var user = await _userRepository.GetByIdentityAsync(
+            IdentityType.Telegram,
+            providerKey,
+            cancellationToken);
 
-        var user = userIdentity?.User;
         if (user is null)
         {
             var userResult = User.Create(GetDisplayName(request));
@@ -60,8 +57,8 @@ public class AuthService : IAuthService
             if (identityResult.IsFailed)
                 return Result.Fail(identityResult.Errors);
 
-            _dbContext.Users.Add(user);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            _userRepository.Add(user);
+            await _userRepository.SaveAsync(cancellationToken);
         }
 
         var token = _jwtTokenService.CreateToken(user);

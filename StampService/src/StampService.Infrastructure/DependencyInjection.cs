@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using StampService.Application.Access;
 using StampService.Application.Auth;
 using StampService.Application.Brands;
+using StampService.Application.Users;
 using StampService.Infrastructure;
 using StampService.Infrastructure.Repositories;
 using StampService.Infrastructure.Services;
@@ -21,11 +22,10 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString);
         });
 
-        services.AddScoped<IBrandService, BrandService>();
-        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IBrandRepository, BrandRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IBrandMembershipRepository, BrandMembershipRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
-        services.AddScoped<IBrandAccessService, BrandAccessService>();
-        services.AddScoped<IBrandMembershipService, BrandMembershipService>();
 
         return services;
     }

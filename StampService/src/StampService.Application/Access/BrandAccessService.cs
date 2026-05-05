@@ -1,16 +1,14 @@
-using Microsoft.EntityFrameworkCore;
-using StampService.Application.Access;
 using StampService.Domain.Access;
 
-namespace StampService.Infrastructure.Services;
+namespace StampService.Application.Access;
 
 public class BrandAccessService : IBrandAccessService
 {
-    private readonly AppDbContext _dbContext;
+    private readonly IBrandMembershipRepository _brandMembershipRepository;
 
-    public BrandAccessService(AppDbContext dbContext)
+    public BrandAccessService(IBrandMembershipRepository brandMembershipRepository)
     {
-        _dbContext = dbContext;
+        _brandMembershipRepository = brandMembershipRepository;
     }
 
     public async Task<bool> CanAsync(
@@ -19,7 +17,10 @@ public class BrandAccessService : IBrandAccessService
         PermissionCode permission,
         CancellationToken cancellationToken)
     {
-        var role = await GetUserRoleAsync(userId, brandId, cancellationToken);
+        var role = await _brandMembershipRepository.GetRoleSystemNameAsync(
+            userId,
+            brandId,
+            cancellationToken);
 
         return role switch
         {
@@ -28,18 +29,6 @@ public class BrandAccessService : IBrandAccessService
             SystemRoles.Customer => CanCustomer(permission),
             _ => false
         };
-    }
-
-    private async Task<string?> GetUserRoleAsync(
-        Guid userId,
-        Guid brandId,
-        CancellationToken cancellationToken)
-    {
-        return await _dbContext.BrandMemberships
-            .AsNoTracking()
-            .Where(membership => membership.UserId == userId && membership.BrandId == brandId)
-            .Select(membership => membership.Role.SystemName)
-            .FirstOrDefaultAsync(cancellationToken);
     }
 
     private static bool CanStaff(PermissionCode permission)
