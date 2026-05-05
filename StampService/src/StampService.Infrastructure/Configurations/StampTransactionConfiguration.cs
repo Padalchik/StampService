@@ -20,10 +20,6 @@ public class StampTransactionConfiguration : IEntityTypeConfiguration<StampTrans
             .IsRequired()
             .HasColumnName("metric_balance_id");
 
-        builder.Property(st => st.MetricDefinitionId)
-            .IsRequired()
-            .HasColumnName("metric_definition_id");
-
         builder.Property(st => st.Amount)
             .IsRequired()
             .HasColumnName("amount");
@@ -33,18 +29,10 @@ public class StampTransactionConfiguration : IEntityTypeConfiguration<StampTrans
             .HasMaxLength(Constants.MAX_TRANSACTION_COMMENT_LENGTH)
             .HasColumnName("comment");
 
-        builder.HasIndex(st => st.MetricDefinitionId)
-            .HasDatabaseName("ix_stamp_transactions_metric_definition_id");
-
         builder.HasOne(st => st.MetricBalance)
             .WithMany()
             .HasForeignKey(st => st.MetricBalanceId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasOne(st => st.MetricDefinition)
-            .WithMany()
-            .HasForeignKey(st => st.MetricDefinitionId)
-            .OnDelete(DeleteBehavior.Restrict);
 
         builder.Property(st => st.CreatedAt)
             .HasColumnName("created_at");

@@ -4,6 +4,10 @@ namespace StampService.Application.Metrics;
 
 public interface ILoyaltyMetricRepository
 {
+    Task<LoyaltyMetricDefinition?> GetByIdAsync(
+        Guid metricDefinitionId,
+        CancellationToken cancellationToken);
+
     Task<bool> CodeExistsAsync(
         Guid brandId,
         string code,

@@ -13,6 +13,15 @@ public class LoyaltyMetricRepository : ILoyaltyMetricRepository
         _dbContext = dbContext;
     }
 
+    public async Task<LoyaltyMetricDefinition?> GetByIdAsync(
+        Guid metricDefinitionId,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.LoyaltyMetricDefinitions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(metric => metric.Id == metricDefinitionId, cancellationToken);
+    }
+
     public async Task<bool> CodeExistsAsync(
         Guid brandId,
         string code,

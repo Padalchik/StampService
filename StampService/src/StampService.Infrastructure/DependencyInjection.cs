@@ -27,6 +27,8 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IBrandMembershipRepository, BrandMembershipRepository>();
         services.AddScoped<ILoyaltyMetricRepository, LoyaltyMetricRepository>();
+        services.AddScoped<IMetricBalanceRepository, MetricBalanceRepository>();
+        services.AddScoped<IStampTransactionRepository, StampTransactionRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
 
         return services;

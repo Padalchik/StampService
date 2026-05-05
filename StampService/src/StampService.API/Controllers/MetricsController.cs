@@ -4,16 +4,17 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StampService.Application.Abstractions;
 using StampService.Application.Metrics.Commands.CreateMetric;
+using StampService.Application.Metrics.Commands.IssueMetric;
 using StampService.Contracts.DTOs.Metrics;
 
 namespace StampService.API.Controllers;
 
 [ApiController]
 [Authorize]
-[Route("api/brands/{brandId:guid}/metrics")]
+[Route("api")]
 public class MetricsController : ControllerBase
 {
-    [HttpPost]
+    [HttpPost("brands/{brandId:guid}/metrics")]
     public async Task<ActionResult<MetricResponse>> Create(
         Guid brandId,
         CreateMetricRequest request,
@@ -30,6 +31,33 @@ public class MetricsController : ControllerBase
 
         if (result.IsSuccess)
             return CreatedAtAction(nameof(Create), new { brandId, metricId = result.Value.Id }, result.Value);
+
+        if (result.Errors.Any(error => error.Message == "Access denied"))
+            return Forbid();
+
+        return BadRequest(result.Errors);
+    }
+
+    [HttpPost("metrics/{metricDefinitionId:guid}/issue")]
+    public async Task<ActionResult<IssueMetricResponse>> Issue(
+        Guid metricDefinitionId,
+        IssueMetricRequest request,
+        [FromServices] ICommandHandler<IssueMetricResponse, IssueMetricCommand> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return Unauthorized(userIdResult.Errors);
+
+        var command = new IssueMetricCommand(
+            metricDefinitionId,
+            userIdResult.Value,
+            request);
+
+        var result = await handler.Handle(command, cancellationToken);
+
+        if (result.IsSuccess)
+            return Ok(result.Value);
 
         if (result.Errors.Any(error => error.Message == "Access denied"))
             return Forbid();
