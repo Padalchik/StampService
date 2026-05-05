@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using StampService.Application.Abstractions;
 using StampService.Application.Metrics.Commands.CreateMetric;
 using StampService.Application.Metrics.Commands.IssueMetric;
+using StampService.Application.Metrics.Queries.GetMetricBalance;
 using StampService.Contracts.DTOs.Metrics;
 
 namespace StampService.API.Controllers;
@@ -55,6 +56,33 @@ public class MetricsController : ControllerBase
             request);
 
         var result = await handler.Handle(command, cancellationToken);
+
+        if (result.IsSuccess)
+            return Ok(result.Value);
+
+        if (result.Errors.Any(error => error.Message == "Access denied"))
+            return Forbid();
+
+        return BadRequest(result.Errors);
+    }
+
+    [HttpGet("metrics/{metricDefinitionId:guid}/balances/{userId:guid}")]
+    public async Task<ActionResult<MetricBalanceResponse>> GetBalance(
+        Guid metricDefinitionId,
+        Guid userId,
+        [FromServices] IQueryHandler<MetricBalanceResponse, GetMetricBalanceQuery> handler,
+        CancellationToken cancellationToken)
+    {
+        var requestUserIdResult = GetUserId();
+        if (requestUserIdResult.IsFailed)
+            return Unauthorized(requestUserIdResult.Errors);
+
+        var query = new GetMetricBalanceQuery(
+            metricDefinitionId,
+            userId,
+            requestUserIdResult.Value);
+
+        var result = await handler.Handle(query, cancellationToken);
 
         if (result.IsSuccess)
             return Ok(result.Value);
