@@ -3,4 +3,4 @@ using StampService.Contracts.DTOs.Brands;
 
 namespace StampService.Application.Brands.Commands.CreateBrand;
 
-public record CreateBrandCommand(CreateBrandRequest Request, Guid UserId) : ICommand;
+public record CreateBrandCommand(CreateBrandRequest Request) : ICommand;

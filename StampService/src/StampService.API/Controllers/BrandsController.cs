@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StampService.Application.Abstractions;
@@ -19,11 +18,7 @@ public class BrandsController : ControllerBase
         [FromServices] ICommandHandler<CreateBrandResponse, CreateBrandCommand> handler,
         CancellationToken cancellationToken)
     {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(userIdClaim, out var userId))
-            return Unauthorized();
-
-        var command = new CreateBrandCommand(request, userId);
+        var command = new CreateBrandCommand(request);
 
         var result = await handler.Handle(command, cancellationToken);
 
