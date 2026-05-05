@@ -1,9 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using StampService.Application.Access;
+using StampService.Application.Auth;
 using StampService.Application.Brands;
+using StampService.Application.Users;
 using StampService.Infrastructure;
 using StampService.Infrastructure.Repositories;
+using StampService.Infrastructure.Services;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -13,12 +17,15 @@ public static class DependencyInjection
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")!;
 
-        services.AddScoped<AppDbContext>(_ =>
-            new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
-                .UseNpgsql(connectionString)
-                .Options));
+        services.AddDbContext<AppDbContext>(options =>
+        {
+            options.UseNpgsql(connectionString);
+        });
 
-        services.AddScoped<IBrandService, BrandService>();
+        services.AddScoped<IBrandRepository, BrandRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IBrandMembershipRepository, BrandMembershipRepository>();
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
 
         return services;
     }

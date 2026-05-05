@@ -7,11 +7,11 @@ namespace StampService.Application.Brands.Commands.CreateBrand;
 
 public class CreateBrandHandler : ICommandHandler<CreateBrandResponse, CreateBrandCommand>
 {
-    private readonly IBrandService _brandService;
+    private readonly IBrandRepository _brandRepository;
 
-    public CreateBrandHandler(IBrandService brandService)
+    public CreateBrandHandler(IBrandRepository brandRepository)
     {
-        _brandService = brandService;
+        _brandRepository = brandRepository;
     }
 
     public async Task<Result<CreateBrandResponse>> Handle(
@@ -24,7 +24,7 @@ public class CreateBrandHandler : ICommandHandler<CreateBrandResponse, CreateBra
 
         var brand = brandResult.Value;
 
-        var addBrandResult = await _brandService.AddAsync(brand, cancellationToken);
+        var addBrandResult = await _brandRepository.AddAsync(brand, cancellationToken);
         if (addBrandResult.IsFailed)
             return Result.Fail(addBrandResult.Errors);
 
