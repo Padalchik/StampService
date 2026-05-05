@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using StampService.Application.Access;
 using StampService.Application.Auth;
 using StampService.Application.Brands;
+using StampService.Application.Metrics;
 using StampService.Application.Users;
 using StampService.Infrastructure;
 using StampService.Infrastructure.Repositories;
@@ -25,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IBrandRepository, BrandRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IBrandMembershipRepository, BrandMembershipRepository>();
+        services.AddScoped<ILoyaltyMetricRepository, LoyaltyMetricRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
 
         return services;

@@ -1,0 +1,15 @@
+using StampService.Domain.Loyalty;
+
+namespace StampService.Application.Metrics;
+
+public interface ILoyaltyMetricRepository
+{
+    Task<bool> CodeExistsAsync(
+        Guid brandId,
+        string code,
+        CancellationToken cancellationToken);
+
+    void Add(LoyaltyMetricDefinition metric);
+
+    Task SaveAsync(CancellationToken cancellationToken);
+}
