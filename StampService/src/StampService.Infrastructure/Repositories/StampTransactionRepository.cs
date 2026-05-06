@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using StampService.Application.Metrics;
 using StampService.Domain.Loyalty;
 
@@ -10,6 +11,21 @@ public class StampTransactionRepository : IStampTransactionRepository
     public StampTransactionRepository(AppDbContext dbContext)
     {
         _dbContext = dbContext;
+    }
+
+    public async Task<IReadOnlyCollection<StampTransaction>> GetHistoryByMetricBalanceAsync(
+        Guid metricBalanceId,
+        int skip,
+        int take,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.StampTransactions
+            .AsNoTracking()
+            .Where(transaction => transaction.MetricBalanceId == metricBalanceId)
+            .OrderByDescending(transaction => transaction.CreatedAt)
+            .Skip(skip)
+            .Take(take)
+            .ToArrayAsync(cancellationToken);
     }
 
     public void Add(StampTransaction transaction)

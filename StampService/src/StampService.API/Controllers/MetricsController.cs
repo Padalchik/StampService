@@ -6,6 +6,7 @@ using StampService.Application.Abstractions;
 using StampService.Application.Metrics.Commands.CreateMetric;
 using StampService.Application.Metrics.Commands.IssueMetric;
 using StampService.Application.Metrics.Queries.GetMetricBalance;
+using StampService.Application.Metrics.Queries.GetMetricTransactions;
 using StampService.Contracts.DTOs.Metrics;
 
 namespace StampService.API.Controllers;
@@ -81,6 +82,37 @@ public class MetricsController : ControllerBase
             metricDefinitionId,
             userId,
             requestUserIdResult.Value);
+
+        var result = await handler.Handle(query, cancellationToken);
+
+        if (result.IsSuccess)
+            return Ok(result.Value);
+
+        if (result.Errors.Any(error => error.Message == "Access denied"))
+            return Forbid();
+
+        return BadRequest(result.Errors);
+    }
+
+    [HttpGet("metrics/{metricDefinitionId:guid}/transactions")]
+    public async Task<ActionResult<MetricTransactionsResponse>> GetTransactions(
+        Guid metricDefinitionId,
+        [FromQuery] Guid userId,
+        [FromQuery] int? skip,
+        [FromQuery] int? take,
+        [FromServices] IQueryHandler<MetricTransactionsResponse, GetMetricTransactionsQuery> handler,
+        CancellationToken cancellationToken)
+    {
+        var requestUserIdResult = GetUserId();
+        if (requestUserIdResult.IsFailed)
+            return Unauthorized(requestUserIdResult.Errors);
+
+        var query = new GetMetricTransactionsQuery(
+            metricDefinitionId,
+            userId,
+            requestUserIdResult.Value,
+            skip ?? 0,
+            take ?? 50);
 
         var result = await handler.Handle(query, cancellationToken);
 
