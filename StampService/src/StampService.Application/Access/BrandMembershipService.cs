@@ -69,4 +69,57 @@ public class BrandMembershipService : IBrandMembershipService
 
         return Result.Ok(membership);
     }
+
+    public async Task<Result<BrandMembership>> AddStaffAsync(
+        Guid brandId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var brandExists = await _brandRepository.ExistsAsync(brandId, cancellationToken);
+        if (!brandExists)
+            return Result.Fail("Brand not found");
+
+        var userExists = await _userRepository.ExistsAsync(userId, cancellationToken);
+        if (!userExists)
+            return Result.Fail("User not found");
+
+        var staffRole = await _brandMembershipRepository.GetRoleBySystemNameAsync(
+            SystemRoles.Staff,
+            cancellationToken);
+        if (staffRole is null)
+            return Result.Fail("Staff role not found");
+
+        var membership = await _brandMembershipRepository.GetByBrandAndUserAsync(
+            brandId,
+            userId,
+            cancellationToken);
+
+        if (membership is null)
+        {
+            var membershipResult = BrandMembership.Create(userId, brandId, staffRole.Id);
+            if (membershipResult.IsFailed)
+                return Result.Fail(membershipResult.Errors);
+
+            membership = membershipResult.Value;
+            _brandMembershipRepository.Add(membership);
+        }
+        else
+        {
+            var currentRole = await _brandMembershipRepository.GetRoleSystemNameAsync(
+                userId,
+                brandId,
+                cancellationToken);
+
+            if (currentRole == SystemRoles.Owner)
+                return Result.Fail("Cannot change owner role");
+
+            var changeRoleResult = membership.ChangeRole(staffRole.Id);
+            if (changeRoleResult.IsFailed)
+                return Result.Fail(changeRoleResult.Errors);
+        }
+
+        await _brandMembershipRepository.SaveAsync(cancellationToken);
+
+        return Result.Ok(membership);
+    }
 }

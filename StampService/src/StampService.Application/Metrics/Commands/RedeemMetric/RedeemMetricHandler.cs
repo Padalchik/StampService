@@ -6,9 +6,9 @@ using StampService.Application.Users;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Access;
 
-namespace StampService.Application.Metrics.Commands.IssueMetric;
+namespace StampService.Application.Metrics.Commands.RedeemMetric;
 
-public class IssueMetricHandler : ICommandHandler<IssueMetricResponse, IssueMetricCommand>
+public class RedeemMetricHandler : ICommandHandler<RedeemMetricResponse, RedeemMetricCommand>
 {
     private readonly IBrandAccessService _brandAccessService;
     private readonly IBrandRepository _brandRepository;
@@ -16,7 +16,7 @@ public class IssueMetricHandler : ICommandHandler<IssueMetricResponse, IssueMetr
     private readonly ILoyaltyMetricRepository _metricRepository;
     private readonly IUserRepository _userRepository;
 
-    public IssueMetricHandler(
+    public RedeemMetricHandler(
         IBrandAccessService brandAccessService,
         IBrandRepository brandRepository,
         IMetricLedgerService metricLedgerService,
@@ -30,8 +30,8 @@ public class IssueMetricHandler : ICommandHandler<IssueMetricResponse, IssueMetr
         _userRepository = userRepository;
     }
 
-    public async Task<Result<IssueMetricResponse>> Handle(
-        IssueMetricCommand command,
+    public async Task<Result<RedeemMetricResponse>> Handle(
+        RedeemMetricCommand command,
         CancellationToken cancellationToken)
     {
         var metric = await _metricRepository.GetByIdAsync(
@@ -45,13 +45,13 @@ public class IssueMetricHandler : ICommandHandler<IssueMetricResponse, IssueMetr
         if (!brandExists)
             return Result.Fail("Brand not found");
 
-        var canIssue = await _brandAccessService.CanAsync(
-            command.IssuerUserId,
+        var canRedeem = await _brandAccessService.CanAsync(
+            command.RedeemerUserId,
             metric.BrandId,
-            PermissionCode.StampIssue,
+            PermissionCode.StampRedeem,
             cancellationToken);
 
-        if (!canIssue)
+        if (!canRedeem)
             return Result.Fail("Access denied");
 
         var userExists = await _userRepository.ExistsAsync(command.Request.UserId, cancellationToken);
@@ -61,7 +61,7 @@ public class IssueMetricHandler : ICommandHandler<IssueMetricResponse, IssueMetr
         if (!metric.IsActive)
             return Result.Fail("Metric is not active");
 
-        var ledgerResult = await _metricLedgerService.IssueAsync(
+        var ledgerResult = await _metricLedgerService.RedeemAsync(
             command.Request.UserId,
             metric.BrandId,
             command.MetricDefinitionId,
@@ -75,7 +75,7 @@ public class IssueMetricHandler : ICommandHandler<IssueMetricResponse, IssueMetr
         var balance = ledgerResult.Value.Balance;
         var transaction = ledgerResult.Value.Transaction;
 
-        var response = new IssueMetricResponse(
+        var response = new RedeemMetricResponse(
             transaction.Id,
             balance.Id,
             balance.BrandId,

@@ -22,6 +22,8 @@ public enum PermissionCode
     /// </summary>
     StampIssue = 60,
 
+    StampRedeem = 70,
+
     /// <summary>
     /// Просмотр балансов клиентов по метрикам лояльности бренда.
     /// </summary>

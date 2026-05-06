@@ -13,6 +13,14 @@ public class MetricBalanceRepository : IMetricBalanceRepository
         _dbContext = dbContext;
     }
 
+    public async Task<MetricBalance?> GetByIdAsync(
+        Guid metricBalanceId,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.MetricBalances
+            .FirstOrDefaultAsync(balance => balance.Id == metricBalanceId, cancellationToken);
+    }
+
     public async Task<MetricBalance?> GetByUserAndMetricAsync(
         Guid userId,
         Guid brandId,
@@ -30,5 +38,10 @@ public class MetricBalanceRepository : IMetricBalanceRepository
     public void Add(MetricBalance balance)
     {
         _dbContext.MetricBalances.Add(balance);
+    }
+
+    public Task SaveAsync(CancellationToken cancellationToken)
+    {
+        return _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

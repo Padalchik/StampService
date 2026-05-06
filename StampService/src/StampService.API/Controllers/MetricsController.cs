@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using StampService.Application.Abstractions;
 using StampService.Application.Metrics.Commands.CreateMetric;
 using StampService.Application.Metrics.Commands.IssueMetric;
+using StampService.Application.Metrics.Commands.RedeemMetric;
 using StampService.Application.Metrics.Queries.GetMetricBalance;
 using StampService.Application.Metrics.Queries.GetMetricTransactions;
 using StampService.Contracts.DTOs.Metrics;
@@ -52,6 +53,33 @@ public class MetricsController : ControllerBase
             return Unauthorized(userIdResult.Errors);
 
         var command = new IssueMetricCommand(
+            metricDefinitionId,
+            userIdResult.Value,
+            request);
+
+        var result = await handler.Handle(command, cancellationToken);
+
+        if (result.IsSuccess)
+            return Ok(result.Value);
+
+        if (result.Errors.Any(error => error.Message == "Access denied"))
+            return Forbid();
+
+        return BadRequest(result.Errors);
+    }
+
+    [HttpPost("metrics/{metricDefinitionId:guid}/redeem")]
+    public async Task<ActionResult<RedeemMetricResponse>> Redeem(
+        Guid metricDefinitionId,
+        RedeemMetricRequest request,
+        [FromServices] ICommandHandler<RedeemMetricResponse, RedeemMetricCommand> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return Unauthorized(userIdResult.Errors);
+
+        var command = new RedeemMetricCommand(
             metricDefinitionId,
             userIdResult.Value,
             request);

@@ -1,6 +1,6 @@
 namespace StampService.Contracts.DTOs.Metrics;
 
-public record IssueMetricResponse(
+public record RedeemMetricResponse(
     Guid TransactionId,
     Guid BalanceId,
     Guid BrandId,

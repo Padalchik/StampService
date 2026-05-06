@@ -88,6 +88,7 @@ public class GetMetricTransactionsHandler : IQueryHandler<MetricTransactionsResp
                 balance.Id,
                 balance.MetricDefinitionId,
                 balance.UserId,
+                transaction.Type.ToString(),
                 transaction.Amount,
                 transaction.Comment,
                 transaction.CreatedAt))

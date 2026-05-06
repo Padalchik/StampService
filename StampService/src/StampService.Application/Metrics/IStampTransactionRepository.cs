@@ -10,6 +10,10 @@ public interface IStampTransactionRepository
         int take,
         CancellationToken cancellationToken);
 
+    Task<int> CalculateMetricBalanceValueAsync(
+        Guid metricBalanceId,
+        CancellationToken cancellationToken);
+
     void Add(StampTransaction transaction);
 
     Task SaveAsync(CancellationToken cancellationToken);

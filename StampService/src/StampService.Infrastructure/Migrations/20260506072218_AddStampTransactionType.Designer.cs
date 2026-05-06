@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using StampService.Infrastructure;
@@ -12,9 +13,11 @@ using StampService.Infrastructure;
 namespace StampService.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260506072218_AddStampTransactionType")]
+    partial class AddStampTransactionType
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -286,10 +289,7 @@ namespace StampService.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_metric_balances_user_id_brand_id_metric_definition_id");
 
-                    b.ToTable("metric_balances", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_metric_balances_value_non_negative", "value >= 0");
-                        });
+                    b.ToTable("metric_balances", (string)null);
                 });
 
             modelBuilder.Entity("StampService.Domain.Loyalty.StampTransaction", b =>
@@ -333,12 +333,7 @@ namespace StampService.Infrastructure.Migrations
 
                     b.HasIndex("MetricBalanceId");
 
-                    b.ToTable("stamp_transactions", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_stamp_transactions_amount_positive", "amount > 0");
-
-                            t.HasCheckConstraint("ck_stamp_transactions_transaction_type", "transaction_type IN (1, 2)");
-                        });
+                    b.ToTable("stamp_transactions", (string)null);
                 });
 
             modelBuilder.Entity("StampService.Domain.User.User", b =>
