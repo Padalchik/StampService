@@ -10,7 +10,10 @@ public class MetricBalanceConfiguration : IEntityTypeConfiguration<MetricBalance
 {
     public void Configure(EntityTypeBuilder<MetricBalance> builder)
     {
-        builder.ToTable("metric_balances");
+        builder.ToTable("metric_balances", table =>
+        {
+            table.HasCheckConstraint("ck_metric_balances_value_non_negative", "value >= 0");
+        });
 
         builder.HasKey(mb => mb.Id);
 

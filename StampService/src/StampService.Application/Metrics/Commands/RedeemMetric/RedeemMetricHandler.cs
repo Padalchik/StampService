@@ -5,7 +5,6 @@ using StampService.Application.Brands;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Access;
-using StampService.Domain.Loyalty;
 
 namespace StampService.Application.Metrics.Commands.RedeemMetric;
 
@@ -13,24 +12,21 @@ public class RedeemMetricHandler : ICommandHandler<RedeemMetricResponse, RedeemM
 {
     private readonly IBrandAccessService _brandAccessService;
     private readonly IBrandRepository _brandRepository;
+    private readonly IMetricLedgerService _metricLedgerService;
     private readonly ILoyaltyMetricRepository _metricRepository;
-    private readonly IMetricBalanceRepository _metricBalanceRepository;
-    private readonly IStampTransactionRepository _stampTransactionRepository;
     private readonly IUserRepository _userRepository;
 
     public RedeemMetricHandler(
         IBrandAccessService brandAccessService,
         IBrandRepository brandRepository,
+        IMetricLedgerService metricLedgerService,
         ILoyaltyMetricRepository metricRepository,
-        IMetricBalanceRepository metricBalanceRepository,
-        IStampTransactionRepository stampTransactionRepository,
         IUserRepository userRepository)
     {
         _brandAccessService = brandAccessService;
         _brandRepository = brandRepository;
+        _metricLedgerService = metricLedgerService;
         _metricRepository = metricRepository;
-        _metricBalanceRepository = metricBalanceRepository;
-        _stampTransactionRepository = stampTransactionRepository;
         _userRepository = userRepository;
     }
 
@@ -65,30 +61,19 @@ public class RedeemMetricHandler : ICommandHandler<RedeemMetricResponse, RedeemM
         if (!metric.IsActive)
             return Result.Fail("Metric is not active");
 
-        var balance = await _metricBalanceRepository.GetByUserAndMetricAsync(
+        var ledgerResult = await _metricLedgerService.RedeemAsync(
             command.Request.UserId,
             metric.BrandId,
             command.MetricDefinitionId,
+            command.Request.Amount,
+            command.Request.Comment,
             cancellationToken);
 
-        if (balance is null)
-            return Result.Fail("Metric balance not found");
+        if (ledgerResult.IsFailed)
+            return Result.Fail(ledgerResult.Errors);
 
-        var subtractResult = balance.Subtract(command.Request.Amount);
-        if (subtractResult.IsFailed)
-            return Result.Fail(subtractResult.Errors);
-
-        var transactionResult = StampTransaction.CreateRedeem(
-            balance.Id,
-            command.Request.Amount,
-            command.Request.Comment);
-
-        if (transactionResult.IsFailed)
-            return Result.Fail(transactionResult.Errors);
-
-        var transaction = transactionResult.Value;
-        _stampTransactionRepository.Add(transaction);
-        await _stampTransactionRepository.SaveAsync(cancellationToken);
+        var balance = ledgerResult.Value.Balance;
+        var transaction = ledgerResult.Value.Transaction;
 
         var response = new RedeemMetricResponse(
             transaction.Id,

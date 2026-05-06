@@ -8,7 +8,11 @@ public class StampTransactionConfiguration : IEntityTypeConfiguration<StampTrans
 {
     public void Configure(EntityTypeBuilder<StampTransaction> builder)
     {
-        builder.ToTable("stamp_transactions");
+        builder.ToTable("stamp_transactions", table =>
+        {
+            table.HasCheckConstraint("ck_stamp_transactions_amount_positive", "amount > 0");
+            table.HasCheckConstraint("ck_stamp_transactions_transaction_type", "transaction_type IN (1, 2)");
+        });
 
         builder.HasKey(st => st.Id);
 

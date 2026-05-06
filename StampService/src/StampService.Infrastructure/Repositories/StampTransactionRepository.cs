@@ -28,6 +28,20 @@ public class StampTransactionRepository : IStampTransactionRepository
             .ToArrayAsync(cancellationToken);
     }
 
+    public async Task<int> CalculateMetricBalanceValueAsync(
+        Guid metricBalanceId,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.StampTransactions
+            .AsNoTracking()
+            .Where(transaction => transaction.MetricBalanceId == metricBalanceId)
+            .Select(
+                transaction => transaction.Type == StampTransactionType.Issue
+                    ? (int?)transaction.Amount
+                    : -transaction.Amount)
+            .SumAsync(cancellationToken) ?? 0;
+    }
+
     public void Add(StampTransaction transaction)
     {
         _dbContext.StampTransactions.Add(transaction);

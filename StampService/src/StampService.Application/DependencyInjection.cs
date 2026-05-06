@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
 using StampService.Application.Auth;
+using StampService.Application.Metrics;
 using StampService.Application.Services;
 
 namespace StampService.Application;
@@ -25,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IBrandAccessService, BrandAccessService>();
         services.AddScoped<IBrandMembershipService, BrandMembershipService>();
+        services.AddScoped<IMetricLedgerService, MetricLedgerService>();
         services.AddScoped<ITelegramValidationService, TelegramValidationService>();
 
         return services;

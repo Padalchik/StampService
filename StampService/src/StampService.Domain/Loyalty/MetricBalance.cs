@@ -65,4 +65,17 @@ public class MetricBalance : BaseEntity
         Touch();
         return Result.Ok();
     }
+
+    public Result SetMaterializedValue(int value)
+    {
+        if (value < 0)
+            return Result.Fail("Materialized balance value cannot be negative");
+
+        if (Value == value)
+            return Result.Ok();
+
+        Value = value;
+        Touch();
+        return Result.Ok();
+    }
 }
