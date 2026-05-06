@@ -15,8 +15,7 @@ public static class RoleSeeder
         var rolesToSeed = new (string SystemName, string DisplayName)[]
         {
             (SystemRoles.Owner, "Owner"),
-            (SystemRoles.Staff, "Staff"),
-            (SystemRoles.Customer, "Customer")
+            (SystemRoles.Staff, "Staff")
         };
 
         foreach (var roleDefinition in rolesToSeed)

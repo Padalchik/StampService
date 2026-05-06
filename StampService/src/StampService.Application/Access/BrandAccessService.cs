@@ -26,7 +26,6 @@ public class BrandAccessService : IBrandAccessService
         {
             SystemRoles.Owner => true,
             SystemRoles.Staff => CanStaff(permission),
-            SystemRoles.Customer => CanCustomer(permission),
             _ => false
         };
     }
@@ -38,8 +37,4 @@ public class BrandAccessService : IBrandAccessService
             PermissionCode.BalanceView;
     }
 
-    private static bool CanCustomer(PermissionCode permission)
-    {
-        return permission is PermissionCode.BalanceView;
-    }
 }
