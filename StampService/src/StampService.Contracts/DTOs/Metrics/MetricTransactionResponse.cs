@@ -5,6 +5,7 @@ public record MetricTransactionResponse(
     Guid BalanceId,
     Guid MetricDefinitionId,
     Guid UserId,
+    string TransactionType,
     int Amount,
     string Comment,
     DateTime CreatedAt);

@@ -34,6 +34,7 @@ public class BrandAccessService : IBrandAccessService
     {
         return permission is
             PermissionCode.StampIssue or
+            PermissionCode.StampRedeem or
             PermissionCode.BalanceView;
     }
 

@@ -20,6 +20,10 @@ public class StampTransactionConfiguration : IEntityTypeConfiguration<StampTrans
             .IsRequired()
             .HasColumnName("metric_balance_id");
 
+        builder.Property(st => st.Type)
+            .IsRequired()
+            .HasColumnName("transaction_type");
+
         builder.Property(st => st.Amount)
             .IsRequired()
             .HasColumnName("amount");
