@@ -9,4 +9,9 @@ public interface IBrandMembershipService
         Guid brandId,
         Guid userId,
         CancellationToken cancellationToken);
+
+    Task<Result<BrandMembership>> AddStaffAsync(
+        Guid brandId,
+        Guid userId,
+        CancellationToken cancellationToken);
 }
