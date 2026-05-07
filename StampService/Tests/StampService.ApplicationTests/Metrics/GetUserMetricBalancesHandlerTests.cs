@@ -62,4 +62,18 @@ public class GetUserMetricBalancesHandlerTests
 
         Assert.True(result.IsFailed);
     }
+
+    [Fact]
+    public async Task Handle_WhenUserIdIsEmpty_ShouldFail()
+    {
+        var handler = new GetUserMetricBalancesHandler(
+            new FakeMetricBalanceRepository(),
+            new FakeUserRepository());
+
+        var result = await handler.Handle(
+            new GetUserMetricBalancesQuery(Guid.Empty),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+    }
 }

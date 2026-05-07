@@ -77,4 +77,74 @@ public class GetUserMetricTransactionsHandlerTests
 
         Assert.True(result.IsFailed);
     }
+
+    [Fact]
+    public async Task Handle_WhenSkipIsNegative_ShouldFail()
+    {
+        var handler = new GetUserMetricTransactionsHandler(
+            new FakeLoyaltyMetricRepository(),
+            new FakeMetricBalanceRepository(),
+            new FakeStampTransactionRepository(),
+            new FakeUserRepository());
+
+        var result = await handler.Handle(
+            new GetUserMetricTransactionsQuery(Guid.NewGuid(), Guid.NewGuid(), -1, 10),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTakeIsZero_ShouldFail()
+    {
+        var handler = new GetUserMetricTransactionsHandler(
+            new FakeLoyaltyMetricRepository(),
+            new FakeMetricBalanceRepository(),
+            new FakeStampTransactionRepository(),
+            new FakeUserRepository());
+
+        var result = await handler.Handle(
+            new GetUserMetricTransactionsQuery(Guid.NewGuid(), Guid.NewGuid(), 0, 0),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+    }
+
+    [Fact]
+    public async Task Handle_WhenMetricDoesNotExist_ShouldFail()
+    {
+        var user = User.Create("user").Value;
+        var userRepository = new FakeUserRepository();
+        userRepository.Add(user);
+        var handler = new GetUserMetricTransactionsHandler(
+            new FakeLoyaltyMetricRepository(),
+            new FakeMetricBalanceRepository(),
+            new FakeStampTransactionRepository(),
+            userRepository);
+
+        var result = await handler.Handle(
+            new GetUserMetricTransactionsQuery(Guid.NewGuid(), user.Id, 0, 10),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+    }
+
+    [Fact]
+    public async Task Handle_WhenUserDoesNotExist_ShouldFail()
+    {
+        var metricRepository = new FakeLoyaltyMetricRepository();
+        var metric = LoyaltyMetricDefinition.Create(Guid.NewGuid(), "stamp", "Stamps").Value;
+        metricRepository.AddExisting(metric);
+        var handler = new GetUserMetricTransactionsHandler(
+            metricRepository,
+            new FakeMetricBalanceRepository(),
+            new FakeStampTransactionRepository(),
+            new FakeUserRepository());
+
+        var result = await handler.Handle(
+            new GetUserMetricTransactionsQuery(metric.Id, Guid.NewGuid(), 0, 10),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+    }
 }

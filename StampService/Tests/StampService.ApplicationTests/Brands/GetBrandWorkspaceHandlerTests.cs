@@ -78,4 +78,52 @@ public class GetBrandWorkspaceHandlerTests
 
         Assert.True(result.IsFailed);
     }
+
+    [Fact]
+    public async Task Handle_WhenUserDoesNotExist_ShouldFail()
+    {
+        var handler = new GetBrandWorkspaceHandler(
+            new BrandAccessService(new FakeBrandMembershipRepository()),
+            new FakeBrandMembershipRepository(),
+            new FakeUserRepository());
+
+        var result = await handler.Handle(
+            new GetBrandWorkspaceQuery(Guid.NewGuid(), Guid.NewGuid()),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+    }
+
+    [Fact]
+    public async Task Handle_WhenUserIdIsEmpty_ShouldFail()
+    {
+        var handler = new GetBrandWorkspaceHandler(
+            new BrandAccessService(new FakeBrandMembershipRepository()),
+            new FakeBrandMembershipRepository(),
+            new FakeUserRepository());
+
+        var result = await handler.Handle(
+            new GetBrandWorkspaceQuery(Guid.Empty, Guid.NewGuid()),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+    }
+
+    [Fact]
+    public async Task Handle_WhenBrandIdIsEmpty_ShouldFail()
+    {
+        var user = User.Create("user").Value;
+        var userRepository = new FakeUserRepository();
+        userRepository.Add(user);
+        var handler = new GetBrandWorkspaceHandler(
+            new BrandAccessService(new FakeBrandMembershipRepository()),
+            new FakeBrandMembershipRepository(),
+            userRepository);
+
+        var result = await handler.Handle(
+            new GetBrandWorkspaceQuery(user.Id, Guid.Empty),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+    }
 }

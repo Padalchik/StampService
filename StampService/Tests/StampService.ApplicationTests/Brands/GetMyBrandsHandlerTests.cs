@@ -39,4 +39,28 @@ public class GetMyBrandsHandlerTests
         Assert.True(result.IsSuccess);
         Assert.Empty(result.Value.Brands);
     }
+
+    [Fact]
+    public async Task Handle_WhenUserDoesNotExist_ShouldFail()
+    {
+        var handler = new GetMyBrandsHandler(
+            new FakeBrandMembershipRepository(),
+            new FakeUserRepository());
+
+        var result = await handler.Handle(new GetMyBrandsQuery(Guid.NewGuid()), CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+    }
+
+    [Fact]
+    public async Task Handle_WhenUserIdIsEmpty_ShouldFail()
+    {
+        var handler = new GetMyBrandsHandler(
+            new FakeBrandMembershipRepository(),
+            new FakeUserRepository());
+
+        var result = await handler.Handle(new GetMyBrandsQuery(Guid.Empty), CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+    }
 }

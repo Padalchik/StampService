@@ -69,4 +69,23 @@ public class EnsureTelegramUserHandlerTests
 
         Assert.True(result.IsFailed);
     }
+
+    [Fact]
+    public async Task Handle_WhenTelegramUserHasNoNames_ShouldUseTelegramIdAsDisplayName()
+    {
+        var repository = new FakeUserRepository();
+        var handler = new EnsureTelegramUserHandler(repository);
+
+        var result = await handler.Handle(
+            new EnsureTelegramUserCommand(
+                123456,
+                null,
+                null,
+                null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("123456", result.Value.DisplayName);
+        Assert.Equal("123456", repository.Users.Single().Name);
+    }
 }

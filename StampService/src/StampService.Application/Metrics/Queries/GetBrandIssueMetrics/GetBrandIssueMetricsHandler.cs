@@ -1,6 +1,7 @@
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Users;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Access;
 
@@ -10,13 +11,16 @@ public class GetBrandIssueMetricsHandler : IQueryHandler<IReadOnlyCollection<Met
 {
     private readonly IBrandAccessService _brandAccessService;
     private readonly ILoyaltyMetricRepository _metricRepository;
+    private readonly IUserRepository _userRepository;
 
     public GetBrandIssueMetricsHandler(
         IBrandAccessService brandAccessService,
-        ILoyaltyMetricRepository metricRepository)
+        ILoyaltyMetricRepository metricRepository,
+        IUserRepository userRepository)
     {
         _brandAccessService = brandAccessService;
         _metricRepository = metricRepository;
+        _userRepository = userRepository;
     }
 
     public async Task<Result<IReadOnlyCollection<MetricResponse>>> Handle(
@@ -28,6 +32,10 @@ public class GetBrandIssueMetricsHandler : IQueryHandler<IReadOnlyCollection<Met
 
         if (query.BrandId == Guid.Empty)
             return Result.Fail("Brand id cannot be empty");
+
+        var userExists = await _userRepository.ExistsAsync(query.UserId, cancellationToken);
+        if (!userExists)
+            return Result.Fail("User not found");
 
         var canIssue = await _brandAccessService.CanAsync(
             query.UserId,
