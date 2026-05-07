@@ -9,10 +9,14 @@ public class EnsureTelegramUserHandler
     : ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand>
 {
     private readonly IUserRepository _userRepository;
+    private readonly ICustomerCodeGenerator _customerCodeGenerator;
 
-    public EnsureTelegramUserHandler(IUserRepository userRepository)
+    public EnsureTelegramUserHandler(
+        IUserRepository userRepository,
+        ICustomerCodeGenerator customerCodeGenerator)
     {
         _userRepository = userRepository;
+        _customerCodeGenerator = customerCodeGenerator;
     }
 
     public async Task<Result<EnsureTelegramUserResponse>> Handle(
@@ -33,11 +37,13 @@ public class EnsureTelegramUserHandler
             return Result.Ok(new EnsureTelegramUserResponse(
                 user.Id,
                 Created: false,
-                user.Name));
+                user.Name,
+                user.CustomerCode));
         }
 
         var displayName = GetDisplayName(command);
-        var userResult = User.Create(displayName);
+        var customerCode = await _customerCodeGenerator.GenerateAsync(cancellationToken);
+        var userResult = User.Create(displayName, customerCode);
         if (userResult.IsFailed)
             return Result.Fail(userResult.Errors);
 
@@ -65,7 +71,8 @@ public class EnsureTelegramUserHandler
         return Result.Ok(new EnsureTelegramUserResponse(
             user.Id,
             Created: true,
-            user.Name));
+            user.Name,
+            user.CustomerCode));
     }
 
     private static string GetDisplayName(EnsureTelegramUserCommand command)

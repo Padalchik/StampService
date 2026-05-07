@@ -13,7 +13,7 @@ public sealed class IssueMetricRecipientScreen : IScreen
         return ValueTask.FromResult(new ScreenView(
             "<b>Выдать метрику</b>\n\n" +
             $"Метрика: {metricName}\n\n" +
-            "Введите Telegram user id получателя.")
+            "Введите 4-значный клиентский код получателя.")
             .AwaitInput<EnterIssueRecipientAction>()
             .BackButton());
     }

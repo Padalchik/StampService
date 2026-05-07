@@ -1,3 +1,4 @@
+using StampService.Application.Users;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.User;
@@ -10,7 +11,9 @@ public class EnsureTelegramUserHandlerTests
     public async Task Handle_WhenTelegramUserDoesNotExist_ShouldCreateUserWithTelegramIdentity()
     {
         var repository = new FakeUserRepository();
-        var handler = new EnsureTelegramUserHandler(repository);
+        var handler = new EnsureTelegramUserHandler(
+            repository,
+            new CustomerCodeGenerator(repository));
 
         var result = await handler.Handle(
             new EnsureTelegramUserCommand(
@@ -23,6 +26,7 @@ public class EnsureTelegramUserHandlerTests
         Assert.True(result.IsSuccess);
         Assert.True(result.Value.Created);
         Assert.Equal("ivan", result.Value.DisplayName);
+        Assert.Matches("^[0-9]{4}$", result.Value.CustomerCode);
         Assert.Single(repository.Users);
         Assert.Equal(1, repository.SaveCount);
         Assert.Contains(
@@ -37,7 +41,9 @@ public class EnsureTelegramUserHandlerTests
         var existingUser = User.Create("existing").Value;
         existingUser.AddIdentity(IdentityType.Telegram, "123456", "{}");
         repository.Add(existingUser);
-        var handler = new EnsureTelegramUserHandler(repository);
+        var handler = new EnsureTelegramUserHandler(
+            repository,
+            new CustomerCodeGenerator(repository));
 
         var result = await handler.Handle(
             new EnsureTelegramUserCommand(
@@ -50,6 +56,7 @@ public class EnsureTelegramUserHandlerTests
         Assert.True(result.IsSuccess);
         Assert.False(result.Value.Created);
         Assert.Equal(existingUser.Id, result.Value.UserId);
+        Assert.Equal(existingUser.CustomerCode, result.Value.CustomerCode);
         Assert.Single(repository.Users);
         Assert.Equal(0, repository.SaveCount);
     }
@@ -57,7 +64,10 @@ public class EnsureTelegramUserHandlerTests
     [Fact]
     public async Task Handle_WhenTelegramUserIdIsInvalid_ShouldFail()
     {
-        var handler = new EnsureTelegramUserHandler(new FakeUserRepository());
+        var repository = new FakeUserRepository();
+        var handler = new EnsureTelegramUserHandler(
+            repository,
+            new CustomerCodeGenerator(repository));
 
         var result = await handler.Handle(
             new EnsureTelegramUserCommand(
@@ -74,7 +84,9 @@ public class EnsureTelegramUserHandlerTests
     public async Task Handle_WhenTelegramUserHasNoNames_ShouldUseTelegramIdAsDisplayName()
     {
         var repository = new FakeUserRepository();
-        var handler = new EnsureTelegramUserHandler(repository);
+        var handler = new EnsureTelegramUserHandler(
+            repository,
+            new CustomerCodeGenerator(repository));
 
         var result = await handler.Handle(
             new EnsureTelegramUserCommand(

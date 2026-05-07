@@ -9,6 +9,10 @@ public interface IUserRepository
         string identityKey,
         CancellationToken cancellationToken);
 
+    Task<User?> GetByCustomerCodeAsync(string customerCode, CancellationToken cancellationToken);
+
+    Task<bool> CustomerCodeExistsAsync(string customerCode, CancellationToken cancellationToken);
+
     Task<bool> ExistsAsync(Guid userId, CancellationToken cancellationToken);
 
     void Add(User user);

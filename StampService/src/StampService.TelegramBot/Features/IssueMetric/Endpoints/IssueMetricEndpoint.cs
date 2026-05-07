@@ -1,7 +1,9 @@
 using StampService.Application.Abstractions;
 using StampService.Application.Metrics.Commands.IssueMetric;
+using StampService.Application.Users;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Metrics;
+using StampService.Domain.Loyalty;
 using StampService.TelegramBot.Features.IssueMetric.Actions;
 using StampService.TelegramBot.Features.IssueMetric.Screens;
 using TelegramBotFlow.Core.Context;
@@ -19,6 +21,7 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         app.MapAction<SelectIssueMetricAction, SelectIssueMetricPayload>(SelectMetricAsync);
         app.MapInput<EnterIssueRecipientAction>(EnterRecipientAsync);
         app.MapInput<EnterIssueAmountAction>(EnterAmountAsync);
+        app.MapInput<EnterIssueCommentAction>(EnterCommentAsync);
     }
 
     private static Task<IEndpointResult> SelectMetricAsync(
@@ -33,55 +36,69 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
 
     private static async Task<IEndpointResult> EnterRecipientAsync(
         UpdateContext ctx,
-        ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler)
+        IRecipientResolver recipientResolver)
     {
-        if (!long.TryParse(ctx.MessageText, out var recipientTelegramUserId) || recipientTelegramUserId <= 0)
-        {
-            return BotResults.ShowView(new ScreenView(
-                "Telegram user id должен быть положительным числом. Попробуйте еще раз.")
-                .AwaitInput<EnterIssueRecipientAction>()
-                .BackButton());
-        }
-
-        var recipientResult = await ensureUserHandler.Handle(
-            new EnsureTelegramUserCommand(
-                recipientTelegramUserId,
-                FirstName: null,
-                LastName: null,
-                Username: null),
+        var recipientResult = await recipientResolver.ResolveAsync(
+            ctx.MessageText ?? string.Empty,
             ctx.CancellationToken);
 
         if (recipientResult.IsFailed)
         {
             return BotResults.ShowView(new ScreenView(
-                "Не удалось создать или найти получателя. Попробуйте еще раз.")
+                "Клиентский код должен состоять из 4 цифр и принадлежать существующему пользователю. Попробуйте еще раз.")
                 .AwaitInput<EnterIssueRecipientAction>()
                 .BackButton());
         }
 
         ctx.Session?.Data.Set(IssueMetricSessionKeys.RecipientUserId, recipientResult.Value.UserId);
-        ctx.Session?.Data.Set(IssueMetricSessionKeys.RecipientTelegramUserId, recipientTelegramUserId);
+        ctx.Session?.Data.Set(IssueMetricSessionKeys.RecipientCustomerCode, recipientResult.Value.PublicIdentifier);
 
         return BotResults.NavigateTo<IssueMetricAmountScreen>();
     }
 
-    private static async Task<IEndpointResult> EnterAmountAsync(
+    private static Task<IEndpointResult> EnterAmountAsync(
+        UpdateContext ctx)
+    {
+        if (!int.TryParse(ctx.MessageText, out var amount) || amount <= 0)
+        {
+            return Task.FromResult(BotResults.ShowView(new ScreenView(
+                "Количество должно быть положительным числом. Попробуйте еще раз.")
+                .AwaitInput<EnterIssueAmountAction>()
+                .BackButton()));
+        }
+
+        ctx.Session?.Data.Set(IssueMetricSessionKeys.Amount, amount);
+
+        return Task.FromResult(BotResults.NavigateTo<IssueMetricCommentScreen>());
+    }
+
+    private static async Task<IEndpointResult> EnterCommentAsync(
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
         ICommandHandler<IssueMetricResponse, IssueMetricCommand> issueMetricHandler)
     {
-        if (!int.TryParse(ctx.MessageText, out var amount) || amount <= 0)
+        var comment = ctx.MessageText?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(comment))
         {
             return BotResults.ShowView(new ScreenView(
-                "Количество должно быть положительным числом. Попробуйте еще раз.")
-                .AwaitInput<EnterIssueAmountAction>()
+                "Комментарий обязателен. Попробуйте еще раз.")
+                .AwaitInput<EnterIssueCommentAction>()
+                .BackButton());
+        }
+
+        if (comment.Length > Constants.MAX_TRANSACTION_COMMENT_LENGTH)
+        {
+            return BotResults.ShowView(new ScreenView(
+                $"Комментарий не должен быть длиннее {Constants.MAX_TRANSACTION_COMMENT_LENGTH} символов. Попробуйте еще раз.")
+                .AwaitInput<EnterIssueCommentAction>()
                 .BackButton());
         }
 
         var metricDefinitionId = ctx.Session?.Data.Get<Guid>(IssueMetricSessionKeys.MetricDefinitionId) ?? Guid.Empty;
         var recipientUserId = ctx.Session?.Data.Get<Guid>(IssueMetricSessionKeys.RecipientUserId) ?? Guid.Empty;
+        var amount = ctx.Session?.Data.Get<int>(IssueMetricSessionKeys.Amount) ?? 0;
 
-        if (metricDefinitionId == Guid.Empty || recipientUserId == Guid.Empty)
+        if (metricDefinitionId == Guid.Empty || recipientUserId == Guid.Empty || amount <= 0)
             return BotResults.ShowView(new ScreenView("Сценарий выдачи устарел. Начните заново.").BackButton());
 
         var from = ctx.Update.Message?.From ?? ctx.Update.CallbackQuery?.From;
@@ -103,7 +120,7 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
                 new IssueMetricRequest(
                     recipientUserId,
                     amount,
-                    "Issued from Telegram bot")),
+                    comment)),
             ctx.CancellationToken);
 
         if (issueResult.IsFailed)
@@ -123,6 +140,7 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.MetricDefinitionId);
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.MetricName);
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.RecipientUserId);
-        ctx.Session?.Data.Remove(IssueMetricSessionKeys.RecipientTelegramUserId);
+        ctx.Session?.Data.Remove(IssueMetricSessionKeys.RecipientCustomerCode);
+        ctx.Session?.Data.Remove(IssueMetricSessionKeys.Amount);
     }
 }

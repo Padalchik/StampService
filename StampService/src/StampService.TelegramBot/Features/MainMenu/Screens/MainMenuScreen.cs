@@ -6,6 +6,7 @@ using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Brands;
 using StampService.TelegramBot.Features.Brands.Actions;
 using StampService.TelegramBot.Features.Brands.Screens;
+using StampService.TelegramBot.Features.CustomerCode.Screens;
 using StampService.TelegramBot.Features.MetricBalances.Screens;
 
 namespace StampService.TelegramBot.Features.MainMenu.Screens;
@@ -34,6 +35,8 @@ public sealed class MainMenuScreen : IScreen
         var view = new ScreenView(
             $"{greeting}\n\n" +
             "Выберите действие:")
+            .NavigateButton<MyCustomerCodeScreen>("Мой код")
+            .Row()
             .NavigateButton<MyBalancesScreen>("Мои балансы");
 
         var userResult = await _ensureUserHandler.Handle(
