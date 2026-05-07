@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using StampService.API.Middlewares;
 using StampService.API.Extensions;
 using StampService.Application;
 using StampService.Application.Services;
@@ -26,6 +27,8 @@ await using (var scope = app.Services.CreateAsyncScope())
 
     await RoleSeeder.SeedSystemRolesAsync(dbContext);
 }
+
+app.UseCustomExceptionHandling();
 
 if (app.Environment.IsDevelopment())
 {
