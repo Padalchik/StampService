@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using StampService.Application.Access;
+using StampService.Application.Brands;
 using StampService.Domain.Access;
 
 namespace StampService.Infrastructure.Repositories;
@@ -23,6 +24,21 @@ public class BrandMembershipRepository : IBrandMembershipRepository
             .Where(membership => membership.UserId == userId && membership.BrandId == brandId)
             .Select(membership => membership.Role.SystemName)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyCollection<UserBrandMembershipReadModel>> GetUserBrandMembershipsAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.BrandMemberships
+            .AsNoTracking()
+            .Where(membership => membership.UserId == userId)
+            .OrderBy(membership => membership.Brand.Name)
+            .Select(membership => new UserBrandMembershipReadModel(
+                membership.BrandId,
+                membership.Brand.Name,
+                membership.Role.SystemName))
+            .ToArrayAsync(cancellationToken);
     }
 
     public async Task<BrandMembership?> GetByBrandAndUserAsync(
