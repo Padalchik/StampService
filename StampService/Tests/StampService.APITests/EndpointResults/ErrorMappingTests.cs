@@ -73,6 +73,18 @@ public class ErrorMappingTests
     }
 
     [Fact]
+    public void GetStatusCode_ForDomainNotFoundError_ShouldReturnNotFound()
+    {
+        var error = DomainError.NotFound(
+            "some_entity.not_found",
+            "Entity not found");
+
+        var statusCode = ErrorMapping.GetStatusCode([error]);
+
+        Assert.Equal(StatusCodes.Status404NotFound, statusCode);
+    }
+
+    [Fact]
     public void GetStatusCode_ForAppAndDomainErrorsWithSameType_ShouldReturnThatStatusCode()
     {
         var statusCode = ErrorMapping.GetStatusCode([

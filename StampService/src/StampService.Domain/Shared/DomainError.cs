@@ -32,6 +32,11 @@ public class DomainError : Error
         return new DomainError(code, message, DomainErrorType.Validation, invalidField);
     }
 
+    public static DomainError NotFound(string code, string message, string? invalidField = null)
+    {
+        return new DomainError(code, message, DomainErrorType.NotFound, invalidField);
+    }
+
     public static DomainError Conflict(string code, string message, string? invalidField = null)
     {
         return new DomainError(code, message, DomainErrorType.Conflict, invalidField);
