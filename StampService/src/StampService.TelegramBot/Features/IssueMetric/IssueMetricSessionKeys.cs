@@ -7,4 +7,5 @@ public static class IssueMetricSessionKeys
     public const string RecipientUserId = "issue_metric.recipient_user_id";
     public const string RecipientCustomerCode = "issue_metric.recipient_customer_code";
     public const string Amount = "issue_metric.amount";
+    public const string Comment = "issue_metric.comment";
 }

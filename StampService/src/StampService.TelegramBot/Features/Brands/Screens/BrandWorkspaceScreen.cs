@@ -12,6 +12,7 @@ namespace StampService.TelegramBot.Features.Brands.Screens;
 public sealed class BrandWorkspaceScreen : IScreen
 {
     public const string BrandIdSessionKey = "brand_workspace.brand_id";
+    public const string BrandNameSessionKey = "brand_workspace.brand_name";
 
     private readonly ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> _ensureUserHandler;
     private readonly IQueryHandler<BrandWorkspaceResponse, GetBrandWorkspaceQuery> _workspaceHandler;
@@ -49,6 +50,8 @@ public sealed class BrandWorkspaceScreen : IScreen
             return new ScreenView("Не удалось открыть бренд.").BackButton();
 
         var workspace = workspaceResult.Value;
+        ctx.Session?.Data.Set(BrandNameSessionKey, workspace.BrandName);
+
         var view = new ScreenView(
             $"<b>{Html(workspace.BrandName)}</b>\n" +
             $"Роль: {Html(workspace.RoleSystemName)}\n\n" +
