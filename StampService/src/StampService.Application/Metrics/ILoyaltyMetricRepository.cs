@@ -8,6 +8,10 @@ public interface ILoyaltyMetricRepository
         Guid metricDefinitionId,
         CancellationToken cancellationToken);
 
+    Task<IReadOnlyCollection<LoyaltyMetricDefinition>> GetByBrandAsync(
+        Guid brandId,
+        CancellationToken cancellationToken);
+
     Task<bool> CodeExistsAsync(
         Guid brandId,
         string code,

@@ -19,6 +19,18 @@ public class FakeLoyaltyMetricRepository : ILoyaltyMetricRepository
         return Task.FromResult(_metrics.FirstOrDefault(metric => metric.Id == metricDefinitionId));
     }
 
+    public Task<IReadOnlyCollection<LoyaltyMetricDefinition>> GetByBrandAsync(
+        Guid brandId,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyCollection<LoyaltyMetricDefinition> result = _metrics
+            .Where(metric => metric.BrandId == brandId)
+            .OrderBy(metric => metric.Name)
+            .ToArray();
+
+        return Task.FromResult(result);
+    }
+
     public Task<bool> CodeExistsAsync(
         Guid brandId,
         string code,

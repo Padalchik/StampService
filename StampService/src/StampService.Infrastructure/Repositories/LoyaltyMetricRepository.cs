@@ -22,6 +22,17 @@ public class LoyaltyMetricRepository : ILoyaltyMetricRepository
             .FirstOrDefaultAsync(metric => metric.Id == metricDefinitionId, cancellationToken);
     }
 
+    public async Task<IReadOnlyCollection<LoyaltyMetricDefinition>> GetByBrandAsync(
+        Guid brandId,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.LoyaltyMetricDefinitions
+            .AsNoTracking()
+            .Where(metric => metric.BrandId == brandId)
+            .OrderBy(metric => metric.Name)
+            .ToArrayAsync(cancellationToken);
+    }
+
     public async Task<bool> CodeExistsAsync(
         Guid brandId,
         string code,
