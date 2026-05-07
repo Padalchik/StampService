@@ -3,6 +3,7 @@ using StampService.Application.Abstractions;
 using StampService.Application.Metrics.Queries.GetUserMetricBalances;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Metrics;
+using StampService.TelegramBot.Features.MetricBalances.Actions;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
 
@@ -50,14 +51,24 @@ public sealed class MyBalancesScreen : IScreen
                 .BackButton();
         }
 
-        var lines = balancesResult.Value.Balances
-            .Select(balance =>
-                $"• <b>{Html(balance.BrandName)}</b>: {Html(balance.MetricName)} - {balance.Value}");
-
-        return new ScreenView(
+        var view = new ScreenView(
             "<b>Мои балансы</b>\n\n" +
-            string.Join("\n", lines))
-            .BackButton();
+            string.Join(
+                "\n",
+                balancesResult.Value.Balances.Select(balance =>
+                    $"• <b>{Html(balance.BrandName)}</b>: {Html(balance.MetricName)} - {balance.Value}")));
+
+        foreach (var balance in balancesResult.Value.Balances)
+        {
+            view.Row().Button<ViewBalanceHistoryAction, ViewBalanceHistoryPayload>(
+                $"История: {balance.MetricName}",
+                new ViewBalanceHistoryPayload(
+                    balance.MetricDefinitionId,
+                    balance.BrandName,
+                    balance.MetricName));
+        }
+
+        return view.BackButton();
     }
 
     private static string Html(string value)
