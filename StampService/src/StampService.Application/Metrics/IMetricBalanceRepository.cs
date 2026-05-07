@@ -14,6 +14,10 @@ public interface IMetricBalanceRepository
         Guid metricDefinitionId,
         CancellationToken cancellationToken);
 
+    Task<IReadOnlyCollection<UserMetricBalanceReadModel>> GetUserBalancesAsync(
+        Guid userId,
+        CancellationToken cancellationToken);
+
     void Add(MetricBalance balance);
 
     Task SaveAsync(CancellationToken cancellationToken);

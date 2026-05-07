@@ -4,6 +4,7 @@ using StampService.Application.Access;
 using StampService.Application.Auth;
 using StampService.Application.Metrics;
 using StampService.Application.Services;
+using StampService.Application.Users;
 
 namespace StampService.Application;
 
@@ -28,6 +29,8 @@ public static class DependencyInjection
         services.AddScoped<IBrandMembershipService, BrandMembershipService>();
         services.AddScoped<IMetricLedgerService, MetricLedgerService>();
         services.AddScoped<ITelegramValidationService, TelegramValidationService>();
+        services.AddScoped<ICustomerCodeGenerator, CustomerCodeGenerator>();
+        services.AddScoped<IRecipientResolver, RecipientResolver>();
 
         return services;
     }

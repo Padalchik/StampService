@@ -1,0 +1,18 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/TelegramBotFlow.App/TelegramBotFlow.App.csproj" />
+    <Project Path="src/TelegramBotFlow.Core.Abstractions/TelegramBotFlow.Core.Abstractions.csproj" />
+    <Project Path="src/TelegramBotFlow.Data.Postgres/TelegramBotFlow.Data.Postgres.csproj" />
+    <Project Path="src/TelegramBotFlow.Core.Redis/TelegramBotFlow.Core.Redis.csproj" />
+    <Project Path="src/TelegramBotFlow.Core/TelegramBotFlow.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TelegramBotFlow.Core.Tests/TelegramBotFlow.Core.Tests.csproj" />
+    <Project Path="tests/TelegramBotFlow.IntegrationTests/TelegramBotFlow.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

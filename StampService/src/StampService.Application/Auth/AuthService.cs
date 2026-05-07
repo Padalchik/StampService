@@ -12,15 +12,18 @@ public class AuthService : IAuthService
     private readonly IUserRepository _userRepository;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly ITelegramValidationService _telegramValidationService;
+    private readonly ICustomerCodeGenerator _customerCodeGenerator;
 
     public AuthService(
         IUserRepository userRepository,
         IJwtTokenService jwtTokenService,
-        ITelegramValidationService telegramValidationService)
+        ITelegramValidationService telegramValidationService,
+        ICustomerCodeGenerator customerCodeGenerator)
     {
         _userRepository = userRepository;
         _jwtTokenService = jwtTokenService;
         _telegramValidationService = telegramValidationService;
+        _customerCodeGenerator = customerCodeGenerator;
     }
 
     public async Task<Result<AuthResponse>> LoginAsync(
@@ -38,7 +41,8 @@ public class AuthService : IAuthService
 
         if (user is null)
         {
-            var userResult = User.Create(GetDisplayName(request));
+            var customerCode = await _customerCodeGenerator.GenerateAsync(cancellationToken);
+            var userResult = User.Create(GetDisplayName(request), customerCode);
             if (userResult.IsFailed)
                 return Result.Fail(userResult.Errors);
 

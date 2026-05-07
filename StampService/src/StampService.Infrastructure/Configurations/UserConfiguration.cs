@@ -20,6 +20,14 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasColumnName("name");
 
+        builder.Property(u => u.CustomerCode)
+            .IsRequired()
+            .HasMaxLength(User.CustomerCodeLength)
+            .HasColumnName("customer_code");
+
+        builder.HasIndex(u => u.CustomerCode)
+            .IsUnique();
+
         builder.HasMany(u => u.Identities)
             .WithOne(ui => ui.User)
             .HasForeignKey(ui => ui.UserId)
