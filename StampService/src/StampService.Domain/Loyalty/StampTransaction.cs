@@ -42,16 +42,28 @@ public class StampTransaction : BaseEntity
         string comment)
     {
         if (metricBalanceId == Guid.Empty)
-            return Result.Fail("MetricBalanceId cannot be empty GUID");
+            return Result.Fail(DomainError.Validation(
+                "stamp_transaction.metric_balance_id_empty",
+                "MetricBalanceId cannot be empty GUID",
+                nameof(metricBalanceId)));
 
         if (amount <= 0)
-            return Result.Fail("Amount must be greater than zero");
+            return Result.Fail(DomainError.Validation(
+                "stamp_transaction.amount_not_positive",
+                "Amount must be greater than zero",
+                nameof(amount)));
 
         if (string.IsNullOrWhiteSpace(comment))
-            return Result.Fail("Comment cannot be empty");
+            return Result.Fail(DomainError.Validation(
+                "stamp_transaction.comment_required",
+                "Comment cannot be empty",
+                nameof(comment)));
 
         if (comment.Length > Constants.MAX_TRANSACTION_COMMENT_LENGTH)
-            return Result.Fail($"Comment must not exceed {Constants.MAX_TRANSACTION_COMMENT_LENGTH} characters");
+            return Result.Fail(DomainError.Validation(
+                "stamp_transaction.comment_too_long",
+                $"Comment must not exceed {Constants.MAX_TRANSACTION_COMMENT_LENGTH} characters",
+                nameof(comment)));
 
         return Result.Ok(new StampTransaction(metricBalanceId, type, amount, comment.Trim()));
     }

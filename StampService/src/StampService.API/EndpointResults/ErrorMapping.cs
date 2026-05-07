@@ -1,5 +1,6 @@
 using FluentResults;
 using StampService.Application.Errors;
+using StampService.Domain.Shared;
 
 namespace StampService.API.EndpointResults;
 
@@ -38,31 +39,79 @@ public static class ErrorMapping
                 appError.InvalidField);
         }
 
+        if (error is DomainError domainError)
+        {
+            return new ApiErrorResponse(
+                domainError.Code,
+                domainError.Message,
+                domainError.Type.ToString(),
+                domainError.InvalidField);
+        }
+
         return new ApiErrorResponse(
             "error.untyped",
             error.Message,
-            AppErrorType.Validation.ToString(),
+            ResponseErrorType.Validation.ToString(),
             null);
     }
 
-    private static AppErrorType GetErrorType(IError error)
+    private static ResponseErrorType GetErrorType(IError error)
     {
-        return error is AppError appError
-            ? appError.Type
-            : AppErrorType.Validation;
+        return error switch
+        {
+            AppError appError => MapAppErrorType(appError.Type),
+            DomainError domainError => MapDomainErrorType(domainError.Type),
+            _ => ResponseErrorType.Validation
+        };
     }
 
-    private static int GetStatusCode(AppErrorType errorType)
+    private static int GetStatusCode(ResponseErrorType errorType)
     {
         return errorType switch
         {
-            AppErrorType.Validation => StatusCodes.Status400BadRequest,
-            AppErrorType.NotFound => StatusCodes.Status404NotFound,
-            AppErrorType.Conflict => StatusCodes.Status409Conflict,
-            AppErrorType.Authentication => StatusCodes.Status401Unauthorized,
-            AppErrorType.Authorization => StatusCodes.Status403Forbidden,
-            AppErrorType.Failure => StatusCodes.Status500InternalServerError,
+            ResponseErrorType.Validation => StatusCodes.Status400BadRequest,
+            ResponseErrorType.NotFound => StatusCodes.Status404NotFound,
+            ResponseErrorType.Conflict => StatusCodes.Status409Conflict,
+            ResponseErrorType.Authentication => StatusCodes.Status401Unauthorized,
+            ResponseErrorType.Authorization => StatusCodes.Status403Forbidden,
+            ResponseErrorType.Failure => StatusCodes.Status500InternalServerError,
             _ => StatusCodes.Status500InternalServerError
         };
+    }
+
+    private static ResponseErrorType MapAppErrorType(AppErrorType errorType)
+    {
+        return errorType switch
+        {
+            AppErrorType.Validation => ResponseErrorType.Validation,
+            AppErrorType.NotFound => ResponseErrorType.NotFound,
+            AppErrorType.Conflict => ResponseErrorType.Conflict,
+            AppErrorType.Authentication => ResponseErrorType.Authentication,
+            AppErrorType.Authorization => ResponseErrorType.Authorization,
+            AppErrorType.Failure => ResponseErrorType.Failure,
+            _ => ResponseErrorType.Failure
+        };
+    }
+
+    private static ResponseErrorType MapDomainErrorType(DomainErrorType errorType)
+    {
+        return errorType switch
+        {
+            DomainErrorType.Validation => ResponseErrorType.Validation,
+            DomainErrorType.NotFound => ResponseErrorType.NotFound,
+            DomainErrorType.Conflict => ResponseErrorType.Conflict,
+            DomainErrorType.Failure => ResponseErrorType.Failure,
+            _ => ResponseErrorType.Failure
+        };
+    }
+
+    private enum ResponseErrorType
+    {
+        Validation,
+        NotFound,
+        Failure,
+        Conflict,
+        Authentication,
+        Authorization
     }
 }

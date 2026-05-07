@@ -29,19 +29,34 @@ public class LoyaltyMetricDefinition : BaseEntity
     public static Result<LoyaltyMetricDefinition> Create(Guid brandId, string code, string name)
     {
         if (brandId == Guid.Empty)
-            return Result.Fail("BrandId не может быть пустым GUID");
+            return Result.Fail(DomainError.Validation(
+                "metric_definition.brand_id_empty",
+                "BrandId не может быть пустым GUID",
+                nameof(brandId)));
 
         if (string.IsNullOrWhiteSpace(code))
-            return Result.Fail("Code не может быть пустым");
+            return Result.Fail(DomainError.Validation(
+                "metric_definition.code_required",
+                "Code не может быть пустым",
+                nameof(code)));
 
         if (code.Length > Constants.MAX_METRIC_CODE_LENGTH)
-            return Result.Fail($"Code не должен превышать {Constants.MAX_METRIC_CODE_LENGTH} символов");
+            return Result.Fail(DomainError.Validation(
+                "metric_definition.code_too_long",
+                $"Code не должен превышать {Constants.MAX_METRIC_CODE_LENGTH} символов",
+                nameof(code)));
 
         if (string.IsNullOrWhiteSpace(name))
-            return Result.Fail("Name не может быть пустым");
+            return Result.Fail(DomainError.Validation(
+                "metric_definition.name_required",
+                "Name не может быть пустым",
+                nameof(name)));
 
         if (name.Length > Constants.MAX_METRIC_NAME_LENGTH)
-            return Result.Fail($"Name не должен превышать {Constants.MAX_METRIC_NAME_LENGTH} символов");
+            return Result.Fail(DomainError.Validation(
+                "metric_definition.name_too_long",
+                $"Name не должен превышать {Constants.MAX_METRIC_NAME_LENGTH} символов",
+                nameof(name)));
 
         var definition = new LoyaltyMetricDefinition(brandId, code.Trim(), name.Trim());
         return Result.Ok(definition);
@@ -76,10 +91,16 @@ public class LoyaltyMetricDefinition : BaseEntity
     public Result UpdateName(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
-            return Result.Fail("Name не может быть пустым");
+            return Result.Fail(DomainError.Validation(
+                "metric_definition.name_required",
+                "Name не может быть пустым",
+                nameof(name)));
 
         if (name.Length > Constants.MAX_METRIC_NAME_LENGTH)
-            return Result.Fail($"Name не должен превышать {Constants.MAX_METRIC_NAME_LENGTH} символов");
+            return Result.Fail(DomainError.Validation(
+                "metric_definition.name_too_long",
+                $"Name не должен превышать {Constants.MAX_METRIC_NAME_LENGTH} символов",
+                nameof(name)));
 
         Name = name.Trim();
         Touch();
@@ -89,10 +110,16 @@ public class LoyaltyMetricDefinition : BaseEntity
     public Result UpdateCode(string code)
     {
         if (string.IsNullOrWhiteSpace(code))
-            return Result.Fail("Code не может быть пустым");
+            return Result.Fail(DomainError.Validation(
+                "metric_definition.code_required",
+                "Code не может быть пустым",
+                nameof(code)));
 
         if (code.Length > Constants.MAX_METRIC_CODE_LENGTH)
-            return Result.Fail($"Code не должен превышать {Constants.MAX_METRIC_CODE_LENGTH} символов");
+            return Result.Fail(DomainError.Validation(
+                "metric_definition.code_too_long",
+                $"Code не должен превышать {Constants.MAX_METRIC_CODE_LENGTH} символов",
+                nameof(code)));
 
         Code = code.Trim();
         Touch();

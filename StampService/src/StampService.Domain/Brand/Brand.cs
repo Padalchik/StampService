@@ -25,10 +25,16 @@ public class Brand : BaseEntity
     public static Result<Brand> Create(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
-            return Result.Fail("Name не может быть пустым");
+            return Result.Fail(DomainError.Validation(
+                "brand.name_required",
+                "Name не может быть пустым",
+                nameof(name)));
 
         if (name.Length < Constants.MIN_BRAND_NAME_LENGTH || name.Length > Constants.MAX_BRAND_NAME_LENGTH)
-            return Result.Fail($"Name должен быть от {Constants.MIN_BRAND_NAME_LENGTH} до {Constants.MAX_BRAND_NAME_LENGTH} символов");
+            return Result.Fail(DomainError.Validation(
+                "brand.name_length_invalid",
+                $"Name должен быть от {Constants.MIN_BRAND_NAME_LENGTH} до {Constants.MAX_BRAND_NAME_LENGTH} символов",
+                nameof(name)));
 
         var brand = new Brand(name.Trim());
         return Result.Ok(brand);
