@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UserSecretsId>e5bfaaf3-e3f2-43b6-9b59-38065d3f2e3b</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\external\telegram-bot-flow\src\TelegramBotFlow.Core\TelegramBotFlow.Core.csproj" />
+      <ProjectReference Include="..\StampService.Application\StampService.Application.csproj" />
+      <ProjectReference Include="..\StampService.Infrastructure\StampService.Infrastructure.csproj" />
+    </ItemGroup>
+
+</Project>
