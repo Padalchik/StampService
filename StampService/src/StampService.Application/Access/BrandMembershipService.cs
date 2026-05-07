@@ -1,5 +1,6 @@
 using FluentResults;
 using StampService.Application.Brands;
+using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Domain.Access;
 
@@ -28,21 +29,21 @@ public class BrandMembershipService : IBrandMembershipService
     {
         var brandExists = await _brandRepository.ExistsAsync(brandId, cancellationToken);
         if (!brandExists)
-            return Result.Fail("Brand not found");
+            return Result.Fail(BrandErrors.NotFound());
 
         var userExists = await _userRepository.ExistsAsync(userId, cancellationToken);
         if (!userExists)
-            return Result.Fail("User not found");
+            return Result.Fail(UserErrors.NotFound());
 
         var ownerRole = await _brandMembershipRepository.GetRoleBySystemNameAsync(
             SystemRoles.Owner,
             cancellationToken);
         if (ownerRole is null)
-            return Result.Fail("Owner role not found");
+            return Result.Fail(BrandErrors.OwnerRoleNotFound());
 
         var existingOwner = await _brandMembershipRepository.GetOwnerAsync(brandId, cancellationToken);
         if (existingOwner is not null && existingOwner.UserId != userId)
-            return Result.Fail("Brand already has an owner");
+            return Result.Fail(BrandErrors.AlreadyHasOwner());
 
         var membership = await _brandMembershipRepository.GetByBrandAndUserAsync(
             brandId,
@@ -77,17 +78,17 @@ public class BrandMembershipService : IBrandMembershipService
     {
         var brandExists = await _brandRepository.ExistsAsync(brandId, cancellationToken);
         if (!brandExists)
-            return Result.Fail("Brand not found");
+            return Result.Fail(BrandErrors.NotFound());
 
         var userExists = await _userRepository.ExistsAsync(userId, cancellationToken);
         if (!userExists)
-            return Result.Fail("User not found");
+            return Result.Fail(UserErrors.NotFound());
 
         var staffRole = await _brandMembershipRepository.GetRoleBySystemNameAsync(
             SystemRoles.Staff,
             cancellationToken);
         if (staffRole is null)
-            return Result.Fail("Staff role not found");
+            return Result.Fail(BrandErrors.StaffRoleNotFound());
 
         var membership = await _brandMembershipRepository.GetByBrandAndUserAsync(
             brandId,
@@ -111,7 +112,7 @@ public class BrandMembershipService : IBrandMembershipService
                 cancellationToken);
 
             if (currentRole == SystemRoles.Owner)
-                return Result.Fail("Cannot change owner role");
+                return Result.Fail(BrandErrors.CannotChangeOwnerRole());
 
             var changeRoleResult = membership.ChangeRole(staffRole.Id);
             if (changeRoleResult.IsFailed)

@@ -2,6 +2,7 @@ using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
 using StampService.Application.Brands;
+using StampService.Application.Errors;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Access;
 using StampService.Domain.Loyalty;
@@ -30,7 +31,7 @@ public class CreateMetricHandler : ICommandHandler<MetricResponse, CreateMetricC
     {
         var brandExists = await _brandRepository.ExistsAsync(command.BrandId, cancellationToken);
         if (!brandExists)
-            return Result.Fail("Brand not found");
+            return Result.Fail(BrandErrors.NotFound());
 
         var canManageMetrics = await _brandAccessService.CanAsync(
             command.UserId,
@@ -39,7 +40,7 @@ public class CreateMetricHandler : ICommandHandler<MetricResponse, CreateMetricC
             cancellationToken);
 
         if (!canManageMetrics)
-            return Result.Fail("Access denied");
+            return Result.Fail(AccessErrors.Denied());
 
         var metricResult = LoyaltyMetricDefinition.Create(
             command.BrandId,
@@ -57,7 +58,7 @@ public class CreateMetricHandler : ICommandHandler<MetricResponse, CreateMetricC
             cancellationToken);
 
         if (codeExists)
-            return Result.Fail("Metric code already exists for this brand");
+            return Result.Fail(MetricErrors.CodeAlreadyExistsForBrand());
 
         _metricRepository.Add(metric);
         await _metricRepository.SaveAsync(cancellationToken);

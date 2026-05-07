@@ -1,6 +1,7 @@
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Errors;
 using StampService.Contracts.DTOs.Brands;
 using StampService.Domain.Access;
 
@@ -30,7 +31,7 @@ public class AddBrandStaffHandler : ICommandHandler<AddBrandStaffResponse, AddBr
             cancellationToken);
 
         if (!canManageStaff)
-            return Result.Fail("Access denied");
+            return Result.Fail(AccessErrors.Denied());
 
         var result = await _brandMembershipService.AddStaffAsync(
             command.BrandId,

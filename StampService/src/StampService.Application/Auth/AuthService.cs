@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FluentResults;
+using StampService.Application.Errors;
 using StampService.Application.Services;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Auth;
@@ -31,7 +32,7 @@ public class AuthService : IAuthService
         CancellationToken cancellationToken)
     {
         if (!_telegramValidationService.Validate(request))
-            return Result.Fail("Invalid Telegram login data");
+            return Result.Fail(AuthErrors.TelegramLoginDataInvalid());
 
         var providerKey = request.Id.ToString();
         var user = await _userRepository.GetByIdentityAsync(

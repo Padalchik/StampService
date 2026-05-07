@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using FluentResults;
+using StampService.API.EndpointResults;
+using StampService.Application.Errors;
 using StampService.Application.Services;
 using StampService.Contracts.DTOs.Auth;
 
@@ -21,14 +24,15 @@ public class DevController : ControllerBase
     }
 
     [HttpPost("telegram-auth-payload")]
-    public ActionResult<TelegramLoginRequest> CreateTelegramAuthPayload(
+    public EndpointResult<TelegramLoginRequest> CreateTelegramAuthPayload(
         CreateTelegramAuthPayloadRequest request)
     {
         if (!_environment.IsDevelopment())
-            return NotFound();
+            return Result.Fail<TelegramLoginRequest>(GeneralErrors.NotFound());
 
         if (string.IsNullOrWhiteSpace(_telegramOptions.BotToken))
-            return BadRequest("Telegram:BotToken is not configured");
+            return Result.Fail<TelegramLoginRequest>(
+                GeneralErrors.Failure("Telegram:BotToken is not configured"));
 
         var authRequest = new TelegramLoginRequest(
             request.Id,
@@ -42,7 +46,7 @@ public class DevController : ControllerBase
             authRequest,
             _telegramOptions.BotToken);
 
-        return Ok(authRequest with { Hash = hash });
+        return Result.Ok(authRequest with { Hash = hash });
     }
 }
 

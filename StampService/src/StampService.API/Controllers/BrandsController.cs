@@ -2,10 +2,12 @@ using System.Security.Claims;
 using FluentResults;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using StampService.API.EndpointResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Brands.Commands.AddBrandStaff;
 using StampService.Application.Brands.Commands.AssignBrandOwner;
 using StampService.Application.Brands.Commands.CreateBrand;
+using StampService.Application.Errors;
 using StampService.Contracts.DTOs.Brands;
 
 namespace StampService.API.Controllers;
@@ -16,20 +18,19 @@ namespace StampService.API.Controllers;
 public class BrandsController : ControllerBase
 {
     [HttpPost]
-    public async Task<ActionResult<CreateBrandResponse>> Create(
+    public async Task<EndpointResult<CreateBrandResponse>> Create(
         CreateBrandRequest request,
         [FromServices] ICommandHandler<CreateBrandResponse, CreateBrandCommand> handler,
         CancellationToken cancellationToken)
     {
         var command = new CreateBrandCommand(request);
 
-        var result = await handler.Handle(command, cancellationToken);
-
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Errors);
+        return EndpointResult<CreateBrandResponse>.Created(
+            await handler.Handle(command, cancellationToken));
     }
 
     [HttpPost("{brandId:guid}/owner")]
-    public async Task<ActionResult<AssignBrandOwnerResponse>> AssignOwner(
+    public async Task<EndpointResult<AssignBrandOwnerResponse>> AssignOwner(
         Guid brandId,
         AssignBrandOwnerRequest request,
         [FromServices] ICommandHandler<AssignBrandOwnerResponse, AssignBrandOwnerCommand> handler,
@@ -37,13 +38,11 @@ public class BrandsController : ControllerBase
     {
         var command = new AssignBrandOwnerCommand(brandId, request);
 
-        var result = await handler.Handle(command, cancellationToken);
-
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Errors);
+        return await handler.Handle(command, cancellationToken);
     }
 
     [HttpPost("{brandId:guid}/staff")]
-    public async Task<ActionResult<AddBrandStaffResponse>> AddStaff(
+    public async Task<EndpointResult<AddBrandStaffResponse>> AddStaff(
         Guid brandId,
         AddBrandStaffRequest request,
         [FromServices] ICommandHandler<AddBrandStaffResponse, AddBrandStaffCommand> handler,
@@ -51,29 +50,21 @@ public class BrandsController : ControllerBase
     {
         var userIdResult = GetUserId();
         if (userIdResult.IsFailed)
-            return Unauthorized(userIdResult.Errors);
+            return userIdResult.ToResult<AddBrandStaffResponse>();
 
         var command = new AddBrandStaffCommand(brandId, userIdResult.Value, request);
 
-        var result = await handler.Handle(command, cancellationToken);
-
-        if (result.IsSuccess)
-            return Ok(result.Value);
-
-        if (result.Errors.Any(error => error.Message == "Access denied"))
-            return Forbid();
-
-        return BadRequest(result.Errors);
+        return await handler.Handle(command, cancellationToken);
     }
 
     private Result<Guid> GetUserId()
     {
         var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrWhiteSpace(userIdValue))
-            return Result.Fail("User id claim is missing");
+            return Result.Fail(AuthErrors.UserIdClaimMissing());
 
         return Guid.TryParse(userIdValue, out var userId)
             ? Result.Ok(userId)
-            : Result.Fail("User id claim is invalid");
+            : Result.Fail(AuthErrors.UserIdClaimInvalid());
     }
 }

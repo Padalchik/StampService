@@ -1,6 +1,7 @@
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Access;
@@ -36,17 +37,17 @@ public class GetMetricTransactionsHandler : IQueryHandler<MetricTransactionsResp
         CancellationToken cancellationToken)
     {
         if (query.Skip < 0)
-            return Result.Fail("Skip cannot be negative");
+            return Result.Fail(MetricErrors.SkipCannotBeNegative());
 
         if (query.Take <= 0 || query.Take > MaxTake)
-            return Result.Fail($"Take must be between 1 and {MaxTake}");
+            return Result.Fail(MetricErrors.TakeOutOfRange(MaxTake));
 
         var metric = await _metricRepository.GetByIdAsync(
             query.MetricDefinitionId,
             cancellationToken);
 
         if (metric is null)
-            return Result.Fail("Metric not found");
+            return Result.Fail(MetricErrors.NotFound());
 
         var canViewBalance = await _brandAccessService.CanAsync(
             query.RequestUserId,
@@ -55,11 +56,11 @@ public class GetMetricTransactionsHandler : IQueryHandler<MetricTransactionsResp
             cancellationToken);
 
         if (!canViewBalance)
-            return Result.Fail("Access denied");
+            return Result.Fail(AccessErrors.Denied());
 
         var userExists = await _userRepository.ExistsAsync(query.UserId, cancellationToken);
         if (!userExists)
-            return Result.Fail("User not found");
+            return Result.Fail(UserErrors.NotFound());
 
         var balance = await _metricBalanceRepository.GetByUserAndMetricAsync(
             query.UserId,

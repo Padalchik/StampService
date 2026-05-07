@@ -1,5 +1,6 @@
 using FluentResults;
 using StampService.Application.Abstractions;
+using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Metrics;
 
@@ -24,11 +25,11 @@ public class GetUserMetricBalancesHandler
         CancellationToken cancellationToken)
     {
         if (query.UserId == Guid.Empty)
-            return Result.Fail("User id cannot be empty");
+            return Result.Fail(UserErrors.IdIsEmpty());
 
         var userExists = await _userRepository.ExistsAsync(query.UserId, cancellationToken);
         if (!userExists)
-            return Result.Fail("User not found");
+            return Result.Fail(UserErrors.NotFound());
 
         var balances = await _metricBalanceRepository.GetUserBalancesAsync(
             query.UserId,

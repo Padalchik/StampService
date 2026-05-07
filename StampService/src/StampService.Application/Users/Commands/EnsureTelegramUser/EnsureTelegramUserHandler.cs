@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FluentResults;
 using StampService.Application.Abstractions;
+using StampService.Application.Errors;
 using StampService.Domain.User;
 
 namespace StampService.Application.Users.Commands.EnsureTelegramUser;
@@ -24,7 +25,7 @@ public class EnsureTelegramUserHandler
         CancellationToken cancellationToken)
     {
         if (command.TelegramUserId <= 0)
-            return Result.Fail("Telegram user id must be positive");
+            return Result.Fail(UserErrors.TelegramUserIdMustBePositive());
 
         var providerKey = command.TelegramUserId.ToString();
         var user = await _userRepository.GetByIdentityAsync(

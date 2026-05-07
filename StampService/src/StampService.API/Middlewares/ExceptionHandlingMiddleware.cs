@@ -1,4 +1,5 @@
-using Microsoft.AspNetCore.Mvc;
+using StampService.API.EndpointResults;
+using StampService.Application.Errors;
 
 namespace StampService.API.Middlewares;
 
@@ -35,19 +36,15 @@ public class ExceptionHandlingMiddleware
 
             context.Response.Clear();
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            context.Response.ContentType = "application/problem+json";
+            context.Response.ContentType = "application/json";
 
-            var problemDetails = new ProblemDetails
-            {
-                Status = StatusCodes.Status500InternalServerError,
-                Title = "Internal server error",
-                Detail = "An unexpected error occurred.",
-                Instance = context.Request.Path
-            };
+            var error = AppError.Failure(
+                "server.internal",
+                "An unexpected error occurred.");
 
-            problemDetails.Extensions["traceId"] = context.TraceIdentifier;
+            var response = ErrorMapping.ToResponse([error]);
 
-            await context.Response.WriteAsJsonAsync(problemDetails);
+            await context.Response.WriteAsJsonAsync(Envelope.Error(response));
         }
     }
 }
