@@ -1,0 +1,84 @@
+using StampService.Domain.Loyalty;
+
+namespace StampService.DomainTests.Loyalty;
+
+public class LoyaltyMetricDefinitionTests
+{
+    [Fact]
+    public void Create_ValidData_ShouldCreateActiveMetricAndTrimValues()
+    {
+        var brandId = Guid.NewGuid();
+
+        var result = LoyaltyMetricDefinition.Create(brandId, " STAMPS ", " Stamps ");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(brandId, result.Value.BrandId);
+        Assert.Equal("STAMPS", result.Value.Code);
+        Assert.Equal("Stamps", result.Value.Name);
+        Assert.True(result.Value.IsActive);
+    }
+
+    [Fact]
+    public void Create_EmptyBrandId_ShouldFail()
+    {
+        var result = LoyaltyMetricDefinition.Create(Guid.Empty, "STAMPS", "Stamps");
+
+        Assert.True(result.IsFailed);
+    }
+
+    [Fact]
+    public void Create_EmptyCode_ShouldFail()
+    {
+        var result = LoyaltyMetricDefinition.Create(Guid.NewGuid(), " ", "Stamps");
+
+        Assert.True(result.IsFailed);
+    }
+
+    [Fact]
+    public void Deactivate_WhenActive_ShouldMakeMetricInactive()
+    {
+        var metric = CreateMetric();
+
+        metric.Deactivate();
+
+        Assert.False(metric.IsActive);
+    }
+
+    [Fact]
+    public void Activate_WhenInactive_ShouldMakeMetricActive()
+    {
+        var metric = CreateMetric();
+        metric.Deactivate();
+
+        metric.Activate();
+
+        Assert.True(metric.IsActive);
+    }
+
+    [Fact]
+    public void UpdateName_ValidName_ShouldTrimAndUpdateName()
+    {
+        var metric = CreateMetric();
+
+        var result = metric.UpdateName(" New name ");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("New name", metric.Name);
+    }
+
+    [Fact]
+    public void UpdateCode_ValidCode_ShouldTrimAndUpdateCode()
+    {
+        var metric = CreateMetric();
+
+        var result = metric.UpdateCode(" NEW ");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("NEW", metric.Code);
+    }
+
+    private static LoyaltyMetricDefinition CreateMetric()
+    {
+        return LoyaltyMetricDefinition.Create(Guid.NewGuid(), "STAMPS", "Stamps").Value;
+    }
+}
