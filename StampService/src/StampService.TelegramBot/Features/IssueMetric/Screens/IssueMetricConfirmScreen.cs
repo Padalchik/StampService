@@ -23,9 +23,9 @@ public sealed class IssueMetricConfirmScreen : IScreen
             $"Код получателя: <code>{Html(recipientCustomerCode)}</code>\n" +
             $"Количество: {amount}\n" +
             $"Комментарий: {Html(comment)}")
-            .Button<ConfirmIssueMetricAction>("Подтвердить")
+            .Button<ConfirmIssueMetricAction>("✅ Подтвердить")
             .Row()
-            .Button<CancelIssueMetricAction>("Отмена"));
+            .Button<CancelIssueMetricAction>("❌ Отмена"));
     }
 
     private static string Html(string value)

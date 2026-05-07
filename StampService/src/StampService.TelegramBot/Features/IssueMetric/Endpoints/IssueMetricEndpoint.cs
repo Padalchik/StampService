@@ -6,6 +6,7 @@ using StampService.Application.Users;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Loyalty;
+using StampService.TelegramBot.Common.Routing;
 using StampService.TelegramBot.Features.Brands.Screens;
 using StampService.TelegramBot.Features.IssueMetric.Actions;
 using StampService.TelegramBot.Features.IssueMetric.Screens;
@@ -49,16 +50,16 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
 
         if (recipientResult.IsFailed)
         {
-            return BotResults.ShowView(new ScreenView(
+            return BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
                 "Клиентский код должен состоять из 4 цифр и принадлежать существующему пользователю. Попробуйте еще раз.")
                 .AwaitInput<EnterIssueRecipientAction>()
-                .BackButton());
+                .BackButton()));
         }
 
         ctx.Session?.Data.Set(IssueMetricSessionKeys.RecipientUserId, recipientResult.Value.UserId);
         ctx.Session?.Data.Set(IssueMetricSessionKeys.RecipientCustomerCode, recipientResult.Value.PublicIdentifier);
 
-        return BotResults.NavigateTo<IssueMetricAmountScreen>();
+        return BotInputResults.DeleteInputThen(BotResults.NavigateTo<IssueMetricAmountScreen>());
     }
 
     private static Task<IEndpointResult> EnterAmountAsync(
@@ -66,15 +67,15 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
     {
         if (!int.TryParse(ctx.MessageText, out var amount) || amount <= 0)
         {
-            return Task.FromResult(BotResults.ShowView(new ScreenView(
+            return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
                 "Количество должно быть положительным числом. Попробуйте еще раз.")
                 .AwaitInput<EnterIssueAmountAction>()
-                .BackButton()));
+                .BackButton())));
         }
 
         ctx.Session?.Data.Set(IssueMetricSessionKeys.Amount, amount);
 
-        return Task.FromResult(BotResults.NavigateTo<IssueMetricCommentScreen>());
+        return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<IssueMetricCommentScreen>()));
     }
 
     private static Task<IEndpointResult> EnterCommentAsync(
@@ -83,23 +84,23 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         var comment = ctx.MessageText?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(comment))
         {
-            return Task.FromResult(BotResults.ShowView(new ScreenView(
+            return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
                 "Комментарий обязателен. Попробуйте еще раз.")
                 .AwaitInput<EnterIssueCommentAction>()
-                .BackButton()));
+                .BackButton())));
         }
 
         if (comment.Length > Constants.MAX_TRANSACTION_COMMENT_LENGTH)
         {
-            return Task.FromResult(BotResults.ShowView(new ScreenView(
+            return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
                 $"Комментарий не должен быть длиннее {Constants.MAX_TRANSACTION_COMMENT_LENGTH} символов. Попробуйте еще раз.")
                 .AwaitInput<EnterIssueCommentAction>()
-                .BackButton()));
+                .BackButton())));
         }
 
         ctx.Session?.Data.Set(IssueMetricSessionKeys.Comment, comment);
 
-        return Task.FromResult(BotResults.NavigateTo<IssueMetricConfirmScreen>());
+        return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<IssueMetricConfirmScreen>()));
     }
 
     private static async Task<IEndpointResult> ConfirmAsync(
