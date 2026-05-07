@@ -1,58 +1,102 @@
-# StampService Next Chat Prompt
+# StampService: итоговый промт для следующего ИИ
 
-Ты - Codex / Senior .NET Engineer. Мы работаем над проектом StampService.
+Ты - Codex / Senior .NET Engineer. Мы работаем над проектом `StampService`.
 
-Проект:
-- SaaS loyalty service.
-- .NET 10 / C# 13.
-- Clean Architecture + DDD.
-- Слои:
-  - StampService.Domain
-  - StampService.Application
-  - StampService.Contracts
-  - StampService.Infrastructure
-  - StampService.API
-- Рабочая папка:
-  C:\Programmer\StampService\StampService
+Рабочая папка:
 
-Стиль архитектуры:
-- Бизнес-логика должна быть в Application.
-- Infrastructure не должна принимать бизнес-решения.
-- Infrastructure реализует persistence, JWT generation и внешние технические детали.
-- Application зависит от repository-интерфейсов, а не от AppDbContext.
-- AppDbContext используется только в Infrastructure/API startup/migrations/seeding.
-- Контроллеры должны быть тонкими:
-  - получают request
-  - достают route/body/JWT данные
-  - создают command/query
-  - вызывают handler/service
-  - маппят результат в HTTP response
-- Не писать EF-запросы в контроллерах.
-- Не писать бизнес-логику в контроллерах.
-- Предпочитать текущие паттерны проекта, не городить лишние абстракции.
-- YAGNI: не добавлять кэширование, refresh token, сложную permission DB-систему, policy-based authorization ASP.NET без необходимости.
+```text
+C:\Programmer\StampService\StampService
+```
 
-Текущее состояние проекта:
+Отвечай по-русски. Пользователь хочет понимать архитектурные решения, поэтому если задача затрагивает концепцию, границы слоев, БД, права доступа или модель данных, сначала объясни подход и только потом вноси изменения. Не оправдывай объективно плохие решения тем, что это MVP.
 
-1. Domain
+## 1. Бизнес-контекст
 
-Есть сущности:
-- User
-- UserIdentity
-- Brand
-- Location
-- Role
-- BrandMembership
-- LoyaltyMetricDefinition
-- MetricBalance
-- StampTransaction
+`StampService` - SaaS loyalty service.
 
-Роли:
-- SystemRoles.Owner = "OWNER"
-- SystemRoles.Staff = "STAFF"
-- SystemRoles.Customer = "CUSTOMER"
+Система нужна для брендов, которые выдают пользователям метрики лояльности: штампы, баллы, бонусы и т.п. Сейчас основная метрика - "штампы", но модель специально названа шире: `LoyaltyMetricDefinition`, `MetricBalance`, `StampTransaction`.
 
-PermissionCode сейчас такой:
+Клиентом считается любой `User`.
+
+Отдельной роли `CUSTOMER` больше нет. Владелец и сотрудник тоже могут быть получателями метрик. Если пользователю выдают метрику, а его баланса по этой метрике еще нет, баланс создается автоматически.
+
+Роли сейчас:
+
+```text
+OWNER
+STAFF
+```
+
+`OWNER` управляет брендом, метриками и сотрудниками.
+
+`STAFF` может выдавать/списывать метрики и смотреть балансы/историю, но не может создавать метрики и добавлять сотрудников.
+
+## 2. Технический стек
+
+- .NET 10
+- C# 13
+- ASP.NET Core Web API
+- Entity Framework Core
+- PostgreSQL
+- Docker
+- xUnit
+- Clean Architecture + DDD
+
+Слои:
+
+```text
+src/StampService.Domain
+src/StampService.Application
+src/StampService.Contracts
+src/StampService.Infrastructure
+src/StampService.API
+Tests/StampService.DomainTests
+Tests/StampService.ApplicationTests
+```
+
+## 3. Архитектурные правила
+
+Бизнес-логика должна быть в `Application`.
+
+`Infrastructure` не должна принимать бизнес-решения. Она реализует persistence, JWT generation и другие технические детали.
+
+`Application` зависит от repository-интерфейсов, а не от `AppDbContext`.
+
+`AppDbContext` используется в `Infrastructure`, а также в `API` только для startup/migrations/seeding.
+
+Контроллеры должны быть тонкими:
+
+- получают request
+- достают route/body/JWT данные
+- создают command/query
+- вызывают handler/service
+- маппят результат в HTTP response
+
+Не писать EF-запросы в контроллерах.
+
+Не писать бизнес-логику в контроллерах.
+
+Предпочитать текущие паттерны проекта, не добавлять лишние абстракции.
+
+## 4. Domain
+
+Основные сущности:
+
+- `User`
+- `UserIdentity`
+- `Brand`
+- `Location`
+- `Role`
+- `BrandMembership`
+- `LoyaltyMetricDefinition`
+- `MetricBalance`
+- `StampTransaction`
+
+`CUSTOMER` удален и не должен возвращаться без отдельного архитектурного обсуждения.
+
+## 5. PermissionCode
+
+Текущие permission codes:
 
 ```csharp
 public enum PermissionCode
@@ -61,166 +105,162 @@ public enum PermissionCode
     MetricManage = 20,
     StaffManage = 40,
     StampIssue = 60,
+    StampRedeem = 70,
     BalanceView = 80
 }
 ```
 
-Смысл PermissionCode:
-- Это не роли.
-- Это действия/возможности внутри бренда.
-- Для MVP права захардкожены в Application.
-- В будущем hardcoded mapping можно заменить таблицами role_permissions, не меняя контроллеры/handlers.
+`PermissionCode` - это не роли. Это действия/возможности внутри бренда.
 
-2. JWT + Telegram Auth
+`BrandAccessService` сейчас содержит hardcoded mapping:
 
-JWT авторизация уже работает.
+```text
+OWNER => true
 
-Endpoint:
+STAFF => StampIssue, StampRedeem, BalanceView
+
+unknown/no membership => false
+```
+
+В будущем hardcoded mapping можно заменить таблицами `role_permissions`, не меняя контроллеры/handlers, потому что они уже спрашивают "может ли пользователь выполнить действие?", а не "какая у пользователя роль?".
+
+## 6. Auth / JWT / Telegram
+
+Есть endpoint:
 
 ```http
 POST /api/auth/telegram
 ```
 
 DTO:
-- TelegramLoginRequest
-- AuthResponse
+
+- `TelegramLoginRequest`
+- `AuthResponse`
 
 Flow:
-- AuthController вызывает IAuthService.LoginAsync(...)
-- AuthService находится в Application.
-- AuthService:
-  - валидирует Telegram request через ITelegramValidationService
-  - ищет User по Telegram identity
-  - если user не найден, создает User и UserIdentity
-  - вызывает IJwtTokenService для выпуска JWT
-- IUserRepository находится в Application.
-- UserRepository находится в Infrastructure и работает с AppDbContext.
-- JwtTokenService находится в Infrastructure, потому что это техническая генерация JWT.
-- JWT содержит claim:
+
+- `AuthController` вызывает `IAuthService.LoginAsync(...)`
+- `AuthService` находится в `Application`
+- `AuthService` валидирует Telegram request через `ITelegramValidationService`
+- ищет `User` по Telegram identity
+- если user не найден, создает `User` и `UserIdentity`
+- вызывает `IJwtTokenService` для выпуска JWT
+
+`IJwtTokenService` находится в `Application`, реализация `JwtTokenService` - в `Infrastructure`.
+
+JWT содержит claim:
 
 ```csharp
 ClaimTypes.NameIdentifier = user.Id
 ```
 
-ВАЖНО:
-TelegramValidationService сейчас MVP-заглушка. Она проверяет только наличие hash.
-Это небезопасно для production.
+Важно: `TelegramValidationService` сейчас небезопасная заглушка. Она проверяет только наличие `hash`.
 
-Когда начнем делать реальный Telegram bot/auth, первым делом внедрить настоящую Telegram hash validation:
-- Telegram:BotToken в server config
-- HMAC-SHA256 проверка hash
-- проверка auth_date TTL
-- JWT выдавать только после валидного Telegram hash
+Перед реальной интеграцией с Telegram нужно сделать:
 
-Архитектурное правило:
+- `Telegram:BotToken` в server config
+- HMAC-SHA256 проверку hash
+- проверку TTL по `auth_date`
+- выдавать JWT только после валидного Telegram hash
+
+Правильное правило:
 
 ```text
 Telegram login data -> backend validates hash with bot token -> only then issue JWT
 ```
 
-3. OpenAPI / Swagger
+## 7. Docker / DB / EF
 
-Swagger UI настроен.
-Есть кнопка Authorize для Bearer JWT.
-OpenAPI extension вынесен в API Extensions.
-В Swagger JWT вставлять без префикса Bearer.
-
-4. Docker / DB
-
-Есть compose.yaml в корне проекта.
 Postgres в Docker:
 
-```yaml
-services:
-  postgres:
-    container_name: stamp_service_postgres
-    image: postgres
-    restart: always
-    environment:
-      POSTGRES_DB: stamp_service
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5440:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-
-volumes:
-  postgres-data:
+```text
+container: stamp_service_postgres
+database: stamp_service
+port: 5440
+user: postgres
+password: postgres
 ```
 
-Development connection string уже должен быть:
+Development connection string должен смотреть на:
 
-```json
-"DefaultConnection": "Host=localhost;Port=5440;Database=stamp_service;Username=postgres;Password=postgres"
+```text
+Host=localhost;Port=5440;Database=stamp_service;Username=postgres;Password=postgres
 ```
 
-Если миграции не появляются в Docker DB, проверить, что appsettings.Development.json смотрит на:
-- localhost
-- port 5440
-- database stamp_service
-
-Для EF:
+Применение миграций:
 
 ```powershell
 cd C:\Programmer\StampService\StampService\src
-dotnet ef database update --project .\StampService.Infrastructure\StampService.Infrastructure.csproj --startup-project .\StampService.API\StampService.API.csproj
+dotnet ef database update -p .\StampService.Infrastructure -s .\StampService.API
 ```
 
-Если build падает из-за locked dll:
-- остановить запущенный API/debug session
-- процесс может называться StampService.API или Visual Studio Debug Adapter
-- ошибка вида "file is being used by another process" не связана с БД
+Обычно пользователь создает миграции командой:
 
-5. DI / handlers
+```powershell
+dotnet ef migrations add MigrationName -p .\StampService.Infrastructure -s .\StampService.API
+```
 
-Application DI:
-- регистрирует ICommandHandler<,>
-- регистрирует IQueryHandler<,>
-- регистрирует Application services:
-  - IAuthService -> AuthService
-  - IBrandAccessService -> BrandAccessService
-  - IBrandMembershipService -> BrandMembershipService
-  - ITelegramValidationService -> TelegramValidationService
+Сборка:
 
-Infrastructure DI:
-- AddDbContext<AppDbContext>
-- регистрирует repositories:
-  - IBrandRepository -> BrandRepository
-  - IUserRepository -> UserRepository
-  - IBrandMembershipRepository -> BrandMembershipRepository
-- регистрирует technical service:
-  - IJwtTokenService -> JwtTokenService
+```powershell
+dotnet build StampService.sln
+```
 
-6. Brands
+Все тесты:
 
-Есть endpoint:
+```powershell
+dotnet test StampService.sln
+```
+
+## 8. DI
+
+Application регистрирует:
+
+- command/query handlers через Scrutor
+- `IAuthService`
+- `IBrandAccessService`
+- `IBrandMembershipService`
+- `IMetricLedgerService`
+- `ITelegramValidationService`
+
+Infrastructure регистрирует:
+
+- `AppDbContext`
+- `IBrandRepository`
+- `IUserRepository`
+- `IBrandMembershipRepository`
+- `ILoyaltyMetricRepository`
+- `IMetricBalanceRepository`
+- `IStampTransactionRepository`
+- `IJwtTokenService`
+
+## 9. Реализованные endpoints
+
+### Auth
 
 ```http
-POST /api/brands
+POST /api/auth/telegram
 ```
 
-Он создает бренд.
+Логин через Telegram-заглушку, выдача JWT.
+
+### Brands
+
+```http
+POST /api/Brands
+```
+
+Создает бренд.
 
 Важно:
-- Бренд создает админ.
-- Создатель бренда НЕ становится owner автоматически.
-- Owner назначается отдельным endpoint.
-- Поэтому CreateBrandCommand содержит только CreateBrandRequest, без UserId.
 
-Текущий flow:
-- BrandsController.Create
-- CreateBrandCommand
-- CreateBrandHandler
-- IBrandRepository
-- BrandRepository
+- creator не становится owner автоматически
+- owner назначается отдельным endpoint
 
-7. Assign owner
-
-Есть endpoint:
+### Assign Owner
 
 ```http
-POST /api/brands/{brandId}/owner
+POST /api/Brands/{brandId}/owner
 ```
 
 Body:
@@ -231,157 +271,346 @@ Body:
 }
 ```
 
-Назначает owner'а бренду.
+Правила:
 
-Flow:
-- BrandsController.AssignOwner
-- AssignBrandOwnerCommand
-- AssignBrandOwnerHandler
-- IBrandMembershipService
-- BrandMembershipService в Application
-- IBrandRepository / IUserRepository / IBrandMembershipRepository
-- EF реализации репозиториев в Infrastructure
+- если brand не существует - ошибка
+- если user не существует - ошибка
+- если у бренда уже есть другой owner - `"Brand already has an owner"`
+- если owner уже тот же user - запрос идемпотентен
+- если membership user+brand уже есть - роль меняется на `OWNER`
+- если membership нет - создается `BrandMembership`
+
+DB-level unique constraint на одного owner на бренд пока не добавлен.
+
+### Add Staff
+
+```http
+POST /api/Brands/{brandId}/staff
+```
+
+Body:
+
+```json
+{
+  "userId": "USER_GUID"
+}
+```
+
+Request user берется из JWT.
+
+Требуется `PermissionCode.StaffManage`.
 
 Правила:
-- Проверить, что brand существует.
-- Проверить, что user существует.
-- Найти роль OWNER.
-- Если у бренда уже есть OWNER и это другой user, вернуть ошибку:
-  "Brand already has an owner"
-- Если у бренда уже есть OWNER и это тот же user, запрос идемпотентен.
-- Если membership user+brand уже есть, сменить роль на OWNER.
-- Если membership нет, создать BrandMembership.
 
-Пока DB-level unique constraint на owner не добавлен.
-Это можно добавить позже для защиты от race condition.
+- `OWNER` может добавить сотрудника
+- `STAFF` не может добавить сотрудника
+- если target membership отсутствует - создать `STAFF`
+- если target membership существует - сменить роль на `STAFF`
+- если target user является `OWNER` - вернуть `"Cannot change owner role"`
 
-8. Brand access / permissions
+Роль в body пока не передается осознанно: endpoint именно добавляет сотрудника.
 
-Есть IBrandAccessService в Application:
+### Create Metric
+
+```http
+POST /api/brands/{brandId}/metrics
+```
+
+Создает определение метрики лояльности.
+
+Требуется `PermissionCode.MetricManage`.
+
+`OWNER` может, `STAFF` не может.
+
+DTO:
+
+- `CreateMetricRequest`
+- `MetricResponse`
+
+`code` уникален в рамках brand.
+
+### Issue Metric
+
+```http
+POST /api/metrics/{metricDefinitionId}/issue
+```
+
+Body:
+
+```json
+{
+  "userId": "USER_GUID",
+  "amount": 1,
+  "comment": "optional"
+}
+```
+
+В route только `metricDefinitionId`. `brandId` извлекается из самой метрики.
+
+Требуется `PermissionCode.StampIssue`.
+
+`OWNER` и `STAFF` могут.
+
+Если `MetricBalance` для user+metric отсутствует, он создается автоматически.
+
+Создается `StampTransaction` типа `Issue`.
+
+`StampTransaction.Amount` всегда положительный.
+
+### Redeem Metric
+
+```http
+POST /api/metrics/{metricDefinitionId}/redeem
+```
+
+Body:
+
+```json
+{
+  "userId": "USER_GUID",
+  "amount": 1,
+  "comment": "optional"
+}
+```
+
+Требуется `PermissionCode.StampRedeem`.
+
+Баланс должен существовать или быть синхронизирован.
+
+Если средств недостаточно - ошибка.
+
+Создается `StampTransaction` типа `Redeem`.
+
+`StampTransaction.Amount` всегда положительный.
+
+### Read Balance
+
+```http
+GET /api/metrics/{metricDefinitionId}/balances/{userId}
+```
+
+Возвращает materialized balance.
+
+Требуется `PermissionCode.BalanceView`.
+
+Если баланса нет, возвращается значение `0` и `balanceId: null`. DB row при чтении не создается.
+
+### Transaction History
+
+```http
+GET /api/metrics/{metricDefinitionId}/transactions?userId=USER_GUID&skip=0&take=50
+```
+
+Требуется `PermissionCode.BalanceView`.
+
+Параметры:
+
+- `skip` по умолчанию `0`
+- `take` по умолчанию `50`
+- максимальный `take` - `100`
+
+Если баланса нет, возвращается пустой список.
+
+Метод репозитория называется:
 
 ```csharp
-Task<bool> CanAsync(
-    Guid userId,
-    Guid brandId,
-    PermissionCode permission,
-    CancellationToken cancellationToken);
+GetHistoryByMetricBalanceAsync
 ```
 
-Публичного GetUserRoleAsync нет. Это осознанно.
-Внешний код не должен спрашивать "какая роль?", он должен спрашивать "может ли пользователь выполнить действие?".
+Не возвращать название `GetByBalanceAsync`, оно было признано вводящим в заблуждение.
 
-BrandAccessService находится в Application.
-Он использует IBrandMembershipRepository.
-Hardcoded MVP mapping:
+## 10. Ledger model
+
+Принята строгая модель:
+
+```text
+stamp_transactions = source of truth
+metric_balances = materialized current balance
+```
+
+`MetricBalance.Value` не является самостоятельной бизнес-истиной.
+
+Он обновляется только через ledger-сценарии и может быть пересчитан из `stamp_transactions`.
+
+`MetricLedgerService` находится в `Application` и нужен, чтобы централизовать ledger mechanics.
+
+Он содержит:
+
+- `IssueAsync`
+- `RedeemAsync`
+- `RecalculateMetricBalanceAsync`
+
+Зачем нужен `MetricLedgerService`:
+
+- чтобы выдача, списание и пересчет баланса жили в одном месте
+- чтобы разные handlers не дублировали правила
+- чтобы `metric_balances` всегда синхронизировался через один механизм
+- чтобы `stamp_transactions` оставался источником правды
+
+Перед issue/redeem существующий balance синхронизируется с суммой транзакций.
+
+Типы транзакций:
 
 ```csharp
-OWNER => true
-
-STAFF => StampIssue, BalanceView
-
-CUSTOMER => BalanceView
-
-unknown/no membership => false
+public enum StampTransactionType
+{
+    Issue = 1,
+    Redeem = 2
+}
 ```
 
-STAFF НЕ имеет MetricManage.
+`StampTransaction.Amount` всегда положительный.
 
-Причина такого подхода:
-- Сейчас роли статичны.
-- Но контроллеры/handlers уже зависят от permission/action, а не от конкретной роли.
-- В будущем можно заменить hardcoded mapping на таблицу role_permissions.
+Смысл операции определяется через `TransactionType`.
 
-9. Текущий важный архитектурный вывод
+DB constraints:
 
-Ранее часть бизнес-логики была в Infrastructure-сервисах:
-- AuthService
-- BrandAccessService
-- BrandMembershipService
+- `stamp_transactions.amount > 0`
+- `stamp_transactions.transaction_type IN (1, 2)`
+- `metric_balances.value >= 0`
 
-Это было исправлено.
-Теперь:
-- Application содержит бизнес-сценарии.
-- Infrastructure содержит репозитории и техническую реализацию.
+Ранее из `stamp_transactions` удалено redundant поле `metric_definition_id`.
 
-Не откатывать это обратно.
+Теперь metric definition узнается так:
 
-10. Что делать дальше
-
-Следующий логичный этап:
-- сделать endpoint создания метрики лояльности, доступный только пользователю с PermissionCode.MetricManage.
-- Не писать EF в контроллере.
-- Делать через Contracts DTO + Application command + handler + repository/service.
-- В handler или Application service проверить:
-
-```csharp
-await brandAccessService.CanAsync(userId, brandId, PermissionCode.MetricManage, ct)
+```text
+stamp_transactions.metric_balance_id
+  -> metric_balances.metric_definition_id
 ```
 
-- Если false, вернуть access denied, controller должен вернуть 403.
-- OWNER сможет создать метрику.
-- STAFF должен получить 403.
-- CUSTOMER должен получить 403.
+Это нормализация. Если нужно получить definition, делается join.
 
-11. Предпочтительный стиль реализации нового endpoint
+## 11. Тесты
 
-Для Metrics:
-- Contracts:
-  - CreateMetricRequest
-  - MetricResponse
-- Application:
-  - CreateMetricCommand
-  - CreateMetricHandler
-  - ILoyaltyMetricRepository или IMetricRepository
-- Infrastructure:
-  - LoyaltyMetricRepository / MetricRepository
-- API:
-  - MetricsController
+Пользователь хотел сначала понять тестовую инфраструктуру, затем делать.
 
-Контроллер:
-- [Authorize]
-- достает userId из JWT ClaimTypes.NameIdentifier
-- создает command
-- вызывает handler
-- маппит ошибки:
-  - access denied -> Forbid / 403
-  - validation/domain errors -> BadRequest
-  - success -> Ok или Created
+Мы начали с unit tests.
 
-12. Проблемы/технический долг, помнить
+### Domain unit tests
 
-- Telegram hash validation пока заглушка.
-- Error mapping сейчас примитивный: BadRequest(result.Errors). Нужно позже нормализовать.
-- Нужна DB-level гарантия "один OWNER на бренд", если появятся параллельные запросы.
-- Русские комментарии в некоторых старых файлах могут отображаться mojibake в PowerShell. Не критично, но новые комментарии лучше писать ASCII или следить за UTF-8.
-- API сейчас может ссылаться на Infrastructure, потому что startup/migrations/seeding используют AppDbContext. Это приемлемо для текущего этапа.
-- Не добавлять сложную систему прав раньше времени.
+Проект:
 
-13. Команды проверки
+```text
+Tests/StampService.DomainTests
+```
 
-Сборка:
+Без БД, Docker, API, Infrastructure.
+
+In-memory only.
+
+Тесты:
+
+- `MetricBalanceTests`
+- `StampTransactionTests`
+- `LoyaltyMetricDefinitionTests`
+- `BrandMembershipTests`
+
+### Application unit tests
+
+Проект:
+
+```text
+Tests/StampService.ApplicationTests
+```
+
+Без БД, Infrastructure, API.
+
+Используются fake repositories:
+
+- `FakeBrandMembershipRepository`
+- `FakeMetricBalanceRepository`
+- `FakeStampTransactionRepository`
+
+Тесты:
+
+- `BrandAccessServiceTests`
+- `MetricLedgerServiceTests`
+
+Оба тестовых проекта используют:
+
+- `Microsoft.NET.Test.Sdk`
+- `xunit`
+- `xunit.runner.visualstudio`
+
+Оба проекта добавлены в `StampService.sln`.
+
+Последний известный результат:
+
+```text
+DomainTests: 23 passed
+ApplicationTests: 10 passed
+Total: 33 passed
+```
+
+Запуск всех тестов:
 
 ```powershell
-dotnet build StampService.sln -p:OutputPath=c:\Programmer\StampService\StampService\obj\codex-build\
+dotnet test StampService.sln
 ```
 
-Docker postgres health:
+В VS Code тесты можно запускать через Testing panel при установленном C# Dev Kit.
 
-```powershell
-docker exec stamp_service_postgres pg_isready -U postgres -d stamp_service
-```
+## 12. Важные технические долги
 
-EF update:
+### Telegram validation
 
-```powershell
-cd C:\Programmer\StampService\StampService\src
-dotnet ef database update --project .\StampService.Infrastructure\StampService.Infrastructure.csproj --startup-project .\StampService.API\StampService.API.csproj
-```
+Сейчас Telegram validation небезопасная заглушка.
 
-14. Правило общения
+Перед реальным ботом обязательно сделать настоящую hash validation.
 
-- Отвечай по-русски.
-- Делай изменения сам, если задача явно на реализацию.
-- Перед изменениями сначала анализируй текущий код.
-- После изменений всегда прогоняй build.
-- Не предлагай архитектуру, противоречащую Clean Architecture/DDD.
-- Если сомневаешься между быстрым MVP и чистым решением, объясни trade-off и выбери консервативно.
+### Error mapping
+
+Сейчас error mapping местами примитивный: `BadRequest(result.Errors)`.
+
+Позже стоит нормализовать ошибки:
+
+- validation/domain errors -> 400
+- access denied -> 403
+- not found -> 404
+- conflict -> 409
+
+### Owner uniqueness
+
+Нужна DB-level гарантия "один OWNER на бренд", если появятся параллельные запросы.
+
+Сейчас это правило реализовано на уровне Application.
+
+### Transaction editing
+
+Концепция допускает, что `stamp_transactions` - источник правды, а `metric_balances` пересчитывается при изменении ledger.
+
+Сейчас реализованы выдача/списание и пересчет. Если позже появится редактирование/откат транзакций, оно должно идти через ledger-сервис или отдельный application scenario, который затем пересчитает `MetricBalance`.
+
+## 13. Стиль дальнейшей работы
+
+Отвечай по-русски.
+
+Перед изменениями сначала изучай текущий код.
+
+Если задача явно на реализацию - реализуй сам, затем запускай build/tests.
+
+Если задача архитектурная - сначала объясни вариант, последствия и только потом делай.
+
+Не возвращай `CUSTOMER` без отдельного обсуждения.
+
+Не добавляй сложную permission DB-систему раньше времени, но и не делай плохой дизайн только потому, что "это MVP".
+
+Не пиши EF в контроллерах.
+
+Не перемещай бизнес-логику в Infrastructure.
+
+Не откатывай пользовательские изменения без прямой просьбы.
+
+Используй существующие паттерны проекта.
+
+## 14. Возможные следующие шаги
+
+Логичные направления после текущего состояния:
+
+1. Расширять покрытие Application unit tests для handlers выдачи, списания, чтения баланса и истории.
+2. Добавить integration tests позже, отдельно обсудив тестовую БД и стратегию сброса состояния.
+3. Реализовать настоящую Telegram validation перед подключением Telegram bot.
+4. Добавить endpoint/сценарии отмены или корректировки транзакции, если бизнесу нужен rollback.
+5. Добавить DB-level unique constraint на одного owner на бренд.
+6. Нормализовать error mapping.
+
