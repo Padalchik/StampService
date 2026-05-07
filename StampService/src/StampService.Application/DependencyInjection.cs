@@ -30,7 +30,9 @@ public static class DependencyInjection
         services.AddScoped<IMetricLedgerService, MetricLedgerService>();
         services.AddScoped<ITelegramValidationService, TelegramValidationService>();
         services.AddScoped<ICustomerCodeGenerator, CustomerCodeGenerator>();
+        services.AddScoped<IRedemptionCodeGenerator, RedemptionCodeGenerator>();
         services.AddScoped<IRecipientResolver, RecipientResolver>();
+        services.AddSingleton(TimeProvider.System);
 
         return services;
     }

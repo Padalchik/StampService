@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using StampService.API.EndpointResults;
 using StampService.Application.Errors;
 
@@ -21,6 +22,30 @@ public class ExceptionHandlingMiddleware
         try
         {
             await _next(context);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Concurrency conflict while processing {Method} {Path}. TraceId: {TraceId}",
+                context.Request.Method,
+                context.Request.Path,
+                context.TraceIdentifier);
+
+            if (context.Response.HasStarted)
+                throw;
+
+            context.Response.Clear();
+            context.Response.StatusCode = StatusCodes.Status409Conflict;
+            context.Response.ContentType = "application/json";
+
+            var error = AppError.Conflict(
+                "concurrency.conflict",
+                "The resource was changed by another operation. Please retry.");
+
+            var response = ErrorMapping.ToResponse([error]);
+
+            await context.Response.WriteAsJsonAsync(Envelope.Error(response));
         }
         catch (Exception ex)
         {

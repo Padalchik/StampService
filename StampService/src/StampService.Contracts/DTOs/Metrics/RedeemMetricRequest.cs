@@ -1,6 +1,6 @@
 namespace StampService.Contracts.DTOs.Metrics;
 
 public record RedeemMetricRequest(
-    Guid UserId,
+    string RedemptionCode,
     int Amount,
     string Comment);

@@ -4,6 +4,7 @@ using StampService.Application.Access;
 using StampService.Application.Brands;
 using StampService.Application.Errors;
 using StampService.Application.Users;
+using StampService.Application.Users.Commands.UseRedemptionCode;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Access;
 
@@ -15,20 +16,20 @@ public class RedeemMetricHandler : ICommandHandler<RedeemMetricResponse, RedeemM
     private readonly IBrandRepository _brandRepository;
     private readonly IMetricLedgerService _metricLedgerService;
     private readonly ILoyaltyMetricRepository _metricRepository;
-    private readonly IUserRepository _userRepository;
+    private readonly ICommandHandler<UseRedemptionCodeResponse, UseRedemptionCodeCommand> _useRedemptionCodeHandler;
 
     public RedeemMetricHandler(
         IBrandAccessService brandAccessService,
         IBrandRepository brandRepository,
         IMetricLedgerService metricLedgerService,
         ILoyaltyMetricRepository metricRepository,
-        IUserRepository userRepository)
+        ICommandHandler<UseRedemptionCodeResponse, UseRedemptionCodeCommand> useRedemptionCodeHandler)
     {
         _brandAccessService = brandAccessService;
         _brandRepository = brandRepository;
         _metricLedgerService = metricLedgerService;
         _metricRepository = metricRepository;
-        _userRepository = userRepository;
+        _useRedemptionCodeHandler = useRedemptionCodeHandler;
     }
 
     public async Task<Result<RedeemMetricResponse>> Handle(
@@ -55,15 +56,18 @@ public class RedeemMetricHandler : ICommandHandler<RedeemMetricResponse, RedeemM
         if (!canRedeem)
             return Result.Fail(AccessErrors.Denied());
 
-        var userExists = await _userRepository.ExistsAsync(command.Request.UserId, cancellationToken);
-        if (!userExists)
-            return Result.Fail(UserErrors.NotFound());
-
         if (!metric.IsActive)
             return Result.Fail(MetricErrors.IsNotActive());
 
+        var useCodeResult = await _useRedemptionCodeHandler.Handle(
+            new UseRedemptionCodeCommand(command.Request.RedemptionCode),
+            cancellationToken);
+
+        if (useCodeResult.IsFailed)
+            return Result.Fail(useCodeResult.Errors);
+
         var ledgerResult = await _metricLedgerService.RedeemAsync(
-            command.Request.UserId,
+            useCodeResult.Value.UserId,
             metric.BrandId,
             command.MetricDefinitionId,
             command.Request.Amount,

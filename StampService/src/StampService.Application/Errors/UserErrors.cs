@@ -29,4 +29,15 @@ public static class UserErrors
             "customer_code.invalid",
             "Customer code must contain exactly 4 digits",
             "customerCode");
+
+    public static AppError RedemptionCodeInvalid() =>
+        AppError.Validation(
+            "redemption_code.invalid",
+            "Redemption code must contain exactly 6 digits",
+            "redemptionCode");
+
+    public static AppError RedemptionCodeNotFoundOrExpired() =>
+        AppError.NotFound(
+            "redemption_code.not_found_or_expired",
+            "Redemption code not found or expired");
 }

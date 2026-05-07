@@ -8,6 +8,7 @@ using StampService.TelegramBot.Features.Brands.Actions;
 using StampService.TelegramBot.Features.Brands.Screens;
 using StampService.TelegramBot.Features.CustomerCode.Screens;
 using StampService.TelegramBot.Features.MetricBalances.Screens;
+using StampService.TelegramBot.Features.RedemptionCode.Screens;
 
 namespace StampService.TelegramBot.Features.MainMenu.Screens;
 
@@ -36,6 +37,8 @@ public sealed class MainMenuScreen : IScreen
             $"{greeting}\n\n" +
             "Выберите действие:")
             .NavigateButton<MyCustomerCodeScreen>("Мой код")
+            .Row()
+            .NavigateButton<MyRedemptionCodeScreen>("Код для списания")
             .Row()
             .NavigateButton<MyBalancesScreen>("Мои балансы");
 

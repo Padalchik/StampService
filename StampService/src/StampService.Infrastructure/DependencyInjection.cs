@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<ILoyaltyMetricRepository, LoyaltyMetricRepository>();
         services.AddScoped<IMetricBalanceRepository, MetricBalanceRepository>();
         services.AddScoped<IStampTransactionRepository, StampTransactionRepository>();
+        services.AddScoped<IRedemptionCodeRepository, RedemptionCodeRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
 
         return services;

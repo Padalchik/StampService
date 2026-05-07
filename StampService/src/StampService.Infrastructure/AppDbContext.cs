@@ -38,6 +38,7 @@ public class AppDbContext : DbContext
     // User & Identity
     public DbSet<StampService.Domain.User.User> Users => Set<StampService.Domain.User.User>();
     public DbSet<StampService.Domain.User.UserIdentity> UserIdentities => Set<StampService.Domain.User.UserIdentity>();
+    public DbSet<StampService.Domain.User.RedemptionCode> RedemptionCodes => Set<StampService.Domain.User.RedemptionCode>();
 
     // Brand
     public DbSet<Brand> Brands => Set<Brand>();
