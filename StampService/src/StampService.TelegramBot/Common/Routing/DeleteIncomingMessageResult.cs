@@ -7,11 +7,12 @@ public sealed record DeleteIncomingMessageResult(IEndpointResult Inner) : IEndpo
 {
     public async Task ExecuteAsync(BotExecutionContext context)
     {
-        if (context.Update.Update.Message is not null)
+        var incomingMessageId = context.Update.Update.Message?.Id;
+        if (incomingMessageId is not null)
         {
             try
             {
-                await context.Responder.DeleteMessageAsync(context.Update);
+                await context.Responder.DeleteMessageAsync(context.Update, incomingMessageId.Value);
             }
             catch
             {
