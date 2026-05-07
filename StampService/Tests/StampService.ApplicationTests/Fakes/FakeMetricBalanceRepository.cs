@@ -28,6 +28,25 @@ public class FakeMetricBalanceRepository : IMetricBalanceRepository
             && balance.MetricDefinitionId == metricDefinitionId));
     }
 
+    public Task<IReadOnlyCollection<UserMetricBalanceReadModel>> GetUserBalancesAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyCollection<UserMetricBalanceReadModel> balances = _balances
+            .Where(balance => balance.UserId == userId)
+            .Select(balance => new UserMetricBalanceReadModel(
+                balance.Id,
+                balance.BrandId,
+                $"Brand {balance.BrandId:N}",
+                balance.MetricDefinitionId,
+                $"metric-{balance.MetricDefinitionId:N}",
+                $"Metric {balance.MetricDefinitionId:N}",
+                balance.Value))
+            .ToArray();
+
+        return Task.FromResult(balances);
+    }
+
     public void Add(MetricBalance balance)
     {
         _balances.Add(balance);

@@ -1,5 +1,6 @@
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
+using StampService.TelegramBot.Features.MetricBalances.Screens;
 
 namespace StampService.TelegramBot.Features.MainMenu.Screens;
 
@@ -14,6 +15,7 @@ public sealed class MainMenuScreen : IScreen
 
         return ValueTask.FromResult(new ScreenView(
             $"{greeting}\n\n" +
-            "Пока доступен базовый экран бота. Следующим шагом добавим просмотр баланса и историю."));
+            "Выберите действие:")
+            .NavigateButton<MyBalancesScreen>("Мои балансы"));
     }
 }
