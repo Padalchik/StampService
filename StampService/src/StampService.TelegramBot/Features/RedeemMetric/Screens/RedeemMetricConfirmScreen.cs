@@ -1,0 +1,35 @@
+using System.Net;
+using StampService.TelegramBot.Features.Brands.Screens;
+using StampService.TelegramBot.Features.RedeemMetric.Actions;
+using TelegramBotFlow.Core.Context;
+using TelegramBotFlow.Core.Screens;
+
+namespace StampService.TelegramBot.Features.RedeemMetric.Screens;
+
+public sealed class RedeemMetricConfirmScreen : IScreen
+{
+    public ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
+    {
+        var brandName = ctx.Session?.Data.GetString(BrandWorkspaceScreen.BrandNameSessionKey) ?? "бренд";
+        var metricName = ctx.Session?.Data.GetString(RedeemMetricSessionKeys.MetricName) ?? "метрика";
+        var redemptionCode = ctx.Session?.Data.GetString(RedeemMetricSessionKeys.RedemptionCode) ?? "-";
+        var amount = ctx.Session?.Data.Get<int>(RedeemMetricSessionKeys.Amount) ?? 0;
+        var comment = ctx.Session?.Data.GetString(RedeemMetricSessionKeys.Comment) ?? string.Empty;
+
+        return ValueTask.FromResult(new ScreenView(
+            "<b>Подтвердите списание</b>\n\n" +
+            $"Бренд: {Html(brandName)}\n" +
+            $"Метрика: {Html(metricName)}\n" +
+            $"Код списания: <code>{Html(redemptionCode)}</code>\n" +
+            $"Количество: {amount}\n" +
+            $"Комментарий: {Html(comment)}")
+            .Button<ConfirmRedeemMetricAction>("✅ Подтвердить")
+            .Row()
+            .Button<CancelRedeemMetricAction>("❌ Отмена"));
+    }
+
+    private static string Html(string value)
+    {
+        return WebUtility.HtmlEncode(value);
+    }
+}

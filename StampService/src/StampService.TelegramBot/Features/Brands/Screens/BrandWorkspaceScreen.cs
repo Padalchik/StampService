@@ -4,6 +4,7 @@ using StampService.Application.Brands.Queries.GetBrandWorkspace;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Brands;
 using StampService.TelegramBot.Features.IssueMetric.Screens;
+using StampService.TelegramBot.Features.RedeemMetric.Screens;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
 
@@ -67,7 +68,7 @@ public sealed class BrandWorkspaceScreen : IScreen
 
         if (workspace.CanRedeem)
         {
-            view.Row().Button("Списать метрику", "brand_redeem_not_implemented");
+            view.Row().NavigateButton<RedeemMetricSelectScreen>("Списать метрику");
             hasActions = true;
         }
 
