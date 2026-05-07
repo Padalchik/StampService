@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using StampService.API.Extensions;
 using StampService.Application;
+using StampService.Application.Services;
 using StampService.Infrastructure;
 using StampService.Infrastructure.Seeding;
 
@@ -9,6 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddApiOpenApi();
 builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.Configure<TelegramOptions>(builder.Configuration.GetSection("Telegram"));
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);

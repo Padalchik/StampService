@@ -4,6 +4,6 @@ public record TelegramLoginRequest(
     long Id,
     string FirstName,
     string? LastName,
-    string Username,
+    string? Username,
     string Hash,
     long AuthDate);
