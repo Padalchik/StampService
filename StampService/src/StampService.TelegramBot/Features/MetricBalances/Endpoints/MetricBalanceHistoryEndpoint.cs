@@ -60,13 +60,15 @@ public sealed class MetricBalanceHistoryEndpoint : IBotEndpoint
 
         var lines = transactionsResult.Value.Items.Select(transaction =>
         {
-            var sign = transaction.TransactionType == "Issue" ? "+" : "-";
+            var isIssue = transaction.TransactionType == "Issue";
+            var marker = isIssue ? "🟢" : "🟡";
+            var sign = isIssue ? "+" : "-";
             var date = transaction.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
             var comment = string.IsNullOrWhiteSpace(transaction.Comment)
                 ? string.Empty
                 : $" - {Html(transaction.Comment)}";
 
-            return $"• {date}: {sign}{transaction.Amount}{comment}";
+            return $"{marker} {date}: {sign}{transaction.Amount}{comment}";
         });
 
         return BotResults.ShowView(new ScreenView(
