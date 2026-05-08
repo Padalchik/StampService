@@ -1,5 +1,6 @@
 using StampService.Application.Abstractions;
 using StampService.Application.Metrics.Commands.RedeemMetric;
+using StampService.Application.Metrics.Queries.GetRedeemMetricOptions;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.TelegramBot.Common.Errors;
@@ -32,21 +33,25 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
         UpdateContext ctx,
         SelectRedeemMetricPayload payload)
     {
+        if (!payload.CanRedeem)
+            return Task.FromResult(BotResults.NavigateTo<RedeemMetricSelectScreen>());
+
         ctx.Session?.Data.Set(RedeemMetricSessionKeys.MetricDefinitionId, payload.MetricDefinitionId);
         ctx.Session?.Data.Set(RedeemMetricSessionKeys.MetricName, payload.MetricName);
         ctx.Session?.Data.Set(RedeemMetricSessionKeys.RedemptionAmount, payload.RedemptionAmount);
+        ctx.Session?.Data.Set(RedeemMetricSessionKeys.CurrentBalance, payload.CurrentBalance);
 
-        return Task.FromResult(BotResults.NavigateTo<RedeemMetricCodeScreen>());
+        return Task.FromResult(BotResults.NavigateTo<RedeemMetricCommentScreen>());
     }
 
     private static async Task<IEndpointResult> EnterCodeAsync(
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        IRedeemMetricValidationService redeemMetricValidationService)
+        IQueryHandler<RedeemMetricOptionsResponse, GetRedeemMetricOptionsQuery> optionsHandler)
     {
-        var metricDefinitionId = ctx.Session?.Data.Get<Guid>(RedeemMetricSessionKeys.MetricDefinitionId) ?? Guid.Empty;
-        if (metricDefinitionId == Guid.Empty)
-            return BotResults.ShowView(new ScreenView("Сценарий списания устарел. Начните заново.").BackButton());
+        var brandId = ctx.Session?.Data.Get<Guid>(BrandWorkspaceScreen.BrandIdSessionKey) ?? Guid.Empty;
+        if (brandId == Guid.Empty)
+            return BotResults.ShowView(new ScreenView("Бренд не выбран.").BackButton());
 
         var code = ctx.MessageText?.Trim() ?? string.Empty;
         if (!DomainRedemptionCode.IsValidCode(code))
@@ -74,23 +79,27 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
                 .BackButton()));
         }
 
-        var precheckResult = await redeemMetricValidationService.ValidateAsync(
-            metricDefinitionId,
-            redeemerResult.Value.UserId,
-            code,
+        var optionsResult = await optionsHandler.Handle(
+            new GetRedeemMetricOptionsQuery(
+                redeemerResult.Value.UserId,
+                brandId,
+                code),
             ctx.CancellationToken);
 
-        if (precheckResult.IsFailed)
+        if (optionsResult.IsFailed)
         {
             return BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                $"Нельзя списать метрику: {BotErrorFormatter.Format(precheckResult.Errors, BotErrorContext.RedeemMetric)}")
+                $"Нельзя начать списание: {BotErrorFormatter.Format(optionsResult.Errors, BotErrorContext.RedeemMetric)}")
                 .AwaitInput<EnterRedeemCodeAction>()
                 .BackButton()));
         }
 
+        ClearSelectedMetric(ctx);
         ctx.Session?.Data.Set(RedeemMetricSessionKeys.RedemptionCode, code);
+        ctx.Session?.Data.Set(RedeemMetricSessionKeys.CustomerUserId, optionsResult.Value.CustomerUserId);
+        ctx.Session?.Data.Set(RedeemMetricSessionKeys.CustomerName, optionsResult.Value.CustomerName);
 
-        return BotInputResults.DeleteInputThen(BotResults.NavigateTo<RedeemMetricCommentScreen>());
+        return BotInputResults.DeleteInputThen(BotResults.NavigateTo<RedeemMetricSelectScreen>());
     }
 
     private static Task<IEndpointResult> EnterCommentAsync(UpdateContext ctx)
@@ -173,7 +182,7 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
             "<b>Метрика списана</b>\n\n" +
             $"Количество: {redeemResult.Value.Amount}\n" +
             $"Текущий баланс: {redeemResult.Value.BalanceValue}")
-            .NavigateButton<RedeemMetricSelectScreen>("Списать еще")
+            .NavigateButton<RedeemMetricCodeScreen>("Списать еще")
             .Row()
             .NavigateButton<BrandWorkspaceScreen>("К бренду")
             .Row()
@@ -192,10 +201,18 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
 
     private static void ClearRedeemSession(UpdateContext ctx)
     {
+        ClearSelectedMetric(ctx);
+        ctx.Session?.Data.Remove(RedeemMetricSessionKeys.RedemptionCode);
+        ctx.Session?.Data.Remove(RedeemMetricSessionKeys.CustomerUserId);
+        ctx.Session?.Data.Remove(RedeemMetricSessionKeys.CustomerName);
+        ctx.Session?.Data.Remove(RedeemMetricSessionKeys.Comment);
+    }
+
+    private static void ClearSelectedMetric(UpdateContext ctx)
+    {
         ctx.Session?.Data.Remove(RedeemMetricSessionKeys.MetricDefinitionId);
         ctx.Session?.Data.Remove(RedeemMetricSessionKeys.MetricName);
         ctx.Session?.Data.Remove(RedeemMetricSessionKeys.RedemptionAmount);
-        ctx.Session?.Data.Remove(RedeemMetricSessionKeys.RedemptionCode);
-        ctx.Session?.Data.Remove(RedeemMetricSessionKeys.Comment);
+        ctx.Session?.Data.Remove(RedeemMetricSessionKeys.CurrentBalance);
     }
 }

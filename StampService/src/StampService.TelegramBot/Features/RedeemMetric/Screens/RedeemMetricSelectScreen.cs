@@ -1,7 +1,9 @@
+using System.Net;
 using StampService.Application.Abstractions;
-using StampService.Application.Metrics.Queries.GetBrandRedeemMetrics;
+using StampService.Application.Metrics.Queries.GetRedeemMetricOptions;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Metrics;
+using StampService.TelegramBot.Common.Errors;
 using StampService.TelegramBot.Features.Brands.Screens;
 using StampService.TelegramBot.Features.RedeemMetric.Actions;
 using TelegramBotFlow.Core.Context;
@@ -12,14 +14,14 @@ namespace StampService.TelegramBot.Features.RedeemMetric.Screens;
 public sealed class RedeemMetricSelectScreen : IScreen
 {
     private readonly ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> _ensureUserHandler;
-    private readonly IQueryHandler<IReadOnlyCollection<MetricResponse>, GetBrandRedeemMetricsQuery> _metricsHandler;
+    private readonly IQueryHandler<RedeemMetricOptionsResponse, GetRedeemMetricOptionsQuery> _optionsHandler;
 
     public RedeemMetricSelectScreen(
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        IQueryHandler<IReadOnlyCollection<MetricResponse>, GetBrandRedeemMetricsQuery> metricsHandler)
+        IQueryHandler<RedeemMetricOptionsResponse, GetRedeemMetricOptionsQuery> optionsHandler)
     {
         _ensureUserHandler = ensureUserHandler;
-        _metricsHandler = metricsHandler;
+        _optionsHandler = optionsHandler;
     }
 
     public async ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
@@ -40,14 +42,18 @@ public sealed class RedeemMetricSelectScreen : IScreen
         if (userResult.IsFailed)
             return new ScreenView("Не удалось определить пользователя.").BackButton();
 
-        var metricsResult = await _metricsHandler.Handle(
-            new GetBrandRedeemMetricsQuery(userResult.Value.UserId, brandId),
+        var redemptionCode = ctx.Session?.Data.GetString(RedeemMetricSessionKeys.RedemptionCode) ?? string.Empty;
+        var optionsResult = await _optionsHandler.Handle(
+            new GetRedeemMetricOptionsQuery(userResult.Value.UserId, brandId, redemptionCode),
             ctx.CancellationToken);
 
-        if (metricsResult.IsFailed)
-            return new ScreenView("Нет доступа к списанию метрик.").BackButton();
+        if (optionsResult.IsFailed)
+            return new ScreenView($"Не удалось загрузить метрики для списания: {BotErrorFormatter.Format(optionsResult.Errors, BotErrorContext.RedeemMetric)}").BackButton();
 
-        if (metricsResult.Value.Count == 0)
+        ctx.Session?.Data.Set(RedeemMetricSessionKeys.CustomerUserId, optionsResult.Value.CustomerUserId);
+        ctx.Session?.Data.Set(RedeemMetricSessionKeys.CustomerName, optionsResult.Value.CustomerName);
+
+        if (optionsResult.Value.Metrics.Count == 0)
         {
             return new ScreenView(
                 "<b>Списать метрику</b>\n\n" +
@@ -55,14 +61,27 @@ public sealed class RedeemMetricSelectScreen : IScreen
                 .BackButton();
         }
 
-        var view = new ScreenView("<b>Списать метрику</b>\n\nВыберите метрику:");
-        foreach (var metric in metricsResult.Value)
+        var view = new ScreenView(
+            "<b>Списать метрику</b>\n\n" +
+            $"Клиент: {Html(optionsResult.Value.CustomerName)}\n" +
+            $"Код: <code>{Html(optionsResult.Value.RedemptionCode)}</code>\n\n" +
+            "Выберите метрику:");
+
+        foreach (var metric in optionsResult.Value.Metrics)
         {
+            var marker = metric.CanRedeem ? "✅" : "⛔️";
             view.Row().Button<SelectRedeemMetricAction, SelectRedeemMetricPayload>(
-                metric.Name,
-                new SelectRedeemMetricPayload(metric.Id, metric.Name, metric.RedemptionAmount));
+                $"{marker} {metric.MetricName} {metric.CurrentBalance}/{metric.RequiredAmount}",
+                new SelectRedeemMetricPayload(
+                    metric.MetricDefinitionId,
+                    metric.MetricName,
+                    metric.RequiredAmount,
+                    metric.CurrentBalance,
+                    metric.CanRedeem));
         }
 
         return view.BackButton();
     }
+
+    private static string Html(string value) => WebUtility.HtmlEncode(value);
 }

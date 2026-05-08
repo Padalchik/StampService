@@ -12,16 +12,19 @@ public sealed class RedeemMetricConfirmScreen : IScreen
     {
         var brandName = ctx.Session?.Data.GetString(BrandWorkspaceScreen.BrandNameSessionKey) ?? "бренд";
         var metricName = ctx.Session?.Data.GetString(RedeemMetricSessionKeys.MetricName) ?? "метрика";
+        var customerName = ctx.Session?.Data.GetString(RedeemMetricSessionKeys.CustomerName) ?? "клиент";
         var redemptionCode = ctx.Session?.Data.GetString(RedeemMetricSessionKeys.RedemptionCode) ?? "-";
         var redemptionAmount = ctx.Session?.Data.Get<int>(RedeemMetricSessionKeys.RedemptionAmount) ?? 0;
+        var currentBalance = ctx.Session?.Data.Get<int>(RedeemMetricSessionKeys.CurrentBalance) ?? 0;
         var comment = ctx.Session?.Data.GetString(RedeemMetricSessionKeys.Comment) ?? string.Empty;
 
         return ValueTask.FromResult(new ScreenView(
             "<b>Подтвердите списание</b>\n\n" +
             $"Бренд: {Html(brandName)}\n" +
+            $"Клиент: {Html(customerName)}\n" +
             $"Метрика: {Html(metricName)}\n" +
             $"Код списания: <code>{Html(redemptionCode)}</code>\n" +
-            $"Количество: {redemptionAmount}\n" +
+            $"Баланс: {currentBalance}/{redemptionAmount}\n" +
             $"Комментарий: {Html(comment)}")
             .Button<ConfirmRedeemMetricAction>("✅ Подтвердить")
             .Row()

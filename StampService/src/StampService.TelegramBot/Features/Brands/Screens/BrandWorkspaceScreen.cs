@@ -70,7 +70,7 @@ public sealed class BrandWorkspaceScreen : IScreen
 
         if (workspace.CanRedeem)
         {
-            view.Row().NavigateButton<RedeemMetricSelectScreen>("Списать метрику");
+            view.Row().NavigateButton<RedeemMetricCodeScreen>("Списать метрику");
             hasActions = true;
         }
 
