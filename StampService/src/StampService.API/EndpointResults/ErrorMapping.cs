@@ -13,12 +13,12 @@ public static class ErrorMapping
 
         var types = errors
             .Select(GetErrorType)
-            .Distinct()
             .ToArray();
 
-        return types.Length == 1
-            ? GetStatusCode(types[0])
-            : StatusCodes.Status500InternalServerError;
+        return types
+            .Select(GetStatusCode)
+            .OrderByDescending(GetStatusPriority)
+            .First();
     }
 
     public static IReadOnlyCollection<ApiErrorResponse> ToResponse(IReadOnlyCollection<IError> errors)
@@ -36,7 +36,8 @@ public static class ErrorMapping
                 appError.Code,
                 appError.Message,
                 appError.Type.ToString(),
-                appError.InvalidField);
+                appError.InvalidField,
+                GetCustomMetadata(appError));
         }
 
         if (error is DomainError domainError)
@@ -45,14 +46,16 @@ public static class ErrorMapping
                 domainError.Code,
                 domainError.Message,
                 domainError.Type.ToString(),
-                domainError.InvalidField);
+                domainError.InvalidField,
+                GetCustomMetadata(domainError));
         }
 
         return new ApiErrorResponse(
             "error.untyped",
             error.Message,
-            ResponseErrorType.Validation.ToString(),
-            null);
+            ResponseErrorType.Failure.ToString(),
+            null,
+            GetCustomMetadata(error));
     }
 
     private static ResponseErrorType GetErrorType(IError error)
@@ -61,7 +64,7 @@ public static class ErrorMapping
         {
             AppError appError => MapAppErrorType(appError.Type),
             DomainError domainError => MapDomainErrorType(domainError.Type),
-            _ => ResponseErrorType.Validation
+            _ => ResponseErrorType.Failure
         };
     }
 
@@ -77,6 +80,32 @@ public static class ErrorMapping
             ResponseErrorType.Failure => StatusCodes.Status500InternalServerError,
             _ => StatusCodes.Status500InternalServerError
         };
+    }
+
+    private static int GetStatusPriority(int statusCode)
+    {
+        return statusCode switch
+        {
+            StatusCodes.Status500InternalServerError => 100,
+            StatusCodes.Status401Unauthorized => 90,
+            StatusCodes.Status403Forbidden => 80,
+            StatusCodes.Status409Conflict => 70,
+            StatusCodes.Status404NotFound => 60,
+            StatusCodes.Status400BadRequest => 50,
+            _ => 0
+        };
+    }
+
+    private static IReadOnlyDictionary<string, object>? GetCustomMetadata(IError error)
+    {
+        var metadata = error.Metadata
+            .Where(item => item.Value is not null
+                && item.Key is not ("error_code" or "error_type" or "invalid_field"))
+            .ToDictionary(item => item.Key, item => item.Value);
+
+        return metadata.Count == 0
+            ? null
+            : metadata;
     }
 
     private static ResponseErrorType MapAppErrorType(AppErrorType errorType)

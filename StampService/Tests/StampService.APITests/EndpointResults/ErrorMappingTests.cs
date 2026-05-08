@@ -20,14 +20,14 @@ public class ErrorMappingTests
     }
 
     [Fact]
-    public void GetStatusCode_WhenErrorsHaveDifferentTypes_ShouldReturnInternalServerError()
+    public void GetStatusCode_WhenErrorsHaveDifferentTypes_ShouldReturnHighestPriorityStatusCode()
     {
         var statusCode = ErrorMapping.GetStatusCode([
             UserErrors.NotFound(),
             AccessErrors.Denied()
         ]);
 
-        Assert.Equal(StatusCodes.Status500InternalServerError, statusCode);
+        Assert.Equal(StatusCodes.Status403Forbidden, statusCode);
     }
 
     [Fact]
@@ -102,8 +102,20 @@ public class ErrorMappingTests
 
         Assert.Equal("error.untyped", response.Code);
         Assert.Equal("Legacy domain error", response.Message);
-        Assert.Equal(AppErrorType.Validation.ToString(), response.Type);
+        Assert.Equal(AppErrorType.Failure.ToString(), response.Type);
         Assert.Null(response.InvalidField);
+    }
+
+    [Fact]
+    public void ToResponse_ForErrorWithCustomMetadata_ShouldKeepMetadata()
+    {
+        var response = ErrorMapping.ToResponse([MetricErrors.InsufficientFunds(2, 5)]).Single();
+
+        Assert.NotNull(response.Metadata);
+        Assert.Equal(2, response.Metadata["current_balance"]);
+        Assert.Equal(5, response.Metadata["required_amount"]);
+        Assert.False(response.Metadata.ContainsKey("error_code"));
+        Assert.False(response.Metadata.ContainsKey("error_type"));
     }
 
     public static TheoryData<AppError, int> StatusCodeCases()

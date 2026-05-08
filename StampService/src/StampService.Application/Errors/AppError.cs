@@ -18,6 +18,16 @@ public class AppError : Error
         Code = code;
         Type = type;
         InvalidField = invalidField;
+        Metadata["error_code"] = code;
+        Metadata["error_type"] = type.ToString();
+        if (!string.IsNullOrWhiteSpace(invalidField))
+            Metadata["invalid_field"] = invalidField;
+    }
+
+    public AppError WithMetadataValue(string key, object value)
+    {
+        Metadata[key] = value;
+        return this;
     }
 
     public static AppError Validation(string code, string message, string? invalidField = null) =>

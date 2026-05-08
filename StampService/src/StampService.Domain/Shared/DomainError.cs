@@ -25,6 +25,10 @@ public class DomainError : Error
         Code = code;
         Type = type;
         InvalidField = invalidField;
+        Metadata["error_code"] = code;
+        Metadata["error_type"] = type.ToString();
+        if (!string.IsNullOrWhiteSpace(invalidField))
+            Metadata["invalid_field"] = invalidField;
     }
 
     public static DomainError Validation(string code, string message, string? invalidField = null)

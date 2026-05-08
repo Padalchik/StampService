@@ -4,38 +4,40 @@ public static class MetricErrors
 {
     public static AppError NotFound() =>
         AppError.NotFound(
-            "metric.not_found",
+            AppErrorCodes.Metric.NotFound,
             "Metric not found");
 
     public static AppError BalanceNotFound() =>
         AppError.NotFound(
-            "metric_balance.not_found",
+            AppErrorCodes.MetricBalance.NotFound,
             "Metric balance not found");
 
     public static AppError InsufficientFunds(int currentBalance, int requiredAmount) =>
         AppError.Conflict(
-            "metric_balance.insufficient_funds",
-            $"Insufficient metric balance. Current: {currentBalance}, required: {requiredAmount}");
+            AppErrorCodes.MetricBalance.InsufficientFunds,
+            $"Insufficient metric balance. Current: {currentBalance}, required: {requiredAmount}")
+            .WithMetadataValue("current_balance", currentBalance)
+            .WithMetadataValue("required_amount", requiredAmount);
 
     public static AppError IsNotActive() =>
         AppError.Conflict(
-            "metric.inactive",
+            AppErrorCodes.Metric.Inactive,
             "Metric is not active");
 
     public static AppError CodeAlreadyExistsForBrand() =>
         AppError.Conflict(
-            "metric.code_already_exists_for_brand",
+            AppErrorCodes.Metric.CodeAlreadyExistsForBrand,
             "Metric code already exists for this brand");
 
     public static AppError SkipCannotBeNegative() =>
         AppError.Validation(
-            "paging.skip_negative",
+            AppErrorCodes.Paging.SkipNegative,
             "Skip cannot be negative",
             "skip");
 
     public static AppError TakeOutOfRange(int maxTake) =>
         AppError.Validation(
-            "paging.take_out_of_range",
+            AppErrorCodes.Paging.TakeOutOfRange,
             $"Take must be between 1 and {maxTake}",
             "take");
 }

@@ -4,40 +4,40 @@ public static class UserErrors
 {
     public static AppError NotFound() =>
         AppError.NotFound(
-            "user.not_found",
+            AppErrorCodes.User.NotFound,
             "User not found");
 
     public static AppError RecipientNotFound() =>
         AppError.NotFound(
-            "recipient.not_found",
+            AppErrorCodes.Recipient.NotFound,
             "Recipient not found");
 
     public static AppError IdIsEmpty() =>
         AppError.Validation(
-            "user.id_empty",
+            AppErrorCodes.User.IdEmpty,
             "User id cannot be empty",
             "userId");
 
     public static AppError TelegramUserIdMustBePositive() =>
         AppError.Validation(
-            "telegram.user_id_invalid",
+            AppErrorCodes.Telegram.UserIdInvalid,
             "Telegram user id must be positive",
             "telegramUserId");
 
     public static AppError CustomerCodeInvalid() =>
         AppError.Validation(
-            "customer_code.invalid",
+            AppErrorCodes.CustomerCode.Invalid,
             "Customer code must contain exactly 4 digits",
             "customerCode");
 
     public static AppError RedemptionCodeInvalid() =>
         AppError.Validation(
-            "redemption_code.invalid",
+            AppErrorCodes.RedemptionCode.Invalid,
             "Redemption code must contain exactly 6 digits",
             "redemptionCode");
 
     public static AppError RedemptionCodeNotFoundOrExpired() =>
         AppError.NotFound(
-            "redemption_code.not_found_or_expired",
+            AppErrorCodes.RedemptionCode.NotFoundOrExpired,
             "Redemption code not found or expired");
 }

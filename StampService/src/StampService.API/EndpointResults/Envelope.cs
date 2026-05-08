@@ -42,4 +42,5 @@ public record ApiErrorResponse(
     string Code,
     string Message,
     string Type,
-    string? InvalidField);
+    string? InvalidField,
+    IReadOnlyDictionary<string, object>? Metadata = null);

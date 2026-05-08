@@ -1,9 +1,8 @@
-using System.Net;
-using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Metrics.Commands.RedeemMetric;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Metrics;
+using StampService.TelegramBot.Common.Errors;
 using StampService.TelegramBot.Common.Routing;
 using StampService.TelegramBot.Features.Brands.Screens;
 using StampService.TelegramBot.Features.RedeemMetric.Actions;
@@ -47,13 +46,13 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
     {
         var metricDefinitionId = ctx.Session?.Data.Get<Guid>(RedeemMetricSessionKeys.MetricDefinitionId) ?? Guid.Empty;
         if (metricDefinitionId == Guid.Empty)
-            return BotResults.ShowView(new ScreenView("РЎС†РµРЅР°СЂРёР№ СЃРїРёСЃР°РЅРёСЏ СѓСЃС‚Р°СЂРµР». РќР°С‡РЅРёС‚Рµ Р·Р°РЅРѕРІРѕ.").BackButton());
+            return BotResults.ShowView(new ScreenView("Сценарий списания устарел. Начните заново.").BackButton());
 
         var code = ctx.MessageText?.Trim() ?? string.Empty;
         if (!DomainRedemptionCode.IsValidCode(code))
         {
             return BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                "Код для списания должен состоять из 6 цифр. Попробуйте ещё раз.")
+                "Код списания должен состоять из 6 цифр. Попробуйте еще раз.")
                 .AwaitInput<EnterRedeemCodeAction>()
                 .BackButton()));
         }
@@ -70,7 +69,7 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
         if (redeemerResult.IsFailed)
         {
             return BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                $"РќРµ СѓРґР°Р»РѕСЃСЊ РѕРїСЂРµРґРµР»РёС‚СЊ СЃРѕС‚СЂСѓРґРЅРёРєР°: {FormatErrors(redeemerResult.Errors)}")
+                $"Не удалось определить сотрудника: {BotErrorFormatter.Format(redeemerResult.Errors, BotErrorContext.RedeemMetric)}")
                 .AwaitInput<EnterRedeemCodeAction>()
                 .BackButton()));
         }
@@ -84,7 +83,7 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
         if (precheckResult.IsFailed)
         {
             return BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                $"Нельзя списать метрику: {FormatErrors(precheckResult.Errors)}")
+                $"Нельзя списать метрику: {BotErrorFormatter.Format(precheckResult.Errors, BotErrorContext.RedeemMetric)}")
                 .AwaitInput<EnterRedeemCodeAction>()
                 .BackButton()));
         }
@@ -94,28 +93,28 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
         return BotInputResults.DeleteInputThen(BotResults.NavigateTo<RedeemMetricCommentScreen>());
     }
 
-    private static async Task<IEndpointResult> EnterCommentAsync(UpdateContext ctx)
+    private static Task<IEndpointResult> EnterCommentAsync(UpdateContext ctx)
     {
         var comment = ctx.MessageText?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(comment))
         {
-            return BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                "Комментарий обязателен. Попробуйте ещё раз.")
+            return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
+                "Комментарий обязателен. Попробуйте еще раз.")
                 .AwaitInput<EnterRedeemCommentAction>()
-                .BackButton()));
+                .BackButton())));
         }
 
         if (comment.Length > LoyaltyConstants.MAX_TRANSACTION_COMMENT_LENGTH)
         {
-            return BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                $"Комментарий не должен быть длиннее {LoyaltyConstants.MAX_TRANSACTION_COMMENT_LENGTH} символов. Попробуйте ещё раз.")
+            return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
+                $"Комментарий не должен быть длиннее {LoyaltyConstants.MAX_TRANSACTION_COMMENT_LENGTH} символов. Попробуйте еще раз.")
                 .AwaitInput<EnterRedeemCommentAction>()
-                .BackButton()));
+                .BackButton())));
         }
 
         ctx.Session?.Data.Set(RedeemMetricSessionKeys.Comment, comment);
 
-        return BotInputResults.DeleteInputThen(BotResults.NavigateTo<RedeemMetricConfirmScreen>());
+        return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<RedeemMetricConfirmScreen>()));
     }
 
     private static async Task<IEndpointResult> ConfirmAsync(
@@ -148,7 +147,7 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
         if (redeemerResult.IsFailed)
         {
             return BotResults.ShowView(new ScreenView(
-                $"Не удалось определить сотрудника: {FormatErrors(redeemerResult.Errors)}")
+                $"Не удалось определить сотрудника: {BotErrorFormatter.Format(redeemerResult.Errors, BotErrorContext.RedeemMetric)}")
                 .BackButton());
         }
 
@@ -164,7 +163,7 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
         if (redeemResult.IsFailed)
         {
             return BotResults.ShowView(new ScreenView(
-                $"Не удалось списать метрику: {FormatErrors(redeemResult.Errors)}")
+                $"Не удалось списать метрику: {BotErrorFormatter.Format(redeemResult.Errors, BotErrorContext.RedeemMetric)}")
                 .BackButton());
         }
 
@@ -174,7 +173,7 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
             "<b>Метрика списана</b>\n\n" +
             $"Количество: {redeemResult.Value.Amount}\n" +
             $"Текущий баланс: {redeemResult.Value.BalanceValue}")
-            .NavigateButton<RedeemMetricSelectScreen>("Списать ещё")
+            .NavigateButton<RedeemMetricSelectScreen>("Списать еще")
             .Row()
             .NavigateButton<BrandWorkspaceScreen>("К бренду")
             .Row()
@@ -199,46 +198,4 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
         ctx.Session?.Data.Remove(RedeemMetricSessionKeys.RedemptionCode);
         ctx.Session?.Data.Remove(RedeemMetricSessionKeys.Comment);
     }
-
-    private static string FormatErrors(IReadOnlyCollection<IError> errors)
-    {
-        var messages = errors
-            .Select(error => TranslateError(error.Message))
-            .Distinct()
-            .ToArray();
-
-        return WebUtility.HtmlEncode(string.Join("; ", messages));
-    }
-
-    private static string TranslateError(string message)
-    {
-        if (message.StartsWith("Insufficient metric balance. Current:", StringComparison.Ordinal))
-        {
-            var currentStart = message.IndexOf("Current: ", StringComparison.Ordinal);
-            var requiredStart = message.IndexOf(", required: ", StringComparison.Ordinal);
-            if (currentStart >= 0 && requiredStart > currentStart)
-            {
-                var current = message.Substring(currentStart + "Current: ".Length, requiredStart - (currentStart + "Current: ".Length));
-                var required = message.Substring(requiredStart + ", required: ".Length);
-                return $"недостаточно баланса для списания ({current}/{required})";
-            }
-
-            return "недостаточно баланса для списания";
-        }
-
-        return message switch
-        {
-            "Access denied" => "нет прав на списание метрики",
-            "Metric not found" => "метрика не найдена",
-            "Brand not found" => "бренд не найден",
-            "Metric is not active" => "метрика неактивна",
-            "Redemption code must contain exactly 6 digits" => "код списания должен состоять из 6 цифр",
-            "Redemption code not found or expired" => "код списания не найден или истёк",
-            "Redemption code has already been used" => "код списания уже использован",
-            "Metric balance not found" => "у клиента нет баланса по этой метрике",
-            _ => message
-        };
-    }
 }
-
-

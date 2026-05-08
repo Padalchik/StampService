@@ -4,6 +4,6 @@ public static class AccessErrors
 {
     public static AppError Denied() =>
         AppError.Authorization(
-            "access.denied",
+            AppErrorCodes.Access.Denied,
             "Access denied");
 }
