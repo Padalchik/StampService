@@ -6,4 +6,9 @@ public static class AccessErrors
         AppError.Authorization(
             AppErrorCodes.Access.Denied,
             "Access denied");
+
+    public static AppError AdminRequired() =>
+        AppError.Authorization(
+            AppErrorCodes.Access.AdminRequired,
+            "Admin access required");
 }

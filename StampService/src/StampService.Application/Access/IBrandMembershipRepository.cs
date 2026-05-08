@@ -25,5 +25,7 @@ public interface IBrandMembershipRepository
 
     void Add(BrandMembership membership);
 
+    void Remove(BrandMembership membership);
+
     Task SaveAsync(CancellationToken cancellationToken);
 }

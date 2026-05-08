@@ -5,6 +5,7 @@ public static class AppErrorCodes
     public static class Access
     {
         public const string Denied = "access.denied";
+        public const string AdminRequired = "access.admin_required";
     }
 
     public static class Auth

@@ -23,4 +23,18 @@ public class FakeBrandRepository : IBrandRepository
     {
         return Task.FromResult(_brandIds.Contains(brandId));
     }
+
+    public Task<IReadOnlyCollection<AdminBrandReadModel>> GetAdminBrandsAsync(CancellationToken cancellationToken)
+    {
+        IReadOnlyCollection<AdminBrandReadModel> result = _brandIds
+            .Select(brandId => new AdminBrandReadModel(
+                brandId,
+                $"Brand {brandId:N}",
+                null,
+                null,
+                null))
+            .ToArray();
+
+        return Task.FromResult(result);
+    }
 }

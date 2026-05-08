@@ -57,7 +57,6 @@ public class BrandMembershipRepository : IBrandMembershipRepository
         CancellationToken cancellationToken)
     {
         return await _dbContext.BrandMemberships
-            .AsNoTracking()
             .FirstOrDefaultAsync(
                 membership => membership.BrandId == brandId
                     && membership.Role.SystemName == SystemRoles.Owner,
@@ -75,6 +74,11 @@ public class BrandMembershipRepository : IBrandMembershipRepository
     public void Add(BrandMembership membership)
     {
         _dbContext.BrandMemberships.Add(membership);
+    }
+
+    public void Remove(BrandMembership membership)
+    {
+        _dbContext.BrandMemberships.Remove(membership);
     }
 
     public Task SaveAsync(CancellationToken cancellationToken)

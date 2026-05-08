@@ -8,4 +8,6 @@ public interface IBrandRepository
     Task<Result<Guid>> AddAsync(Brand brand, CancellationToken cancellationToken);
 
     Task<bool> ExistsAsync(Guid brandId, CancellationToken cancellationToken);
+
+    Task<IReadOnlyCollection<AdminBrandReadModel>> GetAdminBrandsAsync(CancellationToken cancellationToken);
 }

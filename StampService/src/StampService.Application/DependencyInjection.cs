@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Administration;
 using StampService.Application.Auth;
 using StampService.Application.Metrics;
 using StampService.Application.Metrics.Commands.RedeemMetric;
@@ -26,6 +27,7 @@ public static class DependencyInjection
             .WithScopedLifetime());
 
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IAdminAccessService, AdminAccessService>();
         services.AddScoped<IBrandAccessService, BrandAccessService>();
         services.AddScoped<IBrandMembershipService, BrandMembershipService>();
         services.AddScoped<IMetricLedgerService, MetricLedgerService>();

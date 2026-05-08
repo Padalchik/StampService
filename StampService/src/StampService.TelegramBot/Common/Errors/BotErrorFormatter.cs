@@ -25,6 +25,7 @@ public static class BotErrorFormatter
 
         return errorCode switch
         {
+            AppErrorCodes.Access.AdminRequired => "нужны права администратора",
             AppErrorCodes.Access.Denied => context == BotErrorContext.IssueMetric
                 ? "нет прав на выдачу метрики"
                 : "нет прав на списание метрики",
