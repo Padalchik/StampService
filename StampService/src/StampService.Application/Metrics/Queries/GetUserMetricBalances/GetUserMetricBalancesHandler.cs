@@ -1,7 +1,9 @@
 using FluentResults;
 using StampService.Application.Abstractions;
+using StampService.Application.Coins;
 using StampService.Application.Errors;
 using StampService.Application.Users;
+using StampService.Contracts.DTOs.Coins;
 using StampService.Contracts.DTOs.Metrics;
 
 namespace StampService.Application.Metrics.Queries.GetUserMetricBalances;
@@ -10,13 +12,16 @@ public class GetUserMetricBalancesHandler
     : IQueryHandler<UserMetricBalancesResponse, GetUserMetricBalancesQuery>
 {
     private readonly IMetricBalanceRepository _metricBalanceRepository;
+    private readonly ICoinWalletRepository _coinWalletRepository;
     private readonly IUserRepository _userRepository;
 
     public GetUserMetricBalancesHandler(
         IMetricBalanceRepository metricBalanceRepository,
+        ICoinWalletRepository coinWalletRepository,
         IUserRepository userRepository)
     {
         _metricBalanceRepository = metricBalanceRepository;
+        _coinWalletRepository = coinWalletRepository;
         _userRepository = userRepository;
     }
 
@@ -35,6 +40,10 @@ public class GetUserMetricBalancesHandler
             query.UserId,
             cancellationToken);
 
+        var coinWallets = await _coinWalletRepository.GetUserWalletsAsync(
+            query.UserId,
+            cancellationToken);
+
         var response = new UserMetricBalancesResponse(
             query.UserId,
             balances
@@ -47,7 +56,16 @@ public class GetUserMetricBalancesHandler
                     balance.MetricDefinitionId,
                     balance.MetricCode,
                     balance.MetricName,
+                    balance.RedemptionAmount,
                     balance.Value))
+                .ToArray(),
+            coinWallets
+                .OrderBy(wallet => wallet.BrandName)
+                .Select(wallet => new UserCoinWalletResponse(
+                    wallet.WalletId,
+                    wallet.BrandId,
+                    wallet.BrandName,
+                    wallet.Value))
                 .ToArray());
 
         return Result.Ok(response);

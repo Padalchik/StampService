@@ -43,20 +43,17 @@ public sealed class MyBalancesScreen : IScreen
         if (balancesResult.IsFailed)
             return new ScreenView("Не удалось загрузить балансы.").BackButton();
 
-        if (balancesResult.Value.Balances.Count == 0)
+        if (balancesResult.Value.Balances.Count == 0 && balancesResult.Value.CoinWallets.Count == 0)
         {
             return new ScreenView(
                 "<b>Мои балансы</b>\n\n" +
-                "У вас пока нет балансов по метрикам.")
+                "У вас пока нет балансов.")
                 .BackButton();
         }
 
         var view = new ScreenView(
             "<b>Мои балансы</b>\n\n" +
-            string.Join(
-                "\n",
-                balancesResult.Value.Balances.Select(balance =>
-                    $"• <b>{Html(balance.BrandName)}</b>: {Html(balance.MetricName)} - {balance.Value}")));
+            BuildHierarchicalBalancesText(balancesResult.Value));
 
         foreach (var balance in balancesResult.Value.Balances)
         {
@@ -74,5 +71,44 @@ public sealed class MyBalancesScreen : IScreen
     private static string Html(string value)
     {
         return WebUtility.HtmlEncode(value);
+    }
+
+    private static string BuildHierarchicalBalancesText(UserMetricBalancesResponse response)
+    {
+        var brandIds = response.Balances
+            .Select(balance => balance.BrandId)
+            .Concat(response.CoinWallets.Select(wallet => wallet.BrandId))
+            .Distinct()
+            .ToArray();
+
+        var brandBlocks = new List<string>();
+        foreach (var brandId in brandIds
+            .OrderBy(id => GetBrandName(response, id), StringComparer.OrdinalIgnoreCase))
+        {
+            var brandName = GetBrandName(response, brandId);
+            var lines = new List<string>();
+            lines.Add($"• <b>{Html(brandName)}</b>");
+
+            foreach (var balance in response.Balances
+                .Where(balance => balance.BrandId == brandId)
+                .OrderBy(balance => balance.MetricName))
+            {
+                lines.Add($"  - {Html(balance.MetricName)} {balance.RedemptionAmount}/{balance.Value}");
+            }
+
+            var coinValue = response.CoinWallets
+                .FirstOrDefault(wallet => wallet.BrandId == brandId)
+                ?.Value ?? 0;
+            lines.Add($"  - монетки {coinValue}");
+            brandBlocks.Add(string.Join("\n", lines));
+        }
+
+        return string.Join("\n\n", brandBlocks);
+    }
+
+    private static string GetBrandName(UserMetricBalancesResponse response, Guid brandId)
+    {
+        return response.Balances.FirstOrDefault(balance => balance.BrandId == brandId)?.BrandName
+            ?? response.CoinWallets.First(wallet => wallet.BrandId == brandId).BrandName;
     }
 }

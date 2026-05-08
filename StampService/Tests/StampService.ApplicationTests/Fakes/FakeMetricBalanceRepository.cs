@@ -41,6 +41,7 @@ public class FakeMetricBalanceRepository : IMetricBalanceRepository
                 balance.MetricDefinitionId,
                 $"metric-{balance.MetricDefinitionId:N}",
                 $"Metric {balance.MetricDefinitionId:N}",
+                1,
                 balance.Value))
             .ToArray();
 

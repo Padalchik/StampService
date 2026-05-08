@@ -21,6 +21,22 @@ public class FakeCoinWalletRepository : ICoinWalletRepository
             && wallet.BrandId == brandId));
     }
 
+    public Task<IReadOnlyCollection<UserCoinWalletReadModel>> GetUserWalletsAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyCollection<UserCoinWalletReadModel> wallets = _wallets
+            .Where(wallet => wallet.UserId == userId)
+            .Select(wallet => new UserCoinWalletReadModel(
+                wallet.Id,
+                wallet.BrandId,
+                $"Brand {wallet.BrandId:N}",
+                wallet.Value))
+            .ToArray();
+
+        return Task.FromResult(wallets);
+    }
+
     public void Add(CoinWallet wallet)
     {
         _wallets.Add(wallet);

@@ -24,6 +24,21 @@ public class CoinWalletRepository : ICoinWalletRepository
                 cancellationToken);
     }
 
+    public async Task<IReadOnlyCollection<UserCoinWalletReadModel>> GetUserWalletsAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.CoinWallets
+            .AsNoTracking()
+            .Where(wallet => wallet.UserId == userId)
+            .Select(wallet => new UserCoinWalletReadModel(
+                wallet.Id,
+                wallet.BrandId,
+                wallet.Brand.Name,
+                wallet.Value))
+            .ToArrayAsync(cancellationToken);
+    }
+
     public void Add(CoinWallet wallet)
     {
         _dbContext.CoinWallets.Add(wallet);

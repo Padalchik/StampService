@@ -9,6 +9,10 @@ public interface ICoinWalletRepository
         Guid brandId,
         CancellationToken cancellationToken);
 
+    Task<IReadOnlyCollection<UserCoinWalletReadModel>> GetUserWalletsAsync(
+        Guid userId,
+        CancellationToken cancellationToken);
+
     void Add(CoinWallet wallet);
 
     Task SaveAsync(CancellationToken cancellationToken);

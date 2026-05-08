@@ -20,7 +20,10 @@ public class GetUserMetricBalancesHandlerTests
             Guid.NewGuid()).Value;
         balance.SetMaterializedValue(7);
         balanceRepository.Add(balance);
-        var handler = new GetUserMetricBalancesHandler(balanceRepository, userRepository);
+        var handler = new GetUserMetricBalancesHandler(
+            balanceRepository,
+            new FakeCoinWalletRepository(),
+            userRepository);
 
         var result = await handler.Handle(
             new GetUserMetricBalancesQuery(user.Id),
@@ -39,6 +42,7 @@ public class GetUserMetricBalancesHandlerTests
         userRepository.Add(user);
         var handler = new GetUserMetricBalancesHandler(
             new FakeMetricBalanceRepository(),
+            new FakeCoinWalletRepository(),
             userRepository);
 
         var result = await handler.Handle(
@@ -54,6 +58,7 @@ public class GetUserMetricBalancesHandlerTests
     {
         var handler = new GetUserMetricBalancesHandler(
             new FakeMetricBalanceRepository(),
+            new FakeCoinWalletRepository(),
             new FakeUserRepository());
 
         var result = await handler.Handle(
@@ -68,6 +73,7 @@ public class GetUserMetricBalancesHandlerTests
     {
         var handler = new GetUserMetricBalancesHandler(
             new FakeMetricBalanceRepository(),
+            new FakeCoinWalletRepository(),
             new FakeUserRepository());
 
         var result = await handler.Handle(
