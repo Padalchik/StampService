@@ -3,6 +3,7 @@ using StampService.Application.Abstractions;
 using StampService.Application.Brands.Queries.GetBrandWorkspace;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Brands;
+using StampService.TelegramBot.Features.CustomerBalances.Actions;
 using StampService.TelegramBot.Features.IssueMetric.Screens;
 using StampService.TelegramBot.Features.Metrics.Screens;
 using StampService.TelegramBot.Features.RedeemMetric.Screens;
@@ -76,7 +77,7 @@ public sealed class BrandWorkspaceScreen : IScreen
 
         if (workspace.CanViewBalances)
         {
-            view.Row().Button("Балансы клиентов", "brand_balances_not_implemented");
+            view.Row().Button<StartCustomerBalancesAction>("Балансы клиентов");
             hasActions = true;
         }
 
