@@ -38,6 +38,14 @@ internal sealed class NavigationService : INavigationService
         if (context.Session is null)
             return;
 
+        if (context.Session.Navigation.IsActionViewActive
+            && context.Session.Navigation.CurrentScreen is { } currentScreen)
+        {
+            context.Session.Navigation.IsActionViewActive = false;
+            await _screenManager.RenderScreenAsync(context, currentScreen, pushToStack: false);
+            return;
+        }
+
         string? previousScreen = context.Session.Navigation.NavigationStack is { Count: > 0 }
             ? context.Session.Navigation.NavigationStack[^1]
             : context.Session.Navigation.CurrentScreen;

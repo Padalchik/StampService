@@ -16,9 +16,9 @@ public sealed class CreateBrandConfirmScreen : IScreen
             "<b>Создать бренд?</b>\n\n" +
             $"Бренд: {Html(brandName)}\n" +
             $"Владелец: <code>{Html(ownerCode)}</code>")
-            .Button<ConfirmCreateBrandAction>("Создать")
+            .Button<ConfirmCreateBrandAction>("✅ Подтвердить")
             .Row()
-            .Button<CancelCreateBrandAction>("Отмена"));
+            .Button<CancelCreateBrandAction>("❌ Отмена"));
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);

@@ -23,9 +23,9 @@ public sealed class ReassignOwnerConfirmScreen : IScreen
             $"Текущий владелец: {currentOwnerText}\n" +
             $"Новый владелец: <code>{Html(newOwnerCode)}</code>\n\n" +
             "Старый владелец потеряет membership в бренде.")
-            .Button<ConfirmReassignOwnerAction>("Сменить владельца")
+            .Button<ConfirmReassignOwnerAction>("✅ Подтвердить")
             .Row()
-            .Button<CancelReassignOwnerAction>("Отмена"));
+            .Button<CancelReassignOwnerAction>("❌ Отмена"));
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);

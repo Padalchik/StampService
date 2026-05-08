@@ -16,10 +16,9 @@ public sealed class AddStaffConfirmScreen : IScreen
             $"Бренд: {Html(StaffBrandContext.GetBrandName(ctx))}\n" +
             $"CustomerCode: <code>{Html(customerCode)}</code>\n" +
             "Роль: Сотрудник")
-            .Button<ConfirmAddStaffAction>("Добавить")
+            .Button<ConfirmAddStaffAction>("✅ Подтвердить")
             .Row()
-            .Button<CancelAddStaffAction>("Отмена")
-            .BackButton());
+            .Button<CancelAddStaffAction>("❌ Отмена"));
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);

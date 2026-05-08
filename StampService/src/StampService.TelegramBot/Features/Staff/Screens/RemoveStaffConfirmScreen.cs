@@ -16,10 +16,9 @@ public sealed class RemoveStaffConfirmScreen : IScreen
             "<b>Удалить сотрудника?</b>\n\n" +
             $"{Html(name)} · <code>{Html(customerCode)}</code>\n\n" +
             "Пользователь потеряет доступ к этому бренду как сотрудник.")
-            .Button<ConfirmRemoveStaffAction>("Удалить")
+            .Button<ConfirmRemoveStaffAction>("✅ Подтвердить")
             .Row()
-            .Button<CancelRemoveStaffAction>("Отмена")
-            .BackButton());
+            .Button<CancelRemoveStaffAction>("❌ Отмена"));
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);

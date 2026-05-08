@@ -63,9 +63,9 @@ internal sealed class ScreenManager
         {
             session.Navigation.NavMessageId = sentMessage.Id;
             session.Navigation.CurrentMediaType = view.MediaType;
+            session.Navigation.IsActionViewActive = true;
 
-            if (view.PendingInputActionId is not null)
-                session.Navigation.PendingInputActionId = view.PendingInputActionId;
+            session.Navigation.SetPending(view.PendingInputActionId);
 
             foreach (KeyValuePair<string, string> kvp in payloads)
                 session.Navigation.StorePayloadJson(kvp.Key, kvp.Value);
@@ -110,10 +110,10 @@ internal sealed class ScreenManager
 
             session.Navigation.NavMessageId = sentMessage.Id;
             session.Navigation.CurrentMediaType = newMediaType;
+            session.Navigation.IsActionViewActive = false;
 
-            // View может явно задать pending input (перекрывает сброс из PushScreen)
-            if (view.PendingInputActionId is not null)
-                session.Navigation.PendingInputActionId = view.PendingInputActionId;
+            // View может явно задать pending input; если не задал, очищаем старое ожидание.
+            session.Navigation.SetPending(view.PendingInputActionId);
 
             foreach (KeyValuePair<string, string> kvp in payloads)
                 session.Navigation.StorePayloadJson(kvp.Key, kvp.Value);

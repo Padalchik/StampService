@@ -30,12 +30,12 @@ public sealed class CoinConfirmScreen : IScreen
             $"Комментарий: {Html(comment)}");
 
         if (mode == CoinSessionKeys.ModeIssue)
-            view.Button<ConfirmIssueCoinsAction>("Подтвердить");
+            view.Button<ConfirmIssueCoinsAction>("✅ Подтвердить");
         else
-            view.Button<ConfirmRedeemCoinsAction>("Подтвердить");
+            view.Button<ConfirmRedeemCoinsAction>("✅ Подтвердить");
 
         return ValueTask.FromResult(view.Row()
-            .Button<CancelCoinOperationAction>("Отмена"));
+            .Button<CancelCoinOperationAction>("❌ Отмена"));
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);

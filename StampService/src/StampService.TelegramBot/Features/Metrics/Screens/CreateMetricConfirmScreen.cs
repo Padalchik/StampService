@@ -18,9 +18,9 @@ public sealed class CreateMetricConfirmScreen : IScreen
             $"Название: {Html(name)}\n" +
             $"Код: <code>{Html(code)}</code>\n" +
             $"Списание: {redemptionAmount}")
-            .Button<ConfirmCreateMetricAction>("Создать")
+            .Button<ConfirmCreateMetricAction>("✅ Подтвердить")
             .Row()
-            .Button<CancelCreateMetricAction>("Отмена"));
+            .Button<CancelCreateMetricAction>("❌ Отмена"));
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);

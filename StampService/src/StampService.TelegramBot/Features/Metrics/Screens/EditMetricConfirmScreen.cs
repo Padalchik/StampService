@@ -18,9 +18,9 @@ public sealed class EditMetricConfirmScreen : IScreen
             $"Название: {Html(name)}\n" +
             $"Код: <code>{Html(code)}</code>\n" +
             $"Списание: {redemptionAmount}")
-            .Button<ConfirmEditMetricAction>("Сохранить")
+            .Button<ConfirmEditMetricAction>("✅ Подтвердить")
             .Row()
-            .Button<CancelEditMetricAction>("Отмена"));
+            .Button<CancelEditMetricAction>("❌ Отмена"));
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);
