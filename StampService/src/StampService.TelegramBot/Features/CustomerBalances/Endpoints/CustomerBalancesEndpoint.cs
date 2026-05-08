@@ -1,6 +1,8 @@
 using System.Net;
+using System.Globalization;
 using StampService.Application.Abstractions;
 using StampService.Application.Metrics.Queries.GetBrandCustomerMetricBalances;
+using StampService.Application.Metrics.Queries.GetMetricTransactions;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.TelegramBot.Common.Errors;
@@ -23,6 +25,7 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
     {
         app.MapAction<StartCustomerBalancesAction>(StartAsync);
         app.MapInput<EnterCustomerBalancesCodeAction>(EnterCustomerCodeAsync);
+        app.MapAction<ViewCustomerBalanceHistoryAction, ViewCustomerBalanceHistoryPayload>(ViewHistoryAsync);
     }
 
     private static Task<IEndpointResult> StartAsync(UpdateContext ctx)
@@ -83,6 +86,76 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
         return BotInputResults.DeleteInputThen(BotResults.ShowView(BuildBalancesView(ctx, balancesResult.Value)));
     }
 
+    private static async Task<IEndpointResult> ViewHistoryAsync(
+        UpdateContext ctx,
+        ViewCustomerBalanceHistoryPayload payload,
+        ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
+        IQueryHandler<MetricTransactionsResponse, GetMetricTransactionsQuery> transactionsHandler)
+    {
+        var from = ctx.Update.Message?.From ?? ctx.Update.CallbackQuery?.From;
+        var userResult = await ensureUserHandler.Handle(
+            new EnsureTelegramUserCommand(
+                ctx.UserId,
+                from?.FirstName,
+                from?.LastName,
+                from?.Username),
+            ctx.CancellationToken);
+
+        if (userResult.IsFailed)
+            return BotResults.ShowView(new ScreenView("Не удалось определить пользователя.").BackButton());
+
+        var transactionsResult = await transactionsHandler.Handle(
+            new GetMetricTransactionsQuery(
+                payload.MetricDefinitionId,
+                payload.CustomerUserId,
+                userResult.Value.UserId,
+                Skip: 0,
+                Take: 10),
+            ctx.CancellationToken);
+
+        if (transactionsResult.IsFailed)
+            return BotResults.ShowView(new ScreenView("Не удалось загрузить историю.").BackButton());
+
+        var brandName = ctx.Session?.Data.GetString(BrandWorkspaceScreen.BrandNameSessionKey) ?? "бренд";
+        var title =
+            $"<b>{Html(brandName)}</b>\n" +
+            $"{Html(payload.MetricName)}\n" +
+            $"Клиент: {Html(payload.CustomerName)} · <code>{Html(payload.CustomerCode)}</code>";
+
+        if (transactionsResult.Value.Items.Count == 0)
+        {
+            return BotResults.ShowView(new ScreenView(
+                $"{title}\n\n" +
+                "Истории операций пока нет.")
+                .NavigateButton<CustomerBalancesCodeScreen>("Другой клиент")
+                .Row()
+                .NavigateButton<BrandWorkspaceScreen>("К бренду")
+                .BackButton());
+        }
+
+        var lines = transactionsResult.Value.Items.Select(transaction =>
+        {
+            var isIssue = transaction.TransactionType == "Issue";
+            var marker = isIssue ? "🟢" : "🟡";
+            var sign = isIssue ? "+" : "-";
+            var date = transaction.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
+            var comment = string.IsNullOrWhiteSpace(transaction.Comment)
+                ? string.Empty
+                : $" - {Html(transaction.Comment)}";
+
+            return $"{marker} {date}: {sign}{transaction.Amount}{comment}";
+        });
+
+        return BotResults.ShowView(new ScreenView(
+            $"{title}\n\n" +
+            "<b>Последние операции</b>\n" +
+            string.Join("\n", lines))
+            .NavigateButton<CustomerBalancesCodeScreen>("Другой клиент")
+            .Row()
+            .NavigateButton<BrandWorkspaceScreen>("К бренду")
+            .BackButton());
+    }
+
     private static ScreenView BuildBalancesView(
         UpdateContext ctx,
         BrandCustomerMetricBalancesResponse response)
@@ -96,11 +169,24 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
             ? ["В бренде пока нет метрик."]
             : activeBalances.Select(balance => $"{Html(balance.MetricName)}: {balance.Value}");
 
-        return new ScreenView(
+        var view = new ScreenView(
             $"<b>{Html(brandName)}</b>\n\n" +
             $"Клиент: {Html(response.CustomerName)} · <code>{Html(response.CustomerCode)}</code>\n\n" +
-            string.Join("\n", lines))
-            .NavigateButton<CustomerBalancesCodeScreen>("Другой клиент")
+            string.Join("\n", lines));
+
+        foreach (var balance in activeBalances)
+        {
+            view.Row().Button<ViewCustomerBalanceHistoryAction, ViewCustomerBalanceHistoryPayload>(
+                $"История: {balance.MetricName}",
+                new ViewCustomerBalanceHistoryPayload(
+                    response.CustomerUserId,
+                    response.CustomerName,
+                    response.CustomerCode,
+                    balance.MetricDefinitionId,
+                    balance.MetricName));
+        }
+
+        return view.NavigateButton<CustomerBalancesCodeScreen>("Другой клиент")
             .Row()
             .NavigateButton<BrandWorkspaceScreen>("К бренду")
             .BackButton();

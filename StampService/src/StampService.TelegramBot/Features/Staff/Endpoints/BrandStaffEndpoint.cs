@@ -88,6 +88,7 @@ public sealed class BrandStaffEndpoint : IBotEndpoint
             return BotResults.ShowView(new ScreenView($"Не удалось добавить сотрудника: {BotErrorFormatter.Format(result.Errors)}").BackButton());
 
         ctx.Session?.Data.Remove(StaffSessionKeys.AddCustomerCode);
+        ClearSelectedStaff(ctx);
 
         return BotResults.ShowView(new ScreenView(
             "<b>Сотрудник добавлен</b>\n\n" +
@@ -144,6 +145,7 @@ public sealed class BrandStaffEndpoint : IBotEndpoint
         if (result.IsFailed)
             return BotResults.ShowView(new ScreenView($"Не удалось удалить сотрудника: {BotErrorFormatter.Format(result.Errors)}").BackButton());
 
+        ctx.Session?.Data.Remove(StaffSessionKeys.AddCustomerCode);
         ClearSelectedStaff(ctx);
 
         return BotResults.ShowView(new ScreenView(
