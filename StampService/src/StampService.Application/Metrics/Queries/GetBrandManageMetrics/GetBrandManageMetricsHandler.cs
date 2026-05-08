@@ -6,15 +6,15 @@ using StampService.Application.Users;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Access;
 
-namespace StampService.Application.Metrics.Queries.GetBrandIssueMetrics;
+namespace StampService.Application.Metrics.Queries.GetBrandManageMetrics;
 
-public class GetBrandIssueMetricsHandler : IQueryHandler<IReadOnlyCollection<MetricResponse>, GetBrandIssueMetricsQuery>
+public class GetBrandManageMetricsHandler : IQueryHandler<IReadOnlyCollection<MetricResponse>, GetBrandManageMetricsQuery>
 {
     private readonly IBrandAccessService _brandAccessService;
     private readonly ILoyaltyMetricRepository _metricRepository;
     private readonly IUserRepository _userRepository;
 
-    public GetBrandIssueMetricsHandler(
+    public GetBrandManageMetricsHandler(
         IBrandAccessService brandAccessService,
         ILoyaltyMetricRepository metricRepository,
         IUserRepository userRepository)
@@ -25,7 +25,7 @@ public class GetBrandIssueMetricsHandler : IQueryHandler<IReadOnlyCollection<Met
     }
 
     public async Task<Result<IReadOnlyCollection<MetricResponse>>> Handle(
-        GetBrandIssueMetricsQuery query,
+        GetBrandManageMetricsQuery query,
         CancellationToken cancellationToken)
     {
         if (query.UserId == Guid.Empty)
@@ -38,18 +38,17 @@ public class GetBrandIssueMetricsHandler : IQueryHandler<IReadOnlyCollection<Met
         if (!userExists)
             return Result.Fail(UserErrors.NotFound());
 
-        var canIssue = await _brandAccessService.CanAsync(
+        var canManage = await _brandAccessService.CanAsync(
             query.UserId,
             query.BrandId,
-            PermissionCode.StampIssue,
+            PermissionCode.MetricManage,
             cancellationToken);
 
-        if (!canIssue)
+        if (!canManage)
             return Result.Fail(AccessErrors.Denied());
 
         var metrics = await _metricRepository.GetByBrandAsync(query.BrandId, cancellationToken);
         IReadOnlyCollection<MetricResponse> response = metrics
-            .Where(metric => metric.IsActive)
             .Select(MetricMapping.ToResponse)
             .ToArray();
 

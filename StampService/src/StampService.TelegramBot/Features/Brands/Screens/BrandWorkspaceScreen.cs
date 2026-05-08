@@ -4,6 +4,7 @@ using StampService.Application.Brands.Queries.GetBrandWorkspace;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Brands;
 using StampService.TelegramBot.Features.IssueMetric.Screens;
+using StampService.TelegramBot.Features.Metrics.Screens;
 using StampService.TelegramBot.Features.RedeemMetric.Screens;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
@@ -80,7 +81,7 @@ public sealed class BrandWorkspaceScreen : IScreen
 
         if (workspace.CanManageMetrics)
         {
-            view.Row().Button("Метрики", "brand_metrics_not_implemented");
+            view.Row().NavigateButton<MetricsListScreen>("Метрики");
             hasActions = true;
         }
 

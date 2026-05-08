@@ -86,6 +86,30 @@ public class LoyaltyMetricDefinitionTests
         Assert.Equal("NEW", metric.Code);
     }
 
+    [Fact]
+    public void UpdateRedemptionAmount_ValidAmount_ShouldUpdateAmount()
+    {
+        var metric = CreateMetric();
+
+        var result = metric.UpdateRedemptionAmount(3);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(3, metric.RedemptionAmount);
+    }
+
+    [Fact]
+    public void UpdateDetails_WhenRedemptionAmountInvalid_ShouldFailWithoutChangingMetric()
+    {
+        var metric = CreateMetric();
+
+        var result = metric.UpdateDetails("NEW", "New name", 0);
+
+        Assert.True(result.IsFailed);
+        Assert.Equal("STAMPS", metric.Code);
+        Assert.Equal("Stamps", metric.Name);
+        Assert.Equal(1, metric.RedemptionAmount);
+    }
+
     private static LoyaltyMetricDefinition CreateMetric()
     {
         return LoyaltyMetricDefinition.Create(Guid.NewGuid(), "STAMPS", "Stamps", 1).Value;

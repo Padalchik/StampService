@@ -8,7 +8,10 @@ using StampService.Application.Errors;
 using StampService.Application.Metrics.Commands.CreateMetric;
 using StampService.Application.Metrics.Commands.IssueMetric;
 using StampService.Application.Metrics.Commands.RedeemMetric;
+using StampService.Application.Metrics.Commands.UpdateMetric;
+using StampService.Application.Metrics.Queries.GetBrandManageMetrics;
 using StampService.Application.Metrics.Queries.GetMetricBalance;
+using StampService.Application.Metrics.Queries.GetMetricDetails;
 using StampService.Application.Metrics.Queries.GetMetricTransactions;
 using StampService.Contracts.DTOs.Metrics;
 
@@ -34,6 +37,52 @@ public class MetricsController : ControllerBase
 
         return EndpointResult<MetricResponse>.Created(
             await handler.Handle(command, cancellationToken));
+    }
+
+    [HttpGet("brands/{brandId:guid}/metrics")]
+    public async Task<EndpointResult<IReadOnlyCollection<MetricResponse>>> GetByBrand(
+        Guid brandId,
+        [FromServices] IQueryHandler<IReadOnlyCollection<MetricResponse>, GetBrandManageMetricsQuery> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<IReadOnlyCollection<MetricResponse>>();
+
+        return await handler.Handle(
+            new GetBrandManageMetricsQuery(userIdResult.Value, brandId),
+            cancellationToken);
+    }
+
+    [HttpGet("metrics/{metricDefinitionId:guid}")]
+    public async Task<EndpointResult<MetricResponse>> GetDetails(
+        Guid metricDefinitionId,
+        [FromServices] IQueryHandler<MetricResponse, GetMetricDetailsQuery> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<MetricResponse>();
+
+        return await handler.Handle(
+            new GetMetricDetailsQuery(userIdResult.Value, metricDefinitionId),
+            cancellationToken);
+    }
+
+    [HttpPut("metrics/{metricDefinitionId:guid}")]
+    public async Task<EndpointResult<MetricResponse>> Update(
+        Guid metricDefinitionId,
+        UpdateMetricRequest request,
+        [FromServices] ICommandHandler<MetricResponse, UpdateMetricCommand> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<MetricResponse>();
+
+        return await handler.Handle(
+            new UpdateMetricCommand(metricDefinitionId, userIdResult.Value, request),
+            cancellationToken);
     }
 
     [HttpPost("metrics/{metricDefinitionId:guid}/issue")]

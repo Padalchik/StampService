@@ -22,6 +22,14 @@ public class LoyaltyMetricRepository : ILoyaltyMetricRepository
             .FirstOrDefaultAsync(metric => metric.Id == metricDefinitionId, cancellationToken);
     }
 
+    public async Task<LoyaltyMetricDefinition?> GetByIdForUpdateAsync(
+        Guid metricDefinitionId,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.LoyaltyMetricDefinitions
+            .FirstOrDefaultAsync(metric => metric.Id == metricDefinitionId, cancellationToken);
+    }
+
     public async Task<IReadOnlyCollection<LoyaltyMetricDefinition>> GetByBrandAsync(
         Guid brandId,
         CancellationToken cancellationToken)

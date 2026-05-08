@@ -137,4 +137,57 @@ public class LoyaltyMetricDefinition : BaseEntity
         Touch();
         return Result.Ok();
     }
+
+    public Result UpdateRedemptionAmount(int redemptionAmount)
+    {
+        if (redemptionAmount <= 0)
+            return Result.Fail(DomainError.Validation(
+                "metric_definition.redemption_amount_must_be_positive",
+                "RedemptionAmount must be positive",
+                nameof(redemptionAmount)));
+
+        RedemptionAmount = redemptionAmount;
+        Touch();
+        return Result.Ok();
+    }
+
+    public Result UpdateDetails(string code, string name, int redemptionAmount)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            return Result.Fail(DomainError.Validation(
+                "metric_definition.code_required",
+                "Code РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїСѓСЃС‚С‹Рј",
+                nameof(code)));
+
+        if (code.Length > Constants.MAX_METRIC_CODE_LENGTH)
+            return Result.Fail(DomainError.Validation(
+                "metric_definition.code_too_long",
+                $"Code РЅРµ РґРѕР»Р¶РµРЅ РїСЂРµРІС‹С€Р°С‚СЊ {Constants.MAX_METRIC_CODE_LENGTH} СЃРёРјРІРѕР»РѕРІ",
+                nameof(code)));
+
+        if (string.IsNullOrWhiteSpace(name))
+            return Result.Fail(DomainError.Validation(
+                "metric_definition.name_required",
+                "Name РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїСѓСЃС‚С‹Рј",
+                nameof(name)));
+
+        if (name.Length > Constants.MAX_METRIC_NAME_LENGTH)
+            return Result.Fail(DomainError.Validation(
+                "metric_definition.name_too_long",
+                $"Name РЅРµ РґРѕР»Р¶РµРЅ РїСЂРµРІС‹С€Р°С‚СЊ {Constants.MAX_METRIC_NAME_LENGTH} СЃРёРјРІРѕР»РѕРІ",
+                nameof(name)));
+
+        if (redemptionAmount <= 0)
+            return Result.Fail(DomainError.Validation(
+                "metric_definition.redemption_amount_must_be_positive",
+                "RedemptionAmount must be positive",
+                nameof(redemptionAmount)));
+
+        Code = code.Trim();
+        Name = name.Trim();
+        RedemptionAmount = redemptionAmount;
+        Touch();
+
+        return Result.Ok();
+    }
 }

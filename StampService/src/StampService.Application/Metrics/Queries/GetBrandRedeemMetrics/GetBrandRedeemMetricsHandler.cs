@@ -50,14 +50,7 @@ public class GetBrandRedeemMetricsHandler : IQueryHandler<IReadOnlyCollection<Me
         var metrics = await _metricRepository.GetByBrandAsync(query.BrandId, cancellationToken);
         IReadOnlyCollection<MetricResponse> response = metrics
             .Where(metric => metric.IsActive)
-            .Select(metric => new MetricResponse(
-                metric.Id,
-                metric.BrandId,
-                metric.Code,
-                metric.Name,
-                metric.RedemptionAmount,
-                metric.IsActive,
-                metric.CreatedAt))
+            .Select(MetricMapping.ToResponse)
             .ToArray();
 
         return Result.Ok(response);

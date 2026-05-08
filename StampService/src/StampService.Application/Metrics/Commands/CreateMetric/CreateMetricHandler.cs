@@ -64,15 +64,6 @@ public class CreateMetricHandler : ICommandHandler<MetricResponse, CreateMetricC
         _metricRepository.Add(metric);
         await _metricRepository.SaveAsync(cancellationToken);
 
-        var response = new MetricResponse(
-            metric.Id,
-            metric.BrandId,
-            metric.Code,
-            metric.Name,
-            metric.RedemptionAmount,
-            metric.IsActive,
-            metric.CreatedAt);
-
-        return Result.Ok(response);
+        return Result.Ok(MetricMapping.ToResponse(metric));
     }
 }
