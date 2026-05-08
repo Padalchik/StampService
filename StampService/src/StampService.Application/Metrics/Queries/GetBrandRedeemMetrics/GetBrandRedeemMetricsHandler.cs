@@ -55,6 +55,7 @@ public class GetBrandRedeemMetricsHandler : IQueryHandler<IReadOnlyCollection<Me
                 metric.BrandId,
                 metric.Code,
                 metric.Name,
+                metric.RedemptionAmount,
                 metric.IsActive,
                 metric.CreatedAt))
             .ToArray();

@@ -55,6 +55,7 @@ public class GetBrandIssueMetricsHandler : IQueryHandler<IReadOnlyCollection<Met
                 metric.BrandId,
                 metric.Code,
                 metric.Name,
+                metric.RedemptionAmount,
                 metric.IsActive,
                 metric.CreatedAt))
             .ToArray();

@@ -9,13 +9,15 @@ public class LoyaltyMetricDefinition : BaseEntity
     public Brand.Brand Brand { get; private set; } = null!;
     public string Code { get; private set; }
     public string Name { get; private set; }
+    public int RedemptionAmount { get; private set; }
     public bool IsActive { get; private set; }
 
-    private LoyaltyMetricDefinition(Guid brandId, string code, string name)
+    private LoyaltyMetricDefinition(Guid brandId, string code, string name, int redemptionAmount)
     {
         BrandId = brandId;
         Code = code;
         Name = name;
+        RedemptionAmount = redemptionAmount;
         IsActive = true;
     }
 
@@ -26,7 +28,11 @@ public class LoyaltyMetricDefinition : BaseEntity
         Name = null!;
     }
 
-    public static Result<LoyaltyMetricDefinition> Create(Guid brandId, string code, string name)
+    public static Result<LoyaltyMetricDefinition> Create(
+        Guid brandId,
+        string code,
+        string name,
+        int redemptionAmount)
     {
         if (brandId == Guid.Empty)
             return Result.Fail(DomainError.Validation(
@@ -58,7 +64,13 @@ public class LoyaltyMetricDefinition : BaseEntity
                 $"Name не должен превышать {Constants.MAX_METRIC_NAME_LENGTH} символов",
                 nameof(name)));
 
-        var definition = new LoyaltyMetricDefinition(brandId, code.Trim(), name.Trim());
+        if (redemptionAmount <= 0)
+            return Result.Fail(DomainError.Validation(
+                "metric_definition.redemption_amount_must_be_positive",
+                "RedemptionAmount must be positive",
+                nameof(redemptionAmount)));
+
+        var definition = new LoyaltyMetricDefinition(brandId, code.Trim(), name.Trim(), redemptionAmount);
         return Result.Ok(definition);
     }
 

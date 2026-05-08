@@ -60,7 +60,7 @@ public sealed class RedeemMetricSelectScreen : IScreen
         {
             view.Row().Button<SelectRedeemMetricAction, SelectRedeemMetricPayload>(
                 metric.Name,
-                new SelectRedeemMetricPayload(metric.Id, metric.Name));
+                new SelectRedeemMetricPayload(metric.Id, metric.Name, metric.RedemptionAmount));
         }
 
         return view.BackButton();

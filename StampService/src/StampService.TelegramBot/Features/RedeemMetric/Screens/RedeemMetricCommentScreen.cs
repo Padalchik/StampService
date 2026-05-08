@@ -10,13 +10,13 @@ public sealed class RedeemMetricCommentScreen : IScreen
     {
         var metricName = ctx.Session?.Data.GetString(RedeemMetricSessionKeys.MetricName) ?? "метрика";
         var redemptionCode = ctx.Session?.Data.GetString(RedeemMetricSessionKeys.RedemptionCode);
-        var amount = ctx.Session?.Data.Get<int>(RedeemMetricSessionKeys.Amount) ?? 0;
+        var redemptionAmount = ctx.Session?.Data.Get<int>(RedeemMetricSessionKeys.RedemptionAmount) ?? 0;
 
         return ValueTask.FromResult(new ScreenView(
             "<b>Списание метрики</b>\n\n" +
             $"Метрика: {metricName}\n" +
             $"Код списания: {redemptionCode}\n" +
-            $"Количество: {amount}\n\n" +
+            $"Количество: {redemptionAmount}\n\n" +
             "Введите комментарий:")
             .AwaitInput<EnterRedeemCommentAction>()
             .BackButton());

@@ -3,6 +3,7 @@ using StampService.Application.Abstractions;
 using StampService.Application.Access;
 using StampService.Application.Auth;
 using StampService.Application.Metrics;
+using StampService.Application.Metrics.Commands.RedeemMetric;
 using StampService.Application.Services;
 using StampService.Application.Users;
 
@@ -28,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IBrandAccessService, BrandAccessService>();
         services.AddScoped<IBrandMembershipService, BrandMembershipService>();
         services.AddScoped<IMetricLedgerService, MetricLedgerService>();
+        services.AddScoped<IRedeemMetricValidationService, RedeemMetricValidationService>();
         services.AddScoped<ITelegramValidationService, TelegramValidationService>();
         services.AddScoped<ICustomerCodeGenerator, CustomerCodeGenerator>();
         services.AddScoped<IRedemptionCodeGenerator, RedemptionCodeGenerator>();

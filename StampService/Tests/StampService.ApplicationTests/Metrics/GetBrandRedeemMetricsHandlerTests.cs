@@ -19,7 +19,7 @@ public class GetBrandRedeemMetricsHandlerTests
         var membershipRepository = new FakeBrandMembershipRepository();
         membershipRepository.SetRole(user.Id, brandId, SystemRoles.Staff);
         var metricRepository = new FakeLoyaltyMetricRepository();
-        metricRepository.AddExisting(LoyaltyMetricDefinition.Create(brandId, "coffee", "Coffee").Value);
+        metricRepository.AddExisting(LoyaltyMetricDefinition.Create(brandId, "coffee", "Coffee", 2).Value);
 
         var handler = new GetBrandRedeemMetricsHandler(
             new BrandAccessService(membershipRepository),
@@ -33,6 +33,7 @@ public class GetBrandRedeemMetricsHandlerTests
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value);
         Assert.Equal("Coffee", result.Value.Single().Name);
+        Assert.Equal(2, result.Value.Single().RedemptionAmount);
     }
 
     [Fact]

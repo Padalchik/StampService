@@ -45,7 +45,8 @@ public class CreateMetricHandler : ICommandHandler<MetricResponse, CreateMetricC
         var metricResult = LoyaltyMetricDefinition.Create(
             command.BrandId,
             command.Request.Code,
-            command.Request.Name);
+            command.Request.Name,
+            command.Request.RedemptionAmount);
 
         if (metricResult.IsFailed)
             return Result.Fail(metricResult.Errors);
@@ -68,6 +69,7 @@ public class CreateMetricHandler : ICommandHandler<MetricResponse, CreateMetricC
             metric.BrandId,
             metric.Code,
             metric.Name,
+            metric.RedemptionAmount,
             metric.IsActive,
             metric.CreatedAt);
 

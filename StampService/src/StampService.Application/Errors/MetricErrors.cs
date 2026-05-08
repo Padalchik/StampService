@@ -12,6 +12,11 @@ public static class MetricErrors
             "metric_balance.not_found",
             "Metric balance not found");
 
+    public static AppError InsufficientFunds(int currentBalance, int requiredAmount) =>
+        AppError.Conflict(
+            "metric_balance.insufficient_funds",
+            $"Insufficient metric balance. Current: {currentBalance}, required: {requiredAmount}");
+
     public static AppError IsNotActive() =>
         AppError.Conflict(
             "metric.inactive",

@@ -9,19 +9,20 @@ public class LoyaltyMetricDefinitionTests
     {
         var brandId = Guid.NewGuid();
 
-        var result = LoyaltyMetricDefinition.Create(brandId, " STAMPS ", " Stamps ");
+        var result = LoyaltyMetricDefinition.Create(brandId, " STAMPS ", " Stamps ", 5);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(brandId, result.Value.BrandId);
         Assert.Equal("STAMPS", result.Value.Code);
         Assert.Equal("Stamps", result.Value.Name);
+        Assert.Equal(5, result.Value.RedemptionAmount);
         Assert.True(result.Value.IsActive);
     }
 
     [Fact]
     public void Create_EmptyBrandId_ShouldFail()
     {
-        var result = LoyaltyMetricDefinition.Create(Guid.Empty, "STAMPS", "Stamps");
+        var result = LoyaltyMetricDefinition.Create(Guid.Empty, "STAMPS", "Stamps", 1);
 
         Assert.True(result.IsFailed);
     }
@@ -29,7 +30,15 @@ public class LoyaltyMetricDefinitionTests
     [Fact]
     public void Create_EmptyCode_ShouldFail()
     {
-        var result = LoyaltyMetricDefinition.Create(Guid.NewGuid(), " ", "Stamps");
+        var result = LoyaltyMetricDefinition.Create(Guid.NewGuid(), " ", "Stamps", 1);
+
+        Assert.True(result.IsFailed);
+    }
+
+    [Fact]
+    public void Create_NonPositiveRedemptionAmount_ShouldFail()
+    {
+        var result = LoyaltyMetricDefinition.Create(Guid.NewGuid(), "STAMPS", "Stamps", 0);
 
         Assert.True(result.IsFailed);
     }
@@ -79,6 +88,6 @@ public class LoyaltyMetricDefinitionTests
 
     private static LoyaltyMetricDefinition CreateMetric()
     {
-        return LoyaltyMetricDefinition.Create(Guid.NewGuid(), "STAMPS", "Stamps").Value;
+        return LoyaltyMetricDefinition.Create(Guid.NewGuid(), "STAMPS", "Stamps", 1).Value;
     }
 }

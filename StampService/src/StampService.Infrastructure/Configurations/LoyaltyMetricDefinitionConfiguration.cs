@@ -8,7 +8,12 @@ public class LoyaltyMetricDefinitionConfiguration : IEntityTypeConfiguration<Loy
 {
     public void Configure(EntityTypeBuilder<LoyaltyMetricDefinition> builder)
     {
-        builder.ToTable("loyalty_metric_definitions");
+        builder.ToTable("loyalty_metric_definitions", table =>
+        {
+            table.HasCheckConstraint(
+                "ck_loyalty_metric_definitions_redemption_amount_positive",
+                "redemption_amount > 0");
+        });
 
         builder.HasKey(lmd => lmd.Id);
 
@@ -29,6 +34,10 @@ public class LoyaltyMetricDefinitionConfiguration : IEntityTypeConfiguration<Loy
             .IsRequired()
             .HasMaxLength(Constants.MAX_METRIC_NAME_LENGTH)
             .HasColumnName("name");
+
+        builder.Property(lmd => lmd.RedemptionAmount)
+            .IsRequired()
+            .HasColumnName("redemption_amount");
 
         builder.Property(lmd => lmd.IsActive)
             .IsRequired()
