@@ -49,6 +49,23 @@ public class FakeBrandMembershipRepository : IBrandMembershipRepository
         return Task.FromResult(result);
     }
 
+    public Task<IReadOnlyCollection<BrandStaffReadModel>> GetBrandStaffAsync(
+        Guid brandId,
+        CancellationToken cancellationToken)
+    {
+        var staffRole = GetKnownRole(SystemRoles.Staff);
+        IReadOnlyCollection<BrandStaffReadModel> result = _memberships.Values
+            .Where(membership => membership.BrandId == brandId && membership.RoleId == staffRole.Id)
+            .Select(membership => new BrandStaffReadModel(
+                membership.UserId,
+                $"User {membership.UserId:N}",
+                "0000",
+                membership.CreatedAt))
+            .ToArray();
+
+        return Task.FromResult(result);
+    }
+
     public Task<BrandMembership?> GetByBrandAndUserAsync(
         Guid brandId,
         Guid userId,

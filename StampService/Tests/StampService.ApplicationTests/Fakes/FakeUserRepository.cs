@@ -32,6 +32,11 @@ public class FakeUserRepository : IUserRepository
         return Task.FromResult(user);
     }
 
+    public Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(Users.FirstOrDefault(user => user.Id == userId));
+    }
+
     public Task<bool> CustomerCodeExistsAsync(string customerCode, CancellationToken cancellationToken)
     {
         return Task.FromResult(_usersByCustomerCode.ContainsKey(customerCode));

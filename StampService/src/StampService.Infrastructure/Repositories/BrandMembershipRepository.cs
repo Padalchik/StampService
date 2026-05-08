@@ -41,6 +41,24 @@ public class BrandMembershipRepository : IBrandMembershipRepository
             .ToArrayAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyCollection<BrandStaffReadModel>> GetBrandStaffAsync(
+        Guid brandId,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.BrandMemberships
+            .AsNoTracking()
+            .Where(membership => membership.BrandId == brandId
+                && membership.Role.SystemName == SystemRoles.Staff)
+            .OrderBy(membership => membership.User.Name)
+            .ThenBy(membership => membership.User.CustomerCode)
+            .Select(membership => new BrandStaffReadModel(
+                membership.UserId,
+                membership.User.Name,
+                membership.User.CustomerCode,
+                membership.CreatedAt))
+            .ToArrayAsync(cancellationToken);
+    }
+
     public async Task<BrandMembership?> GetByBrandAndUserAsync(
         Guid brandId,
         Guid userId,

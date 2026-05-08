@@ -6,6 +6,7 @@ using StampService.Contracts.DTOs.Brands;
 using StampService.TelegramBot.Features.IssueMetric.Screens;
 using StampService.TelegramBot.Features.Metrics.Screens;
 using StampService.TelegramBot.Features.RedeemMetric.Screens;
+using StampService.TelegramBot.Features.Staff.Actions;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
 
@@ -87,7 +88,9 @@ public sealed class BrandWorkspaceScreen : IScreen
 
         if (workspace.CanManageStaff)
         {
-            view.Row().Button("Сотрудники", "brand_staff_not_implemented");
+            view.Row().Button<OpenBrandStaffAction, OpenBrandStaffPayload>(
+                "Сотрудники",
+                new OpenBrandStaffPayload(workspace.BrandId, workspace.BrandName));
             hasActions = true;
         }
 

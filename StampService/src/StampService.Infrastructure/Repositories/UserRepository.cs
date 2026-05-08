@@ -33,6 +33,12 @@ public class UserRepository : IUserRepository
             .FirstOrDefaultAsync(user => user.CustomerCode == customerCode, cancellationToken);
     }
 
+    public async Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Users
+            .FirstOrDefaultAsync(user => user.Id == userId, cancellationToken);
+    }
+
     public async Task<bool> CustomerCodeExistsAsync(string customerCode, CancellationToken cancellationToken)
     {
         return await _dbContext.Users

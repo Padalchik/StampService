@@ -28,12 +28,15 @@ public static class BotErrorFormatter
             AppErrorCodes.Access.AdminRequired => "нужны права администратора",
             AppErrorCodes.Access.Denied => context == BotErrorContext.IssueMetric
                 ? "нет прав на выдачу метрики"
-                : "нет прав на списание метрики",
+                : context == BotErrorContext.RedeemMetric
+                    ? "нет прав на списание метрики"
+                    : "нет прав на действие",
             AppErrorCodes.Auth.TelegramLoginDataInvalid => "не удалось подтвердить Telegram-авторизацию",
             AppErrorCodes.Auth.UserIdClaimMissing => "не удалось определить пользователя",
             AppErrorCodes.Auth.UserIdClaimInvalid => "не удалось определить пользователя",
             AppErrorCodes.Brand.NotFound => "бренд не найден",
             AppErrorCodes.BrandMembership.NotFound => "нет доступа к этому бренду",
+            AppErrorCodes.BrandMembership.CannotChangeOwnerRole => "владельца нельзя изменить через управление сотрудниками",
             AppErrorCodes.CustomerCode.Invalid => "клиентский код должен состоять из 4 цифр",
             AppErrorCodes.Metric.NotFound => "метрика не найдена",
             AppErrorCodes.Metric.Inactive => "метрика неактивна",
