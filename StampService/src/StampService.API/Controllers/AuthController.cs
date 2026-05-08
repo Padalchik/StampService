@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using StampService.API.EndpointResults;
 using StampService.Application.Auth;
 using StampService.Contracts.DTOs.Auth;
 
@@ -9,13 +10,11 @@ namespace StampService.API.Controllers;
 public class AuthController : ControllerBase
 {
     [HttpPost("telegram")]
-    public async Task<ActionResult<AuthResponse>> Login(
+    public async Task<EndpointResult<AuthResponse>> Login(
         TelegramLoginRequest request,
         [FromServices] IAuthService authService,
         CancellationToken cancellationToken)
     {
-        var result = await authService.LoginAsync(request, cancellationToken);
-
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Errors);
+        return await authService.LoginAsync(request, cancellationToken);
     }
 }

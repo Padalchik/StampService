@@ -5,5 +5,6 @@ public record MetricResponse(
     Guid BrandId,
     string Code,
     string Name,
+    int RedemptionAmount,
     bool IsActive,
     DateTime CreatedAt);

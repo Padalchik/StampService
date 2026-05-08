@@ -11,6 +11,8 @@ public interface IUserRepository
 
     Task<User?> GetByCustomerCodeAsync(string customerCode, CancellationToken cancellationToken);
 
+    Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken);
+
     Task<bool> CustomerCodeExistsAsync(string customerCode, CancellationToken cancellationToken);
 
     Task<bool> ExistsAsync(Guid userId, CancellationToken cancellationToken);

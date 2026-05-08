@@ -41,6 +41,24 @@ public class BrandMembershipRepository : IBrandMembershipRepository
             .ToArrayAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyCollection<BrandStaffReadModel>> GetBrandStaffAsync(
+        Guid brandId,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.BrandMemberships
+            .AsNoTracking()
+            .Where(membership => membership.BrandId == brandId
+                && membership.Role.SystemName == SystemRoles.Staff)
+            .OrderBy(membership => membership.User.Name)
+            .ThenBy(membership => membership.User.CustomerCode)
+            .Select(membership => new BrandStaffReadModel(
+                membership.UserId,
+                membership.User.Name,
+                membership.User.CustomerCode,
+                membership.CreatedAt))
+            .ToArrayAsync(cancellationToken);
+    }
+
     public async Task<BrandMembership?> GetByBrandAndUserAsync(
         Guid brandId,
         Guid userId,
@@ -57,7 +75,6 @@ public class BrandMembershipRepository : IBrandMembershipRepository
         CancellationToken cancellationToken)
     {
         return await _dbContext.BrandMemberships
-            .AsNoTracking()
             .FirstOrDefaultAsync(
                 membership => membership.BrandId == brandId
                     && membership.Role.SystemName == SystemRoles.Owner,
@@ -75,6 +92,11 @@ public class BrandMembershipRepository : IBrandMembershipRepository
     public void Add(BrandMembership membership)
     {
         _dbContext.BrandMemberships.Add(membership);
+    }
+
+    public void Remove(BrandMembership membership)
+    {
+        _dbContext.BrandMemberships.Remove(membership);
     }
 
     public Task SaveAsync(CancellationToken cancellationToken)

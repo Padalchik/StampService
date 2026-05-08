@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using StampService.Application.Access;
 using StampService.Application.Auth;
 using StampService.Application.Brands;
+using StampService.Application.Coins;
 using StampService.Application.Metrics;
 using StampService.Application.Users;
 using StampService.Infrastructure;
@@ -29,6 +30,9 @@ public static class DependencyInjection
         services.AddScoped<ILoyaltyMetricRepository, LoyaltyMetricRepository>();
         services.AddScoped<IMetricBalanceRepository, MetricBalanceRepository>();
         services.AddScoped<IStampTransactionRepository, StampTransactionRepository>();
+        services.AddScoped<ICoinWalletRepository, CoinWalletRepository>();
+        services.AddScoped<ICoinTransactionRepository, CoinTransactionRepository>();
+        services.AddScoped<IRedemptionCodeRepository, RedemptionCodeRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
 
         return services;

@@ -1,8 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Administration;
 using StampService.Application.Auth;
+using StampService.Application.Coins;
 using StampService.Application.Metrics;
+using StampService.Application.Metrics.Commands.RedeemMetric;
 using StampService.Application.Services;
 using StampService.Application.Users;
 
@@ -25,12 +28,17 @@ public static class DependencyInjection
             .WithScopedLifetime());
 
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IAdminAccessService, AdminAccessService>();
         services.AddScoped<IBrandAccessService, BrandAccessService>();
         services.AddScoped<IBrandMembershipService, BrandMembershipService>();
+        services.AddScoped<ICoinLedgerService, CoinLedgerService>();
         services.AddScoped<IMetricLedgerService, MetricLedgerService>();
+        services.AddScoped<IRedeemMetricValidationService, RedeemMetricValidationService>();
         services.AddScoped<ITelegramValidationService, TelegramValidationService>();
         services.AddScoped<ICustomerCodeGenerator, CustomerCodeGenerator>();
+        services.AddScoped<IRedemptionCodeGenerator, RedemptionCodeGenerator>();
         services.AddScoped<IRecipientResolver, RecipientResolver>();
+        services.AddSingleton(TimeProvider.System);
 
         return services;
     }

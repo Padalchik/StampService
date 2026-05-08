@@ -31,13 +31,22 @@ public class BrandMembership : BaseEntity
     public static Result<BrandMembership> Create(Guid userId, Guid brandId, Guid roleId)
     {
         if (userId == Guid.Empty)
-            return Result.Fail("UserId cannot be empty GUID");
+            return Result.Fail(DomainError.Validation(
+                "brand_membership.user_id_empty",
+                "UserId cannot be empty GUID",
+                nameof(userId)));
 
         if (brandId == Guid.Empty)
-            return Result.Fail("BrandId cannot be empty GUID");
+            return Result.Fail(DomainError.Validation(
+                "brand_membership.brand_id_empty",
+                "BrandId cannot be empty GUID",
+                nameof(brandId)));
 
         if (roleId == Guid.Empty)
-            return Result.Fail("RoleId cannot be empty GUID");
+            return Result.Fail(DomainError.Validation(
+                "brand_membership.role_id_empty",
+                "RoleId cannot be empty GUID",
+                nameof(roleId)));
 
         var membership = new BrandMembership(userId, brandId, roleId);
         return Result.Ok(membership);
@@ -46,7 +55,10 @@ public class BrandMembership : BaseEntity
     public Result ChangeRole(Guid roleId)
     {
         if (roleId == Guid.Empty)
-            return Result.Fail("RoleId cannot be empty GUID");
+            return Result.Fail(DomainError.Validation(
+                "brand_membership.role_id_empty",
+                "RoleId cannot be empty GUID",
+                nameof(roleId)));
 
         if (RoleId == roleId)
             return Result.Ok();

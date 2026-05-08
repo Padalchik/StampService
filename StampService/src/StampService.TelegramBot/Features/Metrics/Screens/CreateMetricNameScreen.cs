@@ -1,0 +1,15 @@
+using StampService.TelegramBot.Features.Metrics.Actions;
+using TelegramBotFlow.Core.Context;
+using TelegramBotFlow.Core.Screens;
+
+namespace StampService.TelegramBot.Features.Metrics.Screens;
+
+public sealed class CreateMetricNameScreen : IScreen
+{
+    public ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
+    {
+        return ValueTask.FromResult(new ScreenView("<b>Новая метрика</b>\n\nВведите название:")
+            .AwaitInput<EnterCreateMetricNameAction>()
+            .BackButton());
+    }
+}

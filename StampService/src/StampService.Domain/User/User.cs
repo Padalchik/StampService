@@ -37,10 +37,16 @@ public class User : BaseEntity
     public static Result<User> Create(string name, string customerCode)
     {
         if (string.IsNullOrWhiteSpace(name))
-            return Result.Fail("Name cannot be empty");
+            return Result.Fail(DomainError.Validation(
+                "user.name_required",
+                "Name cannot be empty",
+                nameof(name)));
 
         if (!IsValidCustomerCode(customerCode))
-            return Result.Fail("Customer code must contain exactly 4 digits");
+            return Result.Fail(DomainError.Validation(
+                "user.customer_code_invalid",
+                "Customer code must contain exactly 4 digits",
+                nameof(customerCode)));
 
         var user = new User(name.Trim(), customerCode);
         return Result.Ok(user);
@@ -56,7 +62,9 @@ public class User : BaseEntity
 
         var hasDuplicate = _identities.Any(x => x.Type == identity.Type && x.Key == identity.Key);
         if (hasDuplicate)
-            return Result.Fail("Identity already exists for this user");
+            return Result.Fail(DomainError.Conflict(
+                "user.identity_already_exists",
+                "Identity already exists for this user"));
 
         _identities.Add(identity);
         Touch();

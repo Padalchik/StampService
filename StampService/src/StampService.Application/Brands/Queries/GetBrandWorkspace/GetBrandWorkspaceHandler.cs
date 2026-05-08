@@ -1,6 +1,7 @@
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Brands;
 using StampService.Domain.Access;
@@ -28,14 +29,14 @@ public class GetBrandWorkspaceHandler : IQueryHandler<BrandWorkspaceResponse, Ge
         CancellationToken cancellationToken)
     {
         if (query.UserId == Guid.Empty)
-            return Result.Fail("User id cannot be empty");
+            return Result.Fail(UserErrors.IdIsEmpty());
 
         if (query.BrandId == Guid.Empty)
-            return Result.Fail("Brand id cannot be empty");
+            return Result.Fail(BrandErrors.IdIsEmpty());
 
         var userExists = await _userRepository.ExistsAsync(query.UserId, cancellationToken);
         if (!userExists)
-            return Result.Fail("User not found");
+            return Result.Fail(UserErrors.NotFound());
 
         var memberships = await _brandMembershipRepository.GetUserBrandMembershipsAsync(
             query.UserId,
@@ -43,7 +44,7 @@ public class GetBrandWorkspaceHandler : IQueryHandler<BrandWorkspaceResponse, Ge
 
         var membership = memberships.FirstOrDefault(item => item.BrandId == query.BrandId);
         if (membership is null)
-            return Result.Fail("Brand membership not found");
+            return Result.Fail(BrandErrors.MembershipNotFound());
 
         var response = new BrandWorkspaceResponse(
             query.BrandId,

@@ -2,6 +2,7 @@ using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
 using StampService.Application.Brands;
+using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Access;
@@ -39,11 +40,11 @@ public class IssueMetricHandler : ICommandHandler<IssueMetricResponse, IssueMetr
             cancellationToken);
 
         if (metric is null)
-            return Result.Fail("Metric not found");
+            return Result.Fail(MetricErrors.NotFound());
 
         var brandExists = await _brandRepository.ExistsAsync(metric.BrandId, cancellationToken);
         if (!brandExists)
-            return Result.Fail("Brand not found");
+            return Result.Fail(BrandErrors.NotFound());
 
         var canIssue = await _brandAccessService.CanAsync(
             command.IssuerUserId,
@@ -52,14 +53,14 @@ public class IssueMetricHandler : ICommandHandler<IssueMetricResponse, IssueMetr
             cancellationToken);
 
         if (!canIssue)
-            return Result.Fail("Access denied");
+            return Result.Fail(AccessErrors.Denied());
 
         var userExists = await _userRepository.ExistsAsync(command.Request.UserId, cancellationToken);
         if (!userExists)
-            return Result.Fail("User not found");
+            return Result.Fail(UserErrors.NotFound());
 
         if (!metric.IsActive)
-            return Result.Fail("Metric is not active");
+            return Result.Fail(MetricErrors.IsNotActive());
 
         var ledgerResult = await _metricLedgerService.IssueAsync(
             command.Request.UserId,

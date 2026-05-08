@@ -3,7 +3,12 @@ using StampService.Application.Abstractions;
 using StampService.Application.Brands.Queries.GetBrandWorkspace;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Brands;
+using StampService.TelegramBot.Features.Coins.Screens;
+using StampService.TelegramBot.Features.CustomerBalances.Actions;
 using StampService.TelegramBot.Features.IssueMetric.Screens;
+using StampService.TelegramBot.Features.Metrics.Screens;
+using StampService.TelegramBot.Features.RedeemMetric.Screens;
+using StampService.TelegramBot.Features.Staff.Actions;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
 
@@ -13,6 +18,9 @@ public sealed class BrandWorkspaceScreen : IScreen
 {
     public const string BrandIdSessionKey = "brand_workspace.brand_id";
     public const string BrandNameSessionKey = "brand_workspace.brand_name";
+    public const string CanIssueSessionKey = "brand_workspace.can_issue";
+    public const string CanRedeemSessionKey = "brand_workspace.can_redeem";
+    public const string CanViewBalancesSessionKey = "brand_workspace.can_view_balances";
 
     private readonly ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> _ensureUserHandler;
     private readonly IQueryHandler<BrandWorkspaceResponse, GetBrandWorkspaceQuery> _workspaceHandler;
@@ -51,6 +59,9 @@ public sealed class BrandWorkspaceScreen : IScreen
 
         var workspace = workspaceResult.Value;
         ctx.Session?.Data.Set(BrandNameSessionKey, workspace.BrandName);
+        ctx.Session?.Data.Set(CanIssueSessionKey, workspace.CanIssue);
+        ctx.Session?.Data.Set(CanRedeemSessionKey, workspace.CanRedeem);
+        ctx.Session?.Data.Set(CanViewBalancesSessionKey, workspace.CanViewBalances);
 
         var view = new ScreenView(
             $"<b>{Html(workspace.BrandName)}</b>\n" +
@@ -67,25 +78,33 @@ public sealed class BrandWorkspaceScreen : IScreen
 
         if (workspace.CanRedeem)
         {
-            view.Row().Button("Списать метрику", "brand_redeem_not_implemented");
+            view.Row().NavigateButton<RedeemMetricCodeScreen>("Списать метрику");
+            hasActions = true;
+        }
+
+        if (workspace.CanIssue || workspace.CanRedeem || workspace.CanViewBalances)
+        {
+            view.Row().NavigateButton<CoinMenuScreen>("Монетки");
             hasActions = true;
         }
 
         if (workspace.CanViewBalances)
         {
-            view.Row().Button("Балансы клиентов", "brand_balances_not_implemented");
+            view.Row().Button<StartCustomerBalancesAction>("Балансы клиентов");
             hasActions = true;
         }
 
         if (workspace.CanManageMetrics)
         {
-            view.Row().Button("Метрики", "brand_metrics_not_implemented");
+            view.Row().NavigateButton<MetricsListScreen>("Метрики");
             hasActions = true;
         }
 
         if (workspace.CanManageStaff)
         {
-            view.Row().Button("Сотрудники", "brand_staff_not_implemented");
+            view.Row().Button<OpenBrandStaffAction, OpenBrandStaffPayload>(
+                "Сотрудники",
+                new OpenBrandStaffPayload(workspace.BrandId, workspace.BrandName));
             hasActions = true;
         }
 

@@ -31,19 +31,34 @@ public class UserIdentity : BaseEntity
     public static Result<UserIdentity> Create(User user, IdentityType type, string key, string metadata)
     {
         if (type == IdentityType.None)
-            return Result.Fail("Invalid identity type");
+            return Result.Fail(DomainError.Validation(
+                "user_identity.type_invalid",
+                "Invalid identity type",
+                nameof(type)));
 
         if (string.IsNullOrWhiteSpace(key))
-            return Result.Fail("Key cannot be empty");
+            return Result.Fail(DomainError.Validation(
+                "user_identity.key_required",
+                "Key cannot be empty",
+                nameof(key)));
 
         if (key.Length > Constants.MAX_IDENTITY_KEY_LENGTH)
-            return Result.Fail($"Key must not exceed {Constants.MAX_IDENTITY_KEY_LENGTH} characters");
+            return Result.Fail(DomainError.Validation(
+                "user_identity.key_too_long",
+                $"Key must not exceed {Constants.MAX_IDENTITY_KEY_LENGTH} characters",
+                nameof(key)));
 
         if (string.IsNullOrWhiteSpace(metadata))
-            return Result.Fail("Metadata cannot be empty");
+            return Result.Fail(DomainError.Validation(
+                "user_identity.metadata_required",
+                "Metadata cannot be empty",
+                nameof(metadata)));
 
         if (metadata.Length > Constants.MAX_IDENTITY_METADATA_LENGTH)
-            return Result.Fail($"Metadata must not exceed {Constants.MAX_IDENTITY_METADATA_LENGTH} characters");
+            return Result.Fail(DomainError.Validation(
+                "user_identity.metadata_too_long",
+                $"Metadata must not exceed {Constants.MAX_IDENTITY_METADATA_LENGTH} characters",
+                nameof(metadata)));
 
         var userIdentity = new UserIdentity(user, type, key, metadata);
         return Result.Ok(userIdentity);

@@ -14,6 +14,10 @@ public interface IBrandMembershipRepository
         Guid userId,
         CancellationToken cancellationToken);
 
+    Task<IReadOnlyCollection<BrandStaffReadModel>> GetBrandStaffAsync(
+        Guid brandId,
+        CancellationToken cancellationToken);
+
     Task<BrandMembership?> GetByBrandAndUserAsync(
         Guid brandId,
         Guid userId,
@@ -24,6 +28,8 @@ public interface IBrandMembershipRepository
     Task<Role?> GetRoleBySystemNameAsync(string systemName, CancellationToken cancellationToken);
 
     void Add(BrandMembership membership);
+
+    void Remove(BrandMembership membership);
 
     Task SaveAsync(CancellationToken cancellationToken);
 }

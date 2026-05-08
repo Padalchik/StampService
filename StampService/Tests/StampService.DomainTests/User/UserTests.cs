@@ -1,3 +1,4 @@
+using StampService.Domain.Shared;
 using DomainUser = StampService.Domain.User.User;
 
 namespace StampService.DomainTests.User;
@@ -24,6 +25,17 @@ public class UserTests
         var result = DomainUser.Create("Ivan", customerCode);
 
         Assert.True(result.IsFailed);
+    }
+
+    [Fact]
+    public void Create_WithInvalidCustomerCode_ShouldReturnTypedDomainError()
+    {
+        var result = DomainUser.Create("Ivan", "12A4");
+
+        var error = Assert.IsType<DomainError>(result.Errors.Single());
+        Assert.Equal("user.customer_code_invalid", error.Code);
+        Assert.Equal(DomainErrorType.Validation, error.Type);
+        Assert.Equal("customerCode", error.InvalidField);
     }
 
     [Fact]

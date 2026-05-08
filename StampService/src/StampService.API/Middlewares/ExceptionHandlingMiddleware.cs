@@ -1,4 +1,6 @@
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using StampService.API.EndpointResults;
+using StampService.Application.Errors;
 
 namespace StampService.API.Middlewares;
 
@@ -21,6 +23,30 @@ public class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Concurrency conflict while processing {Method} {Path}. TraceId: {TraceId}",
+                context.Request.Method,
+                context.Request.Path,
+                context.TraceIdentifier);
+
+            if (context.Response.HasStarted)
+                throw;
+
+            context.Response.Clear();
+            context.Response.StatusCode = StatusCodes.Status409Conflict;
+            context.Response.ContentType = "application/json";
+
+            var error = AppError.Conflict(
+                "concurrency.conflict",
+                "The resource was changed by another operation. Please retry.");
+
+            var response = ErrorMapping.ToResponse([error]);
+
+            await context.Response.WriteAsJsonAsync(Envelope.Error(response));
+        }
         catch (Exception ex)
         {
             _logger.LogError(
@@ -35,19 +61,15 @@ public class ExceptionHandlingMiddleware
 
             context.Response.Clear();
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            context.Response.ContentType = "application/problem+json";
+            context.Response.ContentType = "application/json";
 
-            var problemDetails = new ProblemDetails
-            {
-                Status = StatusCodes.Status500InternalServerError,
-                Title = "Internal server error",
-                Detail = "An unexpected error occurred.",
-                Instance = context.Request.Path
-            };
+            var error = AppError.Failure(
+                "server.internal",
+                "An unexpected error occurred.");
 
-            problemDetails.Extensions["traceId"] = context.TraceIdentifier;
+            var response = ErrorMapping.ToResponse([error]);
 
-            await context.Response.WriteAsJsonAsync(problemDetails);
+            await context.Response.WriteAsJsonAsync(Envelope.Error(response));
         }
     }
 }

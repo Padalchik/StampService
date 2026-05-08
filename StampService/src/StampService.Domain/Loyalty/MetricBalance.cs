@@ -31,13 +31,22 @@ public class MetricBalance : BaseEntity
     public static Result<MetricBalance> Create(Guid userId, Guid brandId, Guid metricDefinitionId)
     {
         if (userId == Guid.Empty)
-            return Result.Fail("UserId не может быть пустым GUID");
+            return Result.Fail(DomainError.Validation(
+                "metric_balance.user_id_empty",
+                "UserId не может быть пустым GUID",
+                nameof(userId)));
 
         if (brandId == Guid.Empty)
-            return Result.Fail("BrandId не может быть пустым GUID");
+            return Result.Fail(DomainError.Validation(
+                "metric_balance.brand_id_empty",
+                "BrandId не может быть пустым GUID",
+                nameof(brandId)));
 
         if (metricDefinitionId == Guid.Empty)
-            return Result.Fail("MetricDefinitionId не может быть пустым GUID");
+            return Result.Fail(DomainError.Validation(
+                "metric_balance.metric_definition_id_empty",
+                "MetricDefinitionId не может быть пустым GUID",
+                nameof(metricDefinitionId)));
 
         var balance = new MetricBalance(userId, brandId, metricDefinitionId);
         return Result.Ok(balance);
@@ -46,7 +55,10 @@ public class MetricBalance : BaseEntity
     public Result Add(int amount)
     {
         if (amount <= 0)
-            return Result.Fail("Количество для начисления должно быть больше нуля");
+            return Result.Fail(DomainError.Validation(
+                "metric_balance.issue_amount_not_positive",
+                "Количество для начисления должно быть больше нуля",
+                nameof(amount)));
 
         Value += amount;
         Touch();
@@ -56,10 +68,16 @@ public class MetricBalance : BaseEntity
     public Result Subtract(int amount)
     {
         if (amount <= 0)
-            return Result.Fail("Количество для списания должно быть больше нуля");
+            return Result.Fail(DomainError.Validation(
+                "metric_balance.redeem_amount_not_positive",
+                "Количество для списания должно быть больше нуля",
+                nameof(amount)));
 
         if (Value < amount)
-            return Result.Fail($"Недостаточно средств. Текущий баланс: {Value}, требуется: {amount}");
+            return Result.Fail(DomainError.Conflict(
+                "metric_balance.insufficient_funds",
+                $"Недостаточно средств. Текущий баланс: {Value}, требуется: {amount}",
+                nameof(amount)));
 
         Value -= amount;
         Touch();
@@ -69,7 +87,10 @@ public class MetricBalance : BaseEntity
     public Result SetMaterializedValue(int value)
     {
         if (value < 0)
-            return Result.Fail("Materialized balance value cannot be negative");
+            return Result.Fail(DomainError.Validation(
+                "metric_balance.materialized_value_negative",
+                "Materialized balance value cannot be negative",
+                nameof(value)));
 
         if (Value == value)
             return Result.Ok();

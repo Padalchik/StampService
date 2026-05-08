@@ -1,11 +1,10 @@
-using System.Net;
-using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Metrics.Commands.IssueMetric;
 using StampService.Application.Users;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Loyalty;
+using StampService.TelegramBot.Common.Errors;
 using StampService.TelegramBot.Common.Routing;
 using StampService.TelegramBot.Features.Brands.Screens;
 using StampService.TelegramBot.Features.IssueMetric.Actions;
@@ -62,8 +61,7 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         return BotInputResults.DeleteInputThen(BotResults.NavigateTo<IssueMetricAmountScreen>());
     }
 
-    private static Task<IEndpointResult> EnterAmountAsync(
-        UpdateContext ctx)
+    private static Task<IEndpointResult> EnterAmountAsync(UpdateContext ctx)
     {
         if (!int.TryParse(ctx.MessageText, out var amount) || amount <= 0)
         {
@@ -78,8 +76,7 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<IssueMetricCommentScreen>()));
     }
 
-    private static Task<IEndpointResult> EnterCommentAsync(
-        UpdateContext ctx)
+    private static Task<IEndpointResult> EnterCommentAsync(UpdateContext ctx)
     {
         var comment = ctx.MessageText?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(comment))
@@ -133,7 +130,7 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         if (issuerResult.IsFailed)
         {
             return BotResults.ShowView(new ScreenView(
-                $"Не удалось определить сотрудника: {FormatErrors(issuerResult.Errors)}")
+                $"Не удалось определить сотрудника: {BotErrorFormatter.Format(issuerResult.Errors, BotErrorContext.IssueMetric)}")
                 .BackButton());
         }
 
@@ -150,7 +147,7 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         if (issueResult.IsFailed)
         {
             return BotResults.ShowView(new ScreenView(
-                $"Не удалось выдать метрику: {FormatErrors(issueResult.Errors)}")
+                $"Не удалось выдать метрику: {BotErrorFormatter.Format(issueResult.Errors, BotErrorContext.IssueMetric)}")
                 .BackButton());
         }
 
@@ -160,7 +157,7 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
             "<b>Метрика выдана</b>\n\n" +
             $"Количество: {issueResult.Value.Amount}\n" +
             $"Текущий баланс: {issueResult.Value.BalanceValue}")
-            .NavigateButton<IssueMetricSelectScreen>("Выдать ещё")
+            .NavigateButton<IssueMetricSelectScreen>("Выдать еще")
             .Row()
             .NavigateButton<BrandWorkspaceScreen>("К бренду")
             .Row()
@@ -185,28 +182,5 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.RecipientCustomerCode);
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.Amount);
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.Comment);
-    }
-
-    private static string FormatErrors(IReadOnlyCollection<IError> errors)
-    {
-        var messages = errors
-            .Select(error => TranslateError(error.Message))
-            .Distinct()
-            .ToArray();
-
-        return WebUtility.HtmlEncode(string.Join("; ", messages));
-    }
-
-    private static string TranslateError(string message)
-    {
-        return message switch
-        {
-            "Access denied" => "нет прав на выдачу метрики",
-            "Metric not found" => "метрика не найдена",
-            "Brand not found" => "бренд не найден",
-            "User not found" => "получатель не найден",
-            "Metric is not active" => "метрика неактивна",
-            _ => message
-        };
     }
 }

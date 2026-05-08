@@ -19,6 +19,13 @@ public class FakeLoyaltyMetricRepository : ILoyaltyMetricRepository
         return Task.FromResult(_metrics.FirstOrDefault(metric => metric.Id == metricDefinitionId));
     }
 
+    public Task<LoyaltyMetricDefinition?> GetByIdForUpdateAsync(
+        Guid metricDefinitionId,
+        CancellationToken cancellationToken)
+    {
+        return Task.FromResult(_metrics.FirstOrDefault(metric => metric.Id == metricDefinitionId));
+    }
+
     public Task<IReadOnlyCollection<LoyaltyMetricDefinition>> GetByBrandAsync(
         Guid brandId,
         CancellationToken cancellationToken)

@@ -19,11 +19,11 @@ public class GetBrandIssueMetricsHandlerTests
         var userRepository = new FakeUserRepository();
         userRepository.Add(user);
         membershipRepository.SetRole(user.Id, brandId, SystemRoles.Staff, "Coffee");
-        metricRepository.AddExisting(LoyaltyMetricDefinition.Create(brandId, "stamp", "Stamps").Value);
-        var inactiveMetric = LoyaltyMetricDefinition.Create(brandId, "old", "Old").Value;
+        metricRepository.AddExisting(LoyaltyMetricDefinition.Create(brandId, "stamp", "Stamps", 1).Value);
+        var inactiveMetric = LoyaltyMetricDefinition.Create(brandId, "old", "Old", 1).Value;
         inactiveMetric.Deactivate();
         metricRepository.AddExisting(inactiveMetric);
-        metricRepository.AddExisting(LoyaltyMetricDefinition.Create(Guid.NewGuid(), "other", "Other").Value);
+        metricRepository.AddExisting(LoyaltyMetricDefinition.Create(Guid.NewGuid(), "other", "Other", 1).Value);
         var handler = new GetBrandIssueMetricsHandler(
             new BrandAccessService(membershipRepository),
             metricRepository,

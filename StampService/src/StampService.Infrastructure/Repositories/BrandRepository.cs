@@ -1,6 +1,7 @@
 using FluentResults;
 using Microsoft.EntityFrameworkCore;
 using StampService.Application.Brands;
+using StampService.Domain.Access;
 using StampService.Domain.Brand;
 
 namespace StampService.Infrastructure.Repositories;
@@ -26,5 +27,31 @@ public class BrandRepository : IBrandRepository
     {
         return await _dbContext.Brands
             .AnyAsync(brand => brand.Id == brandId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyCollection<AdminBrandReadModel>> GetAdminBrandsAsync(CancellationToken cancellationToken)
+    {
+        return await _dbContext.Brands
+            .AsNoTracking()
+            .OrderBy(brand => brand.Name)
+            .Select(brand => new AdminBrandReadModel(
+                brand.Id,
+                brand.Name,
+                _dbContext.BrandMemberships
+                    .Where(membership => membership.BrandId == brand.Id
+                        && membership.Role.SystemName == SystemRoles.Owner)
+                    .Select(membership => (Guid?)membership.UserId)
+                    .FirstOrDefault(),
+                _dbContext.BrandMemberships
+                    .Where(membership => membership.BrandId == brand.Id
+                        && membership.Role.SystemName == SystemRoles.Owner)
+                    .Select(membership => membership.User.Name)
+                    .FirstOrDefault(),
+                _dbContext.BrandMemberships
+                    .Where(membership => membership.BrandId == brand.Id
+                        && membership.Role.SystemName == SystemRoles.Owner)
+                    .Select(membership => membership.User.CustomerCode)
+                    .FirstOrDefault()))
+            .ToArrayAsync(cancellationToken);
     }
 }

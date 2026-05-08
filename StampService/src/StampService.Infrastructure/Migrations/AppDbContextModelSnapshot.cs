@@ -193,6 +193,100 @@ namespace StampService.Infrastructure.Migrations
                     b.ToTable("locations", (string)null);
                 });
 
+            modelBuilder.Entity("StampService.Domain.Coins.CoinTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Amount")
+                        .HasColumnType("integer")
+                        .HasColumnName("amount");
+
+                    b.Property<Guid>("CoinWalletId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("coin_wallet_id");
+
+                    b.Property<string>("Comment")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("comment");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer")
+                        .HasColumnName("transaction_type");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CoinWalletId");
+
+                    b.ToTable("coin_transactions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_coin_transactions_amount_positive", "amount > 0");
+
+                            t.HasCheckConstraint("ck_coin_transactions_transaction_type", "transaction_type IN (1, 2)");
+                        });
+                });
+
+            modelBuilder.Entity("StampService.Domain.Coins.CoinWallet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BrandId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("brand_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("Value")
+                        .HasColumnType("integer")
+                        .HasColumnName("value");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BrandId");
+
+                    b.HasIndex("UserId", "BrandId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_coin_wallets_user_id_brand_id");
+
+                    b.ToTable("coin_wallets", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_coin_wallets_value_non_negative", "value >= 0");
+                        });
+                });
+
             modelBuilder.Entity("StampService.Domain.Loyalty.LoyaltyMetricDefinition", b =>
                 {
                     b.Property<Guid>("Id")
@@ -228,6 +322,10 @@ namespace StampService.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
+                    b.Property<int>("RedemptionAmount")
+                        .HasColumnType("integer")
+                        .HasColumnName("redemption_amount");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -238,7 +336,10 @@ namespace StampService.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_loyalty_metric_definitions_brand_id_code");
 
-                    b.ToTable("loyalty_metric_definitions", (string)null);
+                    b.ToTable("loyalty_metric_definitions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_loyalty_metric_definitions_redemption_amount_positive", "redemption_amount > 0");
+                        });
                 });
 
             modelBuilder.Entity("StampService.Domain.Loyalty.MetricBalance", b =>
@@ -339,6 +440,53 @@ namespace StampService.Infrastructure.Migrations
 
                             t.HasCheckConstraint("ck_stamp_transactions_transaction_type", "transaction_type IN (1, 2)");
                         });
+                });
+
+            modelBuilder.Entity("StampService.Domain.User.RedemptionCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at_utc");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateTime?>("UsedAtUtc")
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at_utc");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code");
+
+                    b.HasIndex("UserId", "UsedAtUtc", "ExpiresAtUtc");
+
+                    b.ToTable("redemption_codes", (string)null);
                 });
 
             modelBuilder.Entity("StampService.Domain.User.User", b =>
@@ -468,6 +616,36 @@ namespace StampService.Infrastructure.Migrations
                     b.Navigation("Brand");
                 });
 
+            modelBuilder.Entity("StampService.Domain.Coins.CoinTransaction", b =>
+                {
+                    b.HasOne("StampService.Domain.Coins.CoinWallet", "CoinWallet")
+                        .WithMany()
+                        .HasForeignKey("CoinWalletId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CoinWallet");
+                });
+
+            modelBuilder.Entity("StampService.Domain.Coins.CoinWallet", b =>
+                {
+                    b.HasOne("StampService.Domain.Brand.Brand", "Brand")
+                        .WithMany()
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("StampService.Domain.User.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Brand");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("StampService.Domain.Loyalty.LoyaltyMetricDefinition", b =>
                 {
                     b.HasOne("StampService.Domain.Brand.Brand", "Brand")
@@ -515,6 +693,17 @@ namespace StampService.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("MetricBalance");
+                });
+
+            modelBuilder.Entity("StampService.Domain.User.RedemptionCode", b =>
+                {
+                    b.HasOne("StampService.Domain.User.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("StampService.Domain.User.UserIdentity", b =>

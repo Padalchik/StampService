@@ -1,6 +1,7 @@
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Access;
@@ -28,14 +29,14 @@ public class GetBrandIssueMetricsHandler : IQueryHandler<IReadOnlyCollection<Met
         CancellationToken cancellationToken)
     {
         if (query.UserId == Guid.Empty)
-            return Result.Fail("User id cannot be empty");
+            return Result.Fail(UserErrors.IdIsEmpty());
 
         if (query.BrandId == Guid.Empty)
-            return Result.Fail("Brand id cannot be empty");
+            return Result.Fail(BrandErrors.IdIsEmpty());
 
         var userExists = await _userRepository.ExistsAsync(query.UserId, cancellationToken);
         if (!userExists)
-            return Result.Fail("User not found");
+            return Result.Fail(UserErrors.NotFound());
 
         var canIssue = await _brandAccessService.CanAsync(
             query.UserId,
@@ -44,18 +45,12 @@ public class GetBrandIssueMetricsHandler : IQueryHandler<IReadOnlyCollection<Met
             cancellationToken);
 
         if (!canIssue)
-            return Result.Fail("Access denied");
+            return Result.Fail(AccessErrors.Denied());
 
         var metrics = await _metricRepository.GetByBrandAsync(query.BrandId, cancellationToken);
         IReadOnlyCollection<MetricResponse> response = metrics
             .Where(metric => metric.IsActive)
-            .Select(metric => new MetricResponse(
-                metric.Id,
-                metric.BrandId,
-                metric.Code,
-                metric.Name,
-                metric.IsActive,
-                metric.CreatedAt))
+            .Select(MetricMapping.ToResponse)
             .ToArray();
 
         return Result.Ok(response);

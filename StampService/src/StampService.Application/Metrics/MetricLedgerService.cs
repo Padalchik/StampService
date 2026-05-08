@@ -1,4 +1,5 @@
 using FluentResults;
+using StampService.Application.Errors;
 using StampService.Domain.Loyalty;
 
 namespace StampService.Application.Metrics;
@@ -76,7 +77,7 @@ public class MetricLedgerService : IMetricLedgerService
             cancellationToken);
 
         if (balance is null)
-            return Result.Fail("Metric balance not found");
+            return Result.Fail(MetricErrors.BalanceNotFound());
 
         var syncResult = await SynchronizeMaterializedBalanceAsync(balance, cancellationToken);
         if (syncResult.IsFailed)
@@ -103,7 +104,7 @@ public class MetricLedgerService : IMetricLedgerService
     {
         var balance = await _metricBalanceRepository.GetByIdAsync(metricBalanceId, cancellationToken);
         if (balance is null)
-            return Result.Fail("Metric balance not found");
+            return Result.Fail(MetricErrors.BalanceNotFound());
 
         var ledgerValue = await _stampTransactionRepository.CalculateMetricBalanceValueAsync(
             metricBalanceId,
