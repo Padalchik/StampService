@@ -22,6 +22,8 @@ public static class BotErrorFormatter
         var errorCode = GetErrorCode(error);
         if (errorCode == AppErrorCodes.MetricBalance.InsufficientFunds)
             return TranslateInsufficientFunds(error, context);
+        if (errorCode == AppErrorCodes.Coin.InsufficientFunds)
+            return TranslateCoinInsufficientFunds(error);
 
         return errorCode switch
         {
@@ -41,6 +43,7 @@ public static class BotErrorFormatter
             AppErrorCodes.Metric.NotFound => "метрика не найдена",
             AppErrorCodes.Metric.Inactive => "метрика неактивна",
             AppErrorCodes.MetricBalance.NotFound => "у клиента нет баланса по этой метрике",
+            AppErrorCodes.Coin.WalletNotFound => "у клиента нет баланса монеток",
             AppErrorCodes.Recipient.NotFound => "получатель не найден",
             AppErrorCodes.RedemptionCode.Invalid => "код списания должен состоять из 6 цифр",
             AppErrorCodes.RedemptionCode.NotFoundOrExpired => "код списания не найден или истёк",
@@ -78,6 +81,17 @@ public static class BotErrorFormatter
         }
 
         return $"недостаточно баланса для {subject}";
+    }
+
+    private static string TranslateCoinInsufficientFunds(IError error)
+    {
+        if (TryReadIntMetadata(error, "current_balance", out var current)
+            && TryReadIntMetadata(error, "required_amount", out var required))
+        {
+            return $"недостаточно монеток для списания ({current}/{required})";
+        }
+
+        return "недостаточно монеток для списания";
     }
 
     private static bool TryReadIntMetadata(IError error, string key, out int value)

@@ -33,10 +33,10 @@ public class GetUserMetricTransactionsHandler
         CancellationToken cancellationToken)
     {
         if (query.Skip < 0)
-            return Result.Fail(MetricErrors.SkipCannotBeNegative());
+            return Result.Fail(PagingErrors.SkipCannotBeNegative());
 
         if (query.Take <= 0 || query.Take > MaxTake)
-            return Result.Fail(MetricErrors.TakeOutOfRange(MaxTake));
+            return Result.Fail(PagingErrors.TakeOutOfRange(MaxTake));
 
         var metric = await _metricRepository.GetByIdAsync(
             query.MetricDefinitionId,

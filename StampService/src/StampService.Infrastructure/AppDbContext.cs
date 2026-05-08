@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using StampService.Domain.Access;
 using StampService.Domain.Brand;
+using StampService.Domain.Coins;
 using StampService.Domain.Loyalty;
 using StampService.Domain.Shared;
 
@@ -52,4 +53,8 @@ public class AppDbContext : DbContext
     public DbSet<LoyaltyMetricDefinition> LoyaltyMetricDefinitions => Set<LoyaltyMetricDefinition>();
     public DbSet<MetricBalance> MetricBalances => Set<MetricBalance>();
     public DbSet<StampTransaction> StampTransactions => Set<StampTransaction>();
+
+    // Coins
+    public DbSet<CoinWallet> CoinWallets => Set<CoinWallet>();
+    public DbSet<CoinTransaction> CoinTransactions => Set<CoinTransaction>();
 }

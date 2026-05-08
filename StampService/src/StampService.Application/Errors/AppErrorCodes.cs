@@ -33,6 +33,12 @@ public static class AppErrorCodes
         public const string Invalid = "customer_code.invalid";
     }
 
+    public static class Coin
+    {
+        public const string WalletNotFound = "coin.wallet_not_found";
+        public const string InsufficientFunds = "coin.insufficient_funds";
+    }
+
     public static class General
     {
         public const string ServerFailure = "server.failure";

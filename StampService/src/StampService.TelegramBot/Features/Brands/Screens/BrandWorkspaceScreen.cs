@@ -3,6 +3,7 @@ using StampService.Application.Abstractions;
 using StampService.Application.Brands.Queries.GetBrandWorkspace;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Brands;
+using StampService.TelegramBot.Features.Coins.Screens;
 using StampService.TelegramBot.Features.CustomerBalances.Actions;
 using StampService.TelegramBot.Features.IssueMetric.Screens;
 using StampService.TelegramBot.Features.Metrics.Screens;
@@ -17,6 +18,9 @@ public sealed class BrandWorkspaceScreen : IScreen
 {
     public const string BrandIdSessionKey = "brand_workspace.brand_id";
     public const string BrandNameSessionKey = "brand_workspace.brand_name";
+    public const string CanIssueSessionKey = "brand_workspace.can_issue";
+    public const string CanRedeemSessionKey = "brand_workspace.can_redeem";
+    public const string CanViewBalancesSessionKey = "brand_workspace.can_view_balances";
 
     private readonly ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> _ensureUserHandler;
     private readonly IQueryHandler<BrandWorkspaceResponse, GetBrandWorkspaceQuery> _workspaceHandler;
@@ -55,6 +59,9 @@ public sealed class BrandWorkspaceScreen : IScreen
 
         var workspace = workspaceResult.Value;
         ctx.Session?.Data.Set(BrandNameSessionKey, workspace.BrandName);
+        ctx.Session?.Data.Set(CanIssueSessionKey, workspace.CanIssue);
+        ctx.Session?.Data.Set(CanRedeemSessionKey, workspace.CanRedeem);
+        ctx.Session?.Data.Set(CanViewBalancesSessionKey, workspace.CanViewBalances);
 
         var view = new ScreenView(
             $"<b>{Html(workspace.BrandName)}</b>\n" +
@@ -72,6 +79,12 @@ public sealed class BrandWorkspaceScreen : IScreen
         if (workspace.CanRedeem)
         {
             view.Row().NavigateButton<RedeemMetricCodeScreen>("Списать метрику");
+            hasActions = true;
+        }
+
+        if (workspace.CanIssue || workspace.CanRedeem || workspace.CanViewBalances)
+        {
+            view.Row().NavigateButton<CoinMenuScreen>("Монетки");
             hasActions = true;
         }
 
