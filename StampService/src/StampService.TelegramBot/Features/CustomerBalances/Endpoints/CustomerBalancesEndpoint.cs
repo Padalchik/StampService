@@ -165,9 +165,12 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
             .Where(balance => balance.IsActive)
             .ToArray();
 
-        IEnumerable<string> lines = activeBalances.Length == 0
-            ? ["В бренде пока нет метрик."]
-            : activeBalances.Select(balance => $"{Html(balance.MetricName)}: {balance.Value}");
+        var lines = activeBalances.Length == 0
+            ? ["В бренде пока нет метрик.", $"монетки: {response.CoinBalanceValue}"]
+            : activeBalances
+                .Select(balance => $"{Html(balance.MetricName)}: {balance.Value}")
+                .Append($"монетки: {response.CoinBalanceValue}")
+                .ToArray();
 
         var view = new ScreenView(
             $"<b>{Html(brandName)}</b>\n\n" +
