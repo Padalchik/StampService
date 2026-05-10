@@ -68,7 +68,7 @@ public sealed class MetricBalanceHistoryEndpoint : IBotEndpoint
                 ? string.Empty
                 : $" - {Html(transaction.Comment)}";
 
-            return $"{marker} {date}: {sign}{transaction.Amount}{comment}";
+            return $"{marker} {date}: {sign}{transaction.Amount} {Html(payload.MetricName)}{comment}";
         });
 
         return BotResults.ShowView(new ScreenView(

@@ -3,7 +3,6 @@ using System.Net;
 using StampService.Application.Abstractions;
 using StampService.Application.Coins.Commands.IssueCoins;
 using StampService.Application.Coins.Commands.RedeemCoins;
-using StampService.Application.Coins.Queries.GetCoinBalance;
 using StampService.Application.Coins.Queries.GetCoinHistory;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Coins;
@@ -28,7 +27,6 @@ public sealed class CoinEndpoint : IBotEndpoint
     {
         app.MapAction<StartIssueCoinsAction>(StartIssueAsync);
         app.MapAction<StartRedeemCoinsAction>(StartRedeemAsync);
-        app.MapAction<StartCoinBalanceAction>(StartBalanceAsync);
         app.MapInput<EnterCoinCustomerCodeAction>(EnterCustomerCodeAsync);
         app.MapInput<EnterCoinRedemptionCodeAction>(EnterRedemptionCodeAsync);
         app.MapInput<EnterCoinAmountAction>(EnterAmountAsync);
@@ -53,27 +51,13 @@ public sealed class CoinEndpoint : IBotEndpoint
         return Task.FromResult(BotResults.NavigateTo<CoinRedemptionCodeScreen>());
     }
 
-    private static Task<IEndpointResult> StartBalanceAsync(UpdateContext ctx)
-    {
-        ClearOperation(ctx);
-        ctx.Session?.Data.Set(CoinSessionKeys.Mode, CoinSessionKeys.ModeBalance);
-        return Task.FromResult(BotResults.NavigateTo<CoinCustomerCodeScreen>());
-    }
-
-    private static async Task<IEndpointResult> EnterCustomerCodeAsync(
-        UpdateContext ctx,
-        ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        IQueryHandler<CoinBalanceResponse, GetCoinBalanceQuery> balanceHandler)
+    private static async Task<IEndpointResult> EnterCustomerCodeAsync(UpdateContext ctx)
     {
         var customerCode = ctx.MessageText?.Trim() ?? string.Empty;
         if (!UserEntity.IsValidCustomerCode(customerCode))
             return await Retry<CoinCustomerCodeScreen, EnterCoinCustomerCodeAction>("CustomerCode должен состоять из 4 цифр.");
 
-        var mode = ctx.Session?.Data.GetString(CoinSessionKeys.Mode);
         ctx.Session?.Data.Set(CoinSessionKeys.CustomerCode, customerCode);
-
-        if (mode == CoinSessionKeys.ModeBalance)
-            return BotInputResults.DeleteInputThen(await ShowBalanceAsync(ctx, customerCode, ensureUserHandler, balanceHandler));
 
         return BotInputResults.DeleteInputThen(BotResults.NavigateTo<CoinAmountScreen>());
     }
@@ -173,7 +157,7 @@ public sealed class CoinEndpoint : IBotEndpoint
     private static Task<IEndpointResult> CancelAsync(UpdateContext ctx)
     {
         ClearOperation(ctx);
-        return Task.FromResult(BotResults.NavigateTo<CoinMenuScreen>());
+        return Task.FromResult(BotResults.NavigateTo<ClientWorkScreen>());
     }
 
     private static async Task<IEndpointResult> ViewHistoryAsync(
@@ -199,7 +183,7 @@ public sealed class CoinEndpoint : IBotEndpoint
         {
             return BotResults.ShowView(new ScreenView(
                 $"{title}\n\nИстории операций пока нет.")
-                .NavigateButton<CoinMenuScreen>("К монеткам")
+                .NavigateButton<ClientWorkScreen>("К работе с клиентами")
                 .BackButton());
         }
 
@@ -213,42 +197,13 @@ public sealed class CoinEndpoint : IBotEndpoint
                 ? string.Empty
                 : $" - {Html(transaction.Comment)}";
 
-            return $"{marker} {date}: {sign}{transaction.Amount}{comment}";
+            return $"{marker} {date}: {sign}{transaction.Amount} монетки{comment}";
         });
 
         return BotResults.ShowView(new ScreenView(
             $"{title}\n\n<b>Последние операции</b>\n" +
             string.Join("\n", lines))
-            .NavigateButton<CoinMenuScreen>("К монеткам")
-            .BackButton());
-    }
-
-    private static async Task<IEndpointResult> ShowBalanceAsync(
-        UpdateContext ctx,
-        string customerCode,
-        ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        IQueryHandler<CoinBalanceResponse, GetCoinBalanceQuery> balanceHandler)
-    {
-        var actorUserId = await GetActorUserIdAsync(ctx, ensureUserHandler);
-        if (actorUserId is null)
-            return BotResults.ShowView(new ScreenView("Не удалось определить пользователя.").BackButton());
-
-        var result = await balanceHandler.Handle(
-            new GetCoinBalanceQuery(GetBrandId(ctx), actorUserId.Value, customerCode),
-            ctx.CancellationToken);
-
-        if (result.IsFailed)
-            return BotResults.ShowView(new ScreenView($"Не удалось загрузить баланс монеток: {BotErrorFormatter.Format(result.Errors)}").BackButton());
-
-        return BotResults.ShowView(new ScreenView(
-            "<b>Баланс монеток</b>\n\n" +
-            $"Клиент: {Html(result.Value.UserName)} · <code>{Html(result.Value.CustomerCode)}</code>\n" +
-            $"Баланс: {result.Value.Value}")
-            .Button<ViewCoinHistoryAction, ViewCoinHistoryPayload>(
-                "История",
-                new ViewCoinHistoryPayload(result.Value.CustomerCode))
-            .Row()
-            .NavigateButton<CoinMenuScreen>("К монеткам")
+            .NavigateButton<ClientWorkScreen>("К работе с клиентами")
             .BackButton());
     }
 
@@ -259,7 +214,7 @@ public sealed class CoinEndpoint : IBotEndpoint
             $"Клиент: {Html(response.UserName)} · <code>{Html(response.CustomerCode)}</code>\n" +
             $"Количество: {response.Amount}\n" +
             $"Баланс: {response.BalanceValue}")
-            .NavigateButton<CoinMenuScreen>("К монеткам")
+            .NavigateButton<ClientWorkScreen>("К работе с клиентами")
             .Row()
             .NavigateButton<BrandWorkspaceScreen>("К бренду");
     }

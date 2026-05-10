@@ -10,5 +10,4 @@ public static class CoinSessionKeys
 
     public const string ModeIssue = "issue";
     public const string ModeRedeem = "redeem";
-    public const string ModeBalance = "balance";
 }

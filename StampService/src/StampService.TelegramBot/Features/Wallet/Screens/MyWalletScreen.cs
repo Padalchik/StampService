@@ -1,25 +1,30 @@
 using System.Net;
 using StampService.Application.Abstractions;
 using StampService.Application.Metrics.Queries.GetUserMetricBalances;
+using StampService.Application.Users.Commands.CreateRedemptionCode;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Metrics;
+using StampService.Contracts.DTOs.Users;
 using StampService.TelegramBot.Features.MetricBalances.Actions;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
 
-namespace StampService.TelegramBot.Features.MetricBalances.Screens;
+namespace StampService.TelegramBot.Features.Wallet.Screens;
 
-public sealed class MyBalancesScreen : IScreen
+public sealed class MyWalletScreen : IScreen
 {
-    private readonly ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> _ensureUserHandler;
     private readonly IQueryHandler<UserMetricBalancesResponse, GetUserMetricBalancesQuery> _balancesHandler;
+    private readonly ICommandHandler<CreateRedemptionCodeResponse, CreateRedemptionCodeCommand> _createCodeHandler;
+    private readonly ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> _ensureUserHandler;
 
-    public MyBalancesScreen(
-        ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        IQueryHandler<UserMetricBalancesResponse, GetUserMetricBalancesQuery> balancesHandler)
+    public MyWalletScreen(
+        IQueryHandler<UserMetricBalancesResponse, GetUserMetricBalancesQuery> balancesHandler,
+        ICommandHandler<CreateRedemptionCodeResponse, CreateRedemptionCodeCommand> createCodeHandler,
+        ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler)
     {
-        _ensureUserHandler = ensureUserHandler;
         _balancesHandler = balancesHandler;
+        _createCodeHandler = createCodeHandler;
+        _ensureUserHandler = ensureUserHandler;
     }
 
     public async ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
@@ -36,6 +41,13 @@ public sealed class MyBalancesScreen : IScreen
         if (userResult.IsFailed)
             return new ScreenView("Не удалось определить пользователя.").BackButton();
 
+        var codeResult = await _createCodeHandler.Handle(
+            new CreateRedemptionCodeCommand(userResult.Value.UserId),
+            ctx.CancellationToken);
+
+        if (codeResult.IsFailed)
+            return new ScreenView("Не удалось создать код для списания.").BackButton();
+
         var balancesResult = await _balancesHandler.Handle(
             new GetUserMetricBalancesQuery(userResult.Value.UserId),
             ctx.CancellationToken);
@@ -43,17 +55,13 @@ public sealed class MyBalancesScreen : IScreen
         if (balancesResult.IsFailed)
             return new ScreenView("Не удалось загрузить балансы.").BackButton();
 
-        if (balancesResult.Value.Balances.Count == 0 && balancesResult.Value.CoinWallets.Count == 0)
-        {
-            return new ScreenView(
-                "<b>Мои балансы</b>\n\n" +
-                "У вас пока нет балансов.")
-                .BackButton();
-        }
-
         var view = new ScreenView(
-            "<b>Мои балансы</b>\n\n" +
-            BuildHierarchicalBalancesText(balancesResult.Value));
+            "<b>Мой кошелёк</b>\n\n" +
+            $"CustomerCode: <code>{Html(userResult.Value.CustomerCode)}</code>\n" +
+            $"Код для списания: <code>{Html(codeResult.Value.Code)}</code>\n" +
+            $"Действует до: {codeResult.Value.ExpiresAtUtc:HH:mm:ss} UTC\n\n" +
+            "<b>Балансы</b>\n\n" +
+            BuildBalancesText(balancesResult.Value));
 
         foreach (var balance in balancesResult.Value.Balances)
         {
@@ -68,13 +76,11 @@ public sealed class MyBalancesScreen : IScreen
         return view.BackButton();
     }
 
-    private static string Html(string value)
+    private static string BuildBalancesText(UserMetricBalancesResponse response)
     {
-        return WebUtility.HtmlEncode(value);
-    }
+        if (response.Balances.Count == 0 && response.CoinWallets.Count == 0)
+            return "У вас пока нет балансов.";
 
-    private static string BuildHierarchicalBalancesText(UserMetricBalancesResponse response)
-    {
         var brandIds = response.Balances
             .Select(balance => balance.BrandId)
             .Concat(response.CoinWallets.Select(wallet => wallet.BrandId))
@@ -86,14 +92,16 @@ public sealed class MyBalancesScreen : IScreen
             .OrderBy(id => GetBrandName(response, id), StringComparer.OrdinalIgnoreCase))
         {
             var brandName = GetBrandName(response, brandId);
-            var lines = new List<string>();
-            lines.Add($"• <b>{Html(brandName)}</b>");
+            var lines = new List<string>
+            {
+                $"• <b>{Html(brandName)}</b>"
+            };
 
             foreach (var balance in response.Balances
                 .Where(balance => balance.BrandId == brandId)
                 .OrderBy(balance => balance.MetricName))
             {
-                lines.Add($"  - {Html(balance.MetricName)} {balance.RedemptionAmount}/{balance.Value}");
+                lines.Add($"  - {Html(balance.MetricName)} {balance.Value}/{balance.RedemptionAmount}");
             }
 
             var coinValue = response.CoinWallets
@@ -111,4 +119,6 @@ public sealed class MyBalancesScreen : IScreen
         return response.Balances.FirstOrDefault(balance => balance.BrandId == brandId)?.BrandName
             ?? response.CoinWallets.First(wallet => wallet.BrandId == brandId).BrandName;
     }
+
+    private static string Html(string value) => WebUtility.HtmlEncode(value);
 }

@@ -3,11 +3,6 @@ using StampService.Application.Abstractions;
 using StampService.Application.Brands.Queries.GetBrandWorkspace;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Brands;
-using StampService.TelegramBot.Features.Coins.Screens;
-using StampService.TelegramBot.Features.CustomerBalances.Actions;
-using StampService.TelegramBot.Features.IssueMetric.Screens;
-using StampService.TelegramBot.Features.Metrics.Screens;
-using StampService.TelegramBot.Features.RedeemMetric.Screens;
 using StampService.TelegramBot.Features.Staff.Actions;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
@@ -21,6 +16,8 @@ public sealed class BrandWorkspaceScreen : IScreen
     public const string CanIssueSessionKey = "brand_workspace.can_issue";
     public const string CanRedeemSessionKey = "brand_workspace.can_redeem";
     public const string CanViewBalancesSessionKey = "brand_workspace.can_view_balances";
+    public const string CanManageMetricsSessionKey = "brand_workspace.can_manage_metrics";
+    public const string CanManageStaffSessionKey = "brand_workspace.can_manage_staff";
 
     private readonly ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> _ensureUserHandler;
     private readonly IQueryHandler<BrandWorkspaceResponse, GetBrandWorkspaceQuery> _workspaceHandler;
@@ -62,6 +59,8 @@ public sealed class BrandWorkspaceScreen : IScreen
         ctx.Session?.Data.Set(CanIssueSessionKey, workspace.CanIssue);
         ctx.Session?.Data.Set(CanRedeemSessionKey, workspace.CanRedeem);
         ctx.Session?.Data.Set(CanViewBalancesSessionKey, workspace.CanViewBalances);
+        ctx.Session?.Data.Set(CanManageMetricsSessionKey, workspace.CanManageMetrics);
+        ctx.Session?.Data.Set(CanManageStaffSessionKey, workspace.CanManageStaff);
 
         var view = new ScreenView(
             $"<b>{Html(workspace.BrandName)}</b>\n" +
@@ -70,33 +69,15 @@ public sealed class BrandWorkspaceScreen : IScreen
 
         var hasActions = false;
 
-        if (workspace.CanIssue)
-        {
-            view.Row().NavigateButton<IssueMetricSelectScreen>("Выдать метрику");
-            hasActions = true;
-        }
-
-        if (workspace.CanRedeem)
-        {
-            view.Row().NavigateButton<RedeemMetricCodeScreen>("Списать метрику");
-            hasActions = true;
-        }
-
         if (workspace.CanIssue || workspace.CanRedeem || workspace.CanViewBalances)
         {
-            view.Row().NavigateButton<CoinMenuScreen>("Монетки");
-            hasActions = true;
-        }
-
-        if (workspace.CanViewBalances)
-        {
-            view.Row().Button<StartCustomerBalancesAction>("Балансы клиентов");
+            view.Row().NavigateButton<ClientWorkScreen>("Работа с клиентами");
             hasActions = true;
         }
 
         if (workspace.CanManageMetrics)
         {
-            view.Row().NavigateButton<MetricsListScreen>("Метрики");
+            view.Row().NavigateButton<MetricWorkScreen>("Работа с метриками");
             hasActions = true;
         }
 
