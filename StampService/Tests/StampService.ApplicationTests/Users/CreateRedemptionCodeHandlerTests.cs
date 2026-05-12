@@ -64,6 +64,40 @@ public class CreateRedemptionCodeHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenForceRefreshAndActiveCodeExists_ShouldExpireExistingCodeAndCreateNewCode()
+    {
+        var now = new DateTimeOffset(2026, 5, 7, 10, 0, 0, TimeSpan.Zero);
+        var user = DomainUser.Create("Ivan", "1234").Value;
+        var userRepository = new FakeUserRepository();
+        userRepository.Add(user);
+        var codeRepository = new FakeRedemptionCodeRepository();
+        var existingCode = StampService.Domain.User.RedemptionCode.Create(
+            user.Id,
+            "1111",
+            now.UtcDateTime.AddMinutes(2),
+            now.UtcDateTime).Value;
+        codeRepository.Add(existingCode);
+
+        var handler = new CreateRedemptionCodeHandler(
+            new FixedRedemptionCodeGenerator("2222"),
+            codeRepository,
+            new FixedTimeProvider(now),
+            userRepository);
+
+        var result = await handler.Handle(
+            new CreateRedemptionCodeCommand(user.Id, ForceRefresh: true),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("2222", result.Value.Code);
+        Assert.Equal(now.UtcDateTime, existingCode.ExpiresAtUtc);
+        Assert.False(existingCode.IsActive(now.UtcDateTime));
+        Assert.False(await codeRepository.ActiveCodeExistsAsync("1111", now.UtcDateTime, CancellationToken.None));
+        Assert.Equal(2, codeRepository.Codes.Count);
+        Assert.Equal(2, codeRepository.SaveCount);
+    }
+
+    [Fact]
     public async Task Handle_WhenCodePoolIsExhausted_ShouldFail()
     {
         var now = new DateTimeOffset(2026, 5, 7, 10, 0, 0, TimeSpan.Zero);

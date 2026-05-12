@@ -71,6 +71,22 @@ public class RedemptionCode : BaseEntity
         return Result.Ok();
     }
 
+    public Result Expire(DateTime nowUtc)
+    {
+        if (UsedAtUtc is not null)
+            return Result.Fail(DomainError.Conflict(
+                "redemption_code.already_used",
+                "Redemption code has already been used"));
+
+        if (IsExpired(nowUtc))
+            return Result.Ok();
+
+        ExpiresAtUtc = nowUtc;
+        Touch();
+
+        return Result.Ok();
+    }
+
     public bool IsActive(DateTime nowUtc)
     {
         return UsedAtUtc is null && !IsExpired(nowUtc);

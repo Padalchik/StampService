@@ -46,11 +46,20 @@ public class CreateRedemptionCodeHandler
             nowUtc,
             cancellationToken);
 
-        if (activeCode is not null)
+        if (activeCode is not null && !command.ForceRefresh)
         {
             return Result.Ok(new CreateRedemptionCodeResponse(
                 activeCode.Code,
                 activeCode.ExpiresAtUtc));
+        }
+
+        if (activeCode is not null)
+        {
+            var expireResult = activeCode.Expire(nowUtc);
+            if (expireResult.IsFailed)
+                return Result.Fail(expireResult.Errors);
+
+            await _redemptionCodeRepository.SaveAsync(cancellationToken);
         }
 
         string code;

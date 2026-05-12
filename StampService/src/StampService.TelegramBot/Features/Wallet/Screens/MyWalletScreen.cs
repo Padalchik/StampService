@@ -13,6 +13,8 @@ namespace StampService.TelegramBot.Features.Wallet.Screens;
 
 public sealed class MyWalletScreen : IScreen
 {
+    public const string ForceRefreshCodeSessionKey = "wallet.force_refresh_code";
+
     private readonly IQueryHandler<UserMetricBalancesResponse, GetUserMetricBalancesQuery> _balancesHandler;
     private readonly ICommandHandler<CreateRedemptionCodeResponse, CreateRedemptionCodeCommand> _createCodeHandler;
     private readonly ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> _ensureUserHandler;
@@ -41,8 +43,11 @@ public sealed class MyWalletScreen : IScreen
         if (userResult.IsFailed)
             return new ScreenView("Не удалось определить пользователя.").BackButton();
 
+        var forceRefreshCode = ctx.Session?.Data.Get<bool>(ForceRefreshCodeSessionKey) ?? false;
+        ctx.Session?.Data.Remove(ForceRefreshCodeSessionKey);
+
         var codeResult = await _createCodeHandler.Handle(
-            new CreateRedemptionCodeCommand(userResult.Value.UserId),
+            new CreateRedemptionCodeCommand(userResult.Value.UserId, ForceRefresh: forceRefreshCode),
             ctx.CancellationToken);
 
         if (codeResult.IsFailed)
@@ -63,7 +68,7 @@ public sealed class MyWalletScreen : IScreen
             "<b>Балансы</b>\n\n" +
             BuildBalancesText(balancesResult.Value));
 
-        view.Row().NavigateButton<MyWalletScreen>("🔄 Обновить данные");
+        view.Row().Button<RefreshMyWalletAction>("🔄 Обновить данные");
 
         foreach (var brandId in GetBrandIds(balancesResult.Value))
         {
