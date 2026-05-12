@@ -5,7 +5,7 @@ using StampService.Application.Users.Commands.CreateRedemptionCode;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Contracts.DTOs.Users;
-using StampService.TelegramBot.Features.MetricBalances.Actions;
+using StampService.TelegramBot.Features.Wallet.Actions;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
 
@@ -63,14 +63,12 @@ public sealed class MyWalletScreen : IScreen
             "<b>Балансы</b>\n\n" +
             BuildBalancesText(balancesResult.Value));
 
-        foreach (var balance in balancesResult.Value.Balances)
+        foreach (var brandId in GetBrandIds(balancesResult.Value))
         {
-            view.Row().Button<ViewBalanceHistoryAction, ViewBalanceHistoryPayload>(
-                $"История: {balance.MetricName}",
-                new ViewBalanceHistoryPayload(
-                    balance.MetricDefinitionId,
-                    balance.BrandName,
-                    balance.MetricName));
+            var brandName = GetBrandName(balancesResult.Value, brandId);
+            view.Row().Button<ViewWalletBrandHistoryAction, ViewWalletBrandHistoryPayload>(
+                $"История: {brandName}",
+                new ViewWalletBrandHistoryPayload(brandId, brandName));
         }
 
         return view.BackButton();
@@ -81,14 +79,8 @@ public sealed class MyWalletScreen : IScreen
         if (response.Balances.Count == 0 && response.CoinWallets.Count == 0)
             return "У вас пока нет балансов.";
 
-        var brandIds = response.Balances
-            .Select(balance => balance.BrandId)
-            .Concat(response.CoinWallets.Select(wallet => wallet.BrandId))
-            .Distinct()
-            .ToArray();
-
         var brandBlocks = new List<string>();
-        foreach (var brandId in brandIds
+        foreach (var brandId in GetBrandIds(response)
             .OrderBy(id => GetBrandName(response, id), StringComparer.OrdinalIgnoreCase))
         {
             var brandName = GetBrandName(response, brandId);
@@ -118,6 +110,15 @@ public sealed class MyWalletScreen : IScreen
     {
         return response.Balances.FirstOrDefault(balance => balance.BrandId == brandId)?.BrandName
             ?? response.CoinWallets.First(wallet => wallet.BrandId == brandId).BrandName;
+    }
+
+    private static Guid[] GetBrandIds(UserMetricBalancesResponse response)
+    {
+        return response.Balances
+            .Select(balance => balance.BrandId)
+            .Concat(response.CoinWallets.Select(wallet => wallet.BrandId))
+            .Distinct()
+            .ToArray();
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);
