@@ -85,4 +85,31 @@ public class GetBrandCustomerMetricBalancesHandlerTests
 
         Assert.True(result.IsFailed);
     }
+
+    [Fact]
+    public async Task Handle_WhenCustomerHasNoCoinWallet_ShouldReturnZeroCoinBalance()
+    {
+        var brandId = Guid.NewGuid();
+        var staff = User.Create("Staff", "1001").Value;
+        var customer = User.Create("Customer", "2002").Value;
+        var userRepository = new FakeUserRepository();
+        var membershipRepository = new FakeBrandMembershipRepository();
+        userRepository.Add(staff);
+        userRepository.Add(customer);
+        membershipRepository.SetRole(staff.Id, brandId, SystemRoles.Staff);
+
+        var handler = new GetBrandCustomerMetricBalancesHandler(
+            new BrandAccessService(membershipRepository),
+            new FakeLoyaltyMetricRepository(),
+            new FakeMetricBalanceRepository(),
+            new FakeCoinWalletRepository(),
+            userRepository);
+
+        var result = await handler.Handle(
+            new GetBrandCustomerMetricBalancesQuery(staff.Id, brandId, customer.CustomerCode),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(0, result.Value.CoinBalanceValue);
+    }
 }
