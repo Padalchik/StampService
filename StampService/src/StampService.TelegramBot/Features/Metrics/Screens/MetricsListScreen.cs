@@ -56,14 +56,12 @@ public sealed class MetricsListScreen : IScreen
         {
             var status = metric.IsActive ? "" : " · выкл.";
             view.Row().Button<OpenMetricDetailsAction, OpenMetricDetailsPayload>(
-                $"{metric.Name} ({metric.Code}){status}",
+                $"{metric.Name}{status}",
                 new OpenMetricDetailsPayload(metric.Id));
         }
 
         return view.Row()
-            .Button<StartCreateMetricAction>("Создать метрику")
-            .Row()
-            .NavigateButton<BrandWorkspaceScreen>("К бренду")
+            .Button<StartCreateMetricAction>("➕ Создать новую метрику")
             .BackButton();
     }
 

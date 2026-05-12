@@ -84,9 +84,6 @@ internal sealed class ScreenManager
         IScreen screen = _registry.Resolve(screenId, ctx.RequestServices);
         ScreenView view = await screen.RenderAsync(ctx);
 
-        if (!view.HasNavigationButton && ctx.Session?.Navigation.NavigationStack.Count > 0)
-            view.BackButton();
-
         UserSession? session = ctx.Session;
         int? existingMessageId = session?.Navigation.NavMessageId;
         ScreenMediaType oldMediaType = session?.Navigation.CurrentMediaType ?? ScreenMediaType.None;

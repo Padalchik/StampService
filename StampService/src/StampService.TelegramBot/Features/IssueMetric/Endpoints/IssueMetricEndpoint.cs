@@ -3,7 +3,6 @@ using StampService.Application.Metrics.Commands.IssueMetric;
 using StampService.Application.Users;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Metrics;
-using StampService.Domain.Loyalty;
 using StampService.TelegramBot.Common.Errors;
 using StampService.TelegramBot.Common.Routing;
 using StampService.TelegramBot.Features.Brands.Screens;
@@ -24,7 +23,6 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         app.MapAction<SelectIssueMetricAction, SelectIssueMetricPayload>(SelectMetricAsync);
         app.MapInput<EnterIssueRecipientAction>(EnterRecipientAsync);
         app.MapInput<EnterIssueAmountAction>(EnterAmountAsync);
-        app.MapInput<EnterIssueCommentAction>(EnterCommentAsync);
         app.MapAction<ConfirmIssueMetricAction>(ConfirmAsync);
         app.MapAction<CancelIssueMetricAction>(CancelAsync);
     }
@@ -73,30 +71,6 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
 
         ctx.Session?.Data.Set(IssueMetricSessionKeys.Amount, amount);
 
-        return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<IssueMetricCommentScreen>()));
-    }
-
-    private static Task<IEndpointResult> EnterCommentAsync(UpdateContext ctx)
-    {
-        var comment = ctx.MessageText?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(comment))
-        {
-            return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                "Комментарий обязателен. Попробуйте еще раз.")
-                .AwaitInput<EnterIssueCommentAction>()
-                .BackButton())));
-        }
-
-        if (comment.Length > Constants.MAX_TRANSACTION_COMMENT_LENGTH)
-        {
-            return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                $"Комментарий не должен быть длиннее {Constants.MAX_TRANSACTION_COMMENT_LENGTH} символов. Попробуйте еще раз.")
-                .AwaitInput<EnterIssueCommentAction>()
-                .BackButton())));
-        }
-
-        ctx.Session?.Data.Set(IssueMetricSessionKeys.Comment, comment);
-
         return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<IssueMetricConfirmScreen>()));
     }
 
@@ -108,12 +82,11 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         var metricDefinitionId = ctx.Session?.Data.Get<Guid>(IssueMetricSessionKeys.MetricDefinitionId) ?? Guid.Empty;
         var recipientUserId = ctx.Session?.Data.Get<Guid>(IssueMetricSessionKeys.RecipientUserId) ?? Guid.Empty;
         var amount = ctx.Session?.Data.Get<int>(IssueMetricSessionKeys.Amount) ?? 0;
-        var comment = ctx.Session?.Data.GetString(IssueMetricSessionKeys.Comment) ?? string.Empty;
+        const string comment = "Issue metric";
 
         if (metricDefinitionId == Guid.Empty
             || recipientUserId == Guid.Empty
-            || amount <= 0
-            || string.IsNullOrWhiteSpace(comment))
+            || amount <= 0)
         {
             return BotResults.ShowView(new ScreenView("Сценарий выдачи устарел. Начните заново.").BackButton());
         }
@@ -181,6 +154,5 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.RecipientUserId);
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.RecipientCustomerCode);
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.Amount);
-        ctx.Session?.Data.Remove(IssueMetricSessionKeys.Comment);
     }
 }

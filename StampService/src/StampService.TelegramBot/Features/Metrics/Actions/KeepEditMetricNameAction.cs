@@ -2,4 +2,4 @@ using TelegramBotFlow.Core.Endpoints;
 
 namespace StampService.TelegramBot.Features.Metrics.Actions;
 
-public sealed class EnterEditMetricCodeAction : IBotAction;
+public sealed class KeepEditMetricNameAction : IBotAction;

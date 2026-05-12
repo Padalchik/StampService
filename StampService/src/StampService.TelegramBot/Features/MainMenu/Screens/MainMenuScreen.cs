@@ -39,6 +39,7 @@ public sealed class MainMenuScreen : IScreen
         var view = new ScreenView(
             $"{greeting}\n\n" +
             "Выберите действие:")
+            .WithoutAutoMenuButton()
             .NavigateButton<MyWalletScreen>("Мой кошелёк");
 
         if (_adminAccessService.IsAdmin(ctx.UserId))

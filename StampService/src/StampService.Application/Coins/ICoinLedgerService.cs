@@ -6,6 +6,7 @@ public interface ICoinLedgerService
 {
     Task<Result<CoinLedgerOperation>> IssueAsync(
         Guid userId,
+        Guid actorUserId,
         Guid brandId,
         int amount,
         string comment,
@@ -13,6 +14,7 @@ public interface ICoinLedgerService
 
     Task<Result<CoinLedgerOperation>> RedeemAsync(
         Guid userId,
+        Guid actorUserId,
         Guid brandId,
         int amount,
         string comment,

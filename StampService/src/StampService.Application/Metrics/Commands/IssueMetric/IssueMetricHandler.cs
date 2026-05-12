@@ -64,6 +64,7 @@ public class IssueMetricHandler : ICommandHandler<IssueMetricResponse, IssueMetr
 
         var ledgerResult = await _metricLedgerService.IssueAsync(
             command.Request.UserId,
+            command.IssuerUserId,
             metric.BrandId,
             command.MetricDefinitionId,
             command.Request.Amount,

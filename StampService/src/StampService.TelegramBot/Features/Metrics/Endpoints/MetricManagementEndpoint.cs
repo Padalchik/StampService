@@ -23,13 +23,13 @@ public sealed class MetricManagementEndpoint : IBotEndpoint
         app.MapAction<OpenMetricDetailsAction, OpenMetricDetailsPayload>(OpenDetailsAsync);
         app.MapAction<StartCreateMetricAction>(StartCreateAsync);
         app.MapInput<EnterCreateMetricNameAction>(EnterCreateNameAsync);
-        app.MapInput<EnterCreateMetricCodeAction>(EnterCreateCodeAsync);
         app.MapInput<EnterCreateMetricRedemptionAmountAction>(EnterCreateRedemptionAmountAsync);
         app.MapAction<ConfirmCreateMetricAction>(ConfirmCreateAsync);
         app.MapAction<CancelCreateMetricAction>(CancelCreateAsync);
         app.MapAction<StartEditMetricAction>(StartEditAsync);
+        app.MapAction<KeepEditMetricNameAction>(KeepEditNameAsync);
+        app.MapAction<KeepEditMetricRedemptionAmountAction>(KeepEditRedemptionAmountAsync);
         app.MapInput<EnterEditMetricNameAction>(EnterEditNameAsync);
-        app.MapInput<EnterEditMetricCodeAction>(EnterEditCodeAsync);
         app.MapInput<EnterEditMetricRedemptionAmountAction>(EnterEditRedemptionAmountAsync);
         app.MapAction<ConfirmEditMetricAction>(ConfirmEditAsync);
         app.MapAction<CancelEditMetricAction>(CancelEditAsync);
@@ -56,16 +56,6 @@ public sealed class MetricManagementEndpoint : IBotEndpoint
             return Retry<CreateMetricNameScreen, EnterCreateMetricNameAction>("Название обязательно.");
 
         ctx.Session?.Data.Set(MetricManagementSessionKeys.CreateName, name);
-        return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<CreateMetricCodeScreen>()));
-    }
-
-    private static Task<IEndpointResult> EnterCreateCodeAsync(UpdateContext ctx)
-    {
-        var code = ctx.MessageText?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(code))
-            return Retry<CreateMetricCodeScreen, EnterCreateMetricCodeAction>("Код обязателен.");
-
-        ctx.Session?.Data.Set(MetricManagementSessionKeys.CreateCode, code);
         return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<CreateMetricRedemptionAmountScreen>()));
     }
 
@@ -85,10 +75,9 @@ public sealed class MetricManagementEndpoint : IBotEndpoint
     {
         var brandId = ctx.Session?.Data.Get<Guid>(BrandWorkspaceScreen.BrandIdSessionKey) ?? Guid.Empty;
         var name = ctx.Session?.Data.GetString(MetricManagementSessionKeys.CreateName) ?? string.Empty;
-        var code = ctx.Session?.Data.GetString(MetricManagementSessionKeys.CreateCode) ?? string.Empty;
         var redemptionAmount = ctx.Session?.Data.Get<int>(MetricManagementSessionKeys.CreateRedemptionAmount) ?? 0;
 
-        if (brandId == Guid.Empty || string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(code) || redemptionAmount <= 0)
+        if (brandId == Guid.Empty || string.IsNullOrWhiteSpace(name) || redemptionAmount <= 0)
             return BotResults.ShowView(new ScreenView("Сценарий создания устарел. Начните заново.").BackButton());
 
         var userResult = await EnsureUserAsync(ctx, ensureUserHandler);
@@ -99,7 +88,7 @@ public sealed class MetricManagementEndpoint : IBotEndpoint
             new CreateMetricCommand(
                 brandId,
                 userResult.Value.UserId,
-                new CreateMetricRequest(code, name, redemptionAmount)),
+                new CreateMetricRequest(name, redemptionAmount)),
             ctx.CancellationToken);
 
         if (result.IsFailed)
@@ -108,10 +97,7 @@ public sealed class MetricManagementEndpoint : IBotEndpoint
         ClearCreateSession(ctx);
         ctx.Session?.Data.Set(MetricManagementSessionKeys.SelectedMetricDefinitionId, result.Value.Id);
 
-        return BotResults.ShowView(new ScreenView("Метрика создана.")
-            .NavigateButton<MetricDetailsScreen>("Открыть метрику")
-            .Row()
-            .NavigateButton<MetricsListScreen>("К метрикам"));
+        return BotResults.NavigateTo<MetricsListScreen>();
     }
 
     private static Task<IEndpointResult> CancelCreateAsync(UpdateContext ctx)
@@ -130,9 +116,6 @@ public sealed class MetricManagementEndpoint : IBotEndpoint
             MetricManagementSessionKeys.EditName,
             ctx.Session.Data.GetString(MetricManagementSessionKeys.SelectedMetricName) ?? string.Empty);
         ctx.Session?.Data.Set(
-            MetricManagementSessionKeys.EditCode,
-            ctx.Session.Data.GetString(MetricManagementSessionKeys.SelectedMetricCode) ?? string.Empty);
-        ctx.Session?.Data.Set(
             MetricManagementSessionKeys.EditRedemptionAmount,
             ctx.Session.Data.Get<int>(MetricManagementSessionKeys.SelectedMetricRedemptionAmount));
 
@@ -141,44 +124,37 @@ public sealed class MetricManagementEndpoint : IBotEndpoint
 
     private static Task<IEndpointResult> EnterEditNameAsync(UpdateContext ctx)
     {
-        var value = ctx.MessageText?.Trim() ?? string.Empty;
-        var current = ctx.Session?.Data.GetString(MetricManagementSessionKeys.SelectedMetricName) ?? string.Empty;
-        var name = value == "-" ? current : value;
+        var name = ctx.MessageText?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(name))
             return Retry<EditMetricNameScreen, EnterEditMetricNameAction>("Название обязательно.");
 
         ctx.Session?.Data.Set(MetricManagementSessionKeys.EditName, name);
-        return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<EditMetricCodeScreen>()));
+        return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<EditMetricRedemptionAmountScreen>()));
     }
 
-    private static Task<IEndpointResult> EnterEditCodeAsync(UpdateContext ctx)
+    private static Task<IEndpointResult> KeepEditNameAsync(UpdateContext ctx)
     {
-        var value = ctx.MessageText?.Trim() ?? string.Empty;
-        var current = ctx.Session?.Data.GetString(MetricManagementSessionKeys.SelectedMetricCode) ?? string.Empty;
-        var code = value == "-" ? current : value;
-        if (string.IsNullOrWhiteSpace(code))
-            return Retry<EditMetricCodeScreen, EnterEditMetricCodeAction>("Код обязателен.");
-
-        ctx.Session?.Data.Set(MetricManagementSessionKeys.EditCode, code);
-        return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<EditMetricRedemptionAmountScreen>()));
+        var current = ctx.Session?.Data.GetString(MetricManagementSessionKeys.SelectedMetricName) ?? string.Empty;
+        ctx.Session?.Data.Set(MetricManagementSessionKeys.EditName, current);
+        return Task.FromResult(BotResults.NavigateTo<EditMetricRedemptionAmountScreen>());
     }
 
     private static Task<IEndpointResult> EnterEditRedemptionAmountAsync(UpdateContext ctx)
     {
         var value = ctx.MessageText?.Trim() ?? string.Empty;
-        var current = ctx.Session?.Data.Get<int>(MetricManagementSessionKeys.SelectedMetricRedemptionAmount) ?? 0;
-
-        if (value == "-")
-        {
-            ctx.Session?.Data.Set(MetricManagementSessionKeys.EditRedemptionAmount, current);
-            return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<EditMetricConfirmScreen>()));
-        }
 
         if (!int.TryParse(value, out var amount) || amount <= 0)
             return Retry<EditMetricRedemptionAmountScreen, EnterEditMetricRedemptionAmountAction>("Количество для списания должно быть положительным числом.");
 
         ctx.Session?.Data.Set(MetricManagementSessionKeys.EditRedemptionAmount, amount);
         return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<EditMetricConfirmScreen>()));
+    }
+
+    private static Task<IEndpointResult> KeepEditRedemptionAmountAsync(UpdateContext ctx)
+    {
+        var current = ctx.Session?.Data.Get<int>(MetricManagementSessionKeys.SelectedMetricRedemptionAmount) ?? 0;
+        ctx.Session?.Data.Set(MetricManagementSessionKeys.EditRedemptionAmount, current);
+        return Task.FromResult(BotResults.NavigateTo<EditMetricConfirmScreen>());
     }
 
     private static async Task<IEndpointResult> ConfirmEditAsync(
@@ -188,10 +164,9 @@ public sealed class MetricManagementEndpoint : IBotEndpoint
     {
         var metricId = ctx.Session?.Data.Get<Guid>(MetricManagementSessionKeys.SelectedMetricDefinitionId) ?? Guid.Empty;
         var name = ctx.Session?.Data.GetString(MetricManagementSessionKeys.EditName) ?? string.Empty;
-        var code = ctx.Session?.Data.GetString(MetricManagementSessionKeys.EditCode) ?? string.Empty;
         var redemptionAmount = ctx.Session?.Data.Get<int>(MetricManagementSessionKeys.EditRedemptionAmount) ?? 0;
 
-        if (metricId == Guid.Empty || string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(code) || redemptionAmount <= 0)
+        if (metricId == Guid.Empty || string.IsNullOrWhiteSpace(name) || redemptionAmount <= 0)
             return BotResults.ShowView(new ScreenView("Сценарий редактирования устарел. Начните заново.").BackButton());
 
         var userResult = await EnsureUserAsync(ctx, ensureUserHandler);
@@ -202,7 +177,7 @@ public sealed class MetricManagementEndpoint : IBotEndpoint
             new UpdateMetricCommand(
                 metricId,
                 userResult.Value.UserId,
-                new UpdateMetricRequest(code, name, redemptionAmount)),
+                new UpdateMetricRequest(name, redemptionAmount)),
             ctx.CancellationToken);
 
         if (result.IsFailed)
@@ -211,10 +186,7 @@ public sealed class MetricManagementEndpoint : IBotEndpoint
         ClearEditSession(ctx);
         StoreSelectedMetric(ctx, result.Value);
 
-        return BotResults.ShowView(new ScreenView("Метрика обновлена.")
-            .NavigateButton<MetricDetailsScreen>("Открыть метрику")
-            .Row()
-            .NavigateButton<MetricsListScreen>("К метрикам"));
+        return BotResults.NavigateTo<MetricsListScreen>();
     }
 
     private static Task<IEndpointResult> CancelEditAsync(UpdateContext ctx)
@@ -246,21 +218,18 @@ public sealed class MetricManagementEndpoint : IBotEndpoint
     {
         ctx.Session?.Data.Set(MetricManagementSessionKeys.SelectedMetricDefinitionId, metric.Id);
         ctx.Session?.Data.Set(MetricManagementSessionKeys.SelectedMetricName, metric.Name);
-        ctx.Session?.Data.Set(MetricManagementSessionKeys.SelectedMetricCode, metric.Code);
         ctx.Session?.Data.Set(MetricManagementSessionKeys.SelectedMetricRedemptionAmount, metric.RedemptionAmount);
     }
 
     private static void ClearCreateSession(UpdateContext ctx)
     {
         ctx.Session?.Data.Remove(MetricManagementSessionKeys.CreateName);
-        ctx.Session?.Data.Remove(MetricManagementSessionKeys.CreateCode);
         ctx.Session?.Data.Remove(MetricManagementSessionKeys.CreateRedemptionAmount);
     }
 
     private static void ClearEditSession(UpdateContext ctx)
     {
         ctx.Session?.Data.Remove(MetricManagementSessionKeys.EditName);
-        ctx.Session?.Data.Remove(MetricManagementSessionKeys.EditCode);
         ctx.Session?.Data.Remove(MetricManagementSessionKeys.EditRedemptionAmount);
     }
 }

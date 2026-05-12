@@ -44,26 +44,15 @@ public class CreateMetricHandler : ICommandHandler<MetricResponse, CreateMetricC
 
         var metricResult = LoyaltyMetricDefinition.Create(
             command.BrandId,
-            command.Request.Code,
             command.Request.Name,
             command.Request.RedemptionAmount);
 
         if (metricResult.IsFailed)
             return Result.Fail(metricResult.Errors);
 
-        var metric = metricResult.Value;
-
-        var codeExists = await _metricRepository.CodeExistsAsync(
-            metric.BrandId,
-            metric.Code,
-            cancellationToken);
-
-        if (codeExists)
-            return Result.Fail(MetricErrors.CodeAlreadyExistsForBrand());
-
-        _metricRepository.Add(metric);
+        _metricRepository.Add(metricResult.Value);
         await _metricRepository.SaveAsync(cancellationToken);
 
-        return Result.Ok(MetricMapping.ToResponse(metric));
+        return Result.Ok(MetricMapping.ToResponse(metricResult.Value));
     }
 }

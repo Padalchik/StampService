@@ -5,7 +5,6 @@ public record UserMetricBalanceResponse(
     Guid BrandId,
     string BrandName,
     Guid MetricDefinitionId,
-    string MetricCode,
     string MetricName,
     int RedemptionAmount,
     int Value);

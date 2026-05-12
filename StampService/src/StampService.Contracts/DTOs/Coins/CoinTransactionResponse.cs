@@ -8,4 +8,5 @@ public record CoinTransactionResponse(
     string TransactionType,
     int Amount,
     string Comment,
+    Guid ActorUserId,
     DateTime CreatedAt);

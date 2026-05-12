@@ -13,8 +13,9 @@ public sealed class EditMetricNameScreen : IScreen
         return ValueTask.FromResult(new ScreenView(
             "<b>Редактирование метрики</b>\n\n" +
             $"Текущее название: {Html(current)}\n" +
-            "Введите новое название или '-' чтобы оставить текущее:")
+            "Введите новое название:")
             .AwaitInput<EnterEditMetricNameAction>()
+            .Button<KeepEditMetricNameAction>("Оставить эти данные")
             .BackButton());
     }
 

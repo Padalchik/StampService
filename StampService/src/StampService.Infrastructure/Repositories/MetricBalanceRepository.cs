@@ -47,7 +47,6 @@ public class MetricBalanceRepository : IMetricBalanceRepository
                 balance.BrandId,
                 balance.Brand.Name,
                 balance.MetricDefinitionId,
-                balance.MetricDefinition.Code,
                 balance.MetricDefinition.Name,
                 balance.MetricDefinition.RedemptionAmount,
                 balance.Value))

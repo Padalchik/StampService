@@ -6,4 +6,5 @@ public record UserBrandWalletHistoryItemResponse(
     string TransactionType,
     int Amount,
     string? Comment,
+    Guid ActorUserId,
     DateTime CreatedAt);

@@ -68,7 +68,7 @@ public sealed class WalletBrandHistoryEndpoint : IBotEndpoint
             var marker = isIssue ? "🟢" : "🟡";
             var sign = isIssue ? "+" : "-";
             var date = item.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
-            var comment = string.IsNullOrWhiteSpace(item.Comment)
+            var comment = string.IsNullOrWhiteSpace(item.Comment) || IsAutoComment(item.Comment)
                 ? string.Empty
                 : $" - {Html(item.Comment)}";
 
@@ -83,4 +83,9 @@ public sealed class WalletBrandHistoryEndpoint : IBotEndpoint
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);
+
+    private static bool IsAutoComment(string value)
+    {
+        return value is "Issue metric" or "Redeem metric" or "Issue coins" or "Redeem coins";
+    }
 }

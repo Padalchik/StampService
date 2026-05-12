@@ -70,7 +70,7 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
     {
         var ownerCode = ctx.MessageText?.Trim() ?? string.Empty;
         if (!User.IsValidCustomerCode(ownerCode))
-            return Retry<CreateBrandOwnerCodeScreen, EnterCreateBrandOwnerCodeAction>("CustomerCode должен состоять из 4 цифр.");
+            return Retry<CreateBrandOwnerCodeScreen, EnterCreateBrandOwnerCodeAction>("Код пользователя должен состоять из 4 цифр.");
 
         ctx.Session?.Data.Set(AdminSessionKeys.CreateOwnerCustomerCode, ownerCode);
         return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<CreateBrandConfirmScreen>()));
@@ -131,7 +131,7 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
     {
         var ownerCode = ctx.MessageText?.Trim() ?? string.Empty;
         if (!User.IsValidCustomerCode(ownerCode))
-            return Retry<ReassignOwnerCodeScreen, EnterReassignOwnerCodeAction>("CustomerCode должен состоять из 4 цифр.");
+            return Retry<ReassignOwnerCodeScreen, EnterReassignOwnerCodeAction>("Код пользователя должен состоять из 4 цифр.");
 
         ctx.Session?.Data.Set(AdminSessionKeys.ReassignOwnerCustomerCode, ownerCode);
         return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<ReassignOwnerConfirmScreen>()));

@@ -4,7 +4,6 @@ using StampService.Application.Metrics.Queries.GetMetricDetails;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.TelegramBot.Common.Errors;
-using StampService.TelegramBot.Features.Brands.Screens;
 using StampService.TelegramBot.Features.Metrics.Actions;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
@@ -51,7 +50,6 @@ public sealed class MetricDetailsScreen : IScreen
         var status = metric.IsActive ? "активна" : "выключена";
         return new ScreenView(
             $"<b>{Html(metric.Name)}</b>\n\n" +
-            $"Код: <code>{Html(metric.Code)}</code>\n" +
             $"Списание: {metric.RedemptionAmount}\n" +
             $"Статус: {status}\n" +
             $"Создана: {metric.CreatedAt:dd.MM.yyyy HH:mm} UTC")
@@ -65,7 +63,6 @@ public sealed class MetricDetailsScreen : IScreen
     {
         ctx.Session?.Data.Set(MetricManagementSessionKeys.SelectedMetricDefinitionId, metric.Id);
         ctx.Session?.Data.Set(MetricManagementSessionKeys.SelectedMetricName, metric.Name);
-        ctx.Session?.Data.Set(MetricManagementSessionKeys.SelectedMetricCode, metric.Code);
         ctx.Session?.Data.Set(MetricManagementSessionKeys.SelectedMetricRedemptionAmount, metric.RedemptionAmount);
     }
 

@@ -14,7 +14,7 @@ public sealed class StaffDetailsScreen : IScreen
 
         return ValueTask.FromResult(new ScreenView(
             $"<b>{Html(name)}</b>\n\n" +
-            $"CustomerCode: <code>{Html(customerCode)}</code>\n" +
+            $"Код пользователя: <code>{Html(customerCode)}</code>\n" +
             "Роль: Сотрудник")
             .Button<StartRemoveStaffAction>("Удалить сотрудника")
             .Row()

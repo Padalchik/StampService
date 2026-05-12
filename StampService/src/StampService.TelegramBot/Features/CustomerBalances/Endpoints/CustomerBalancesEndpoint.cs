@@ -47,7 +47,7 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
         if (!UserEntity.IsValidCustomerCode(customerCode))
         {
             return BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                "CustomerCode должен состоять из 4 цифр.")
+                "Код пользователя должен состоять из 4 цифр.")
                 .AwaitInput<EnterCustomerBalancesCodeAction>()
                 .BackButton()));
         }
@@ -140,7 +140,7 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
             var marker = isIssue ? "🟢" : "🟡";
             var sign = isIssue ? "+" : "-";
             var date = transaction.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
-            var comment = string.IsNullOrWhiteSpace(transaction.Comment)
+            var comment = string.IsNullOrWhiteSpace(transaction.Comment) || IsAutoComment(transaction.Comment)
                 ? string.Empty
                 : $" - {Html(transaction.Comment)}";
 
@@ -181,7 +181,7 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
         foreach (var balance in activeBalances)
         {
             view.Row().Button<ViewCustomerBalanceHistoryAction, ViewCustomerBalanceHistoryPayload>(
-                $"История: {balance.MetricName}",
+                $"📈 История: {balance.MetricName}",
                 new ViewCustomerBalanceHistoryPayload(
                     response.CustomerUserId,
                     response.CustomerName,
@@ -191,7 +191,7 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
         }
 
         view.Row().Button<ViewCoinHistoryAction, ViewCoinHistoryPayload>(
-            "История: монетки",
+            "📈 История: монетки",
             new ViewCoinHistoryPayload(response.CustomerCode));
 
         return view.NavigateButton<CustomerBalancesCodeScreen>("Другой клиент")
@@ -201,4 +201,9 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);
+
+    private static bool IsAutoComment(string value)
+    {
+        return value is "Issue metric" or "Redeem metric";
+    }
 }

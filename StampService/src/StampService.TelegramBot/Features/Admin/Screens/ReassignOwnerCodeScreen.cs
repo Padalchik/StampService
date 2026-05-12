@@ -12,7 +12,7 @@ public sealed class ReassignOwnerCodeScreen : IScreen
         var brandName = ctx.Session?.Data.GetString(AdminSessionKeys.SelectedBrandName) ?? "бренд";
         return ValueTask.FromResult(new ScreenView(
             $"<b>{Html(brandName)}</b>\n\n" +
-            "Введите CustomerCode нового владельца:")
+            "Введите код пользователя нового владельца:")
             .AwaitInput<EnterReassignOwnerCodeAction>()
             .BackButton());
     }

@@ -64,7 +64,7 @@ public sealed class MetricBalanceHistoryEndpoint : IBotEndpoint
             var marker = isIssue ? "🟢" : "🟡";
             var sign = isIssue ? "+" : "-";
             var date = transaction.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
-            var comment = string.IsNullOrWhiteSpace(transaction.Comment)
+            var comment = string.IsNullOrWhiteSpace(transaction.Comment) || IsAutoComment(transaction.Comment)
                 ? string.Empty
                 : $" - {Html(transaction.Comment)}";
 
@@ -81,5 +81,10 @@ public sealed class MetricBalanceHistoryEndpoint : IBotEndpoint
     private static string Html(string value)
     {
         return WebUtility.HtmlEncode(value);
+    }
+
+    private static bool IsAutoComment(string value)
+    {
+        return value is "Issue metric" or "Redeem metric";
     }
 }

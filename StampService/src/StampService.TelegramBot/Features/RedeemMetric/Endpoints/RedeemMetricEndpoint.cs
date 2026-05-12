@@ -14,7 +14,6 @@ using TelegramBotFlow.Core.Hosting;
 using TelegramBotFlow.Core.Routing;
 using TelegramBotFlow.Core.Screens;
 using DomainRedemptionCode = StampService.Domain.User.RedemptionCode;
-using LoyaltyConstants = StampService.Domain.Loyalty.Constants;
 
 namespace StampService.TelegramBot.Features.RedeemMetric.Endpoints;
 
@@ -24,7 +23,6 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
     {
         app.MapAction<SelectRedeemMetricAction, SelectRedeemMetricPayload>(SelectMetricAsync);
         app.MapInput<EnterRedeemCodeAction>(EnterCodeAsync);
-        app.MapInput<EnterRedeemCommentAction>(EnterCommentAsync);
         app.MapAction<ConfirmRedeemMetricAction>(ConfirmAsync);
         app.MapAction<CancelRedeemMetricAction>(CancelAsync);
     }
@@ -41,7 +39,7 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
         ctx.Session?.Data.Set(RedeemMetricSessionKeys.RedemptionAmount, payload.RedemptionAmount);
         ctx.Session?.Data.Set(RedeemMetricSessionKeys.CurrentBalance, payload.CurrentBalance);
 
-        return Task.FromResult(BotResults.NavigateTo<RedeemMetricCommentScreen>());
+        return Task.FromResult(BotResults.NavigateTo<RedeemMetricConfirmScreen>());
     }
 
     private static async Task<IEndpointResult> EnterCodeAsync(
@@ -102,30 +100,6 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
         return BotInputResults.DeleteInputThen(BotResults.NavigateTo<RedeemMetricSelectScreen>());
     }
 
-    private static Task<IEndpointResult> EnterCommentAsync(UpdateContext ctx)
-    {
-        var comment = ctx.MessageText?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(comment))
-        {
-            return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                "Комментарий обязателен. Попробуйте еще раз.")
-                .AwaitInput<EnterRedeemCommentAction>()
-                .BackButton())));
-        }
-
-        if (comment.Length > LoyaltyConstants.MAX_TRANSACTION_COMMENT_LENGTH)
-        {
-            return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                $"Комментарий не должен быть длиннее {LoyaltyConstants.MAX_TRANSACTION_COMMENT_LENGTH} символов. Попробуйте еще раз.")
-                .AwaitInput<EnterRedeemCommentAction>()
-                .BackButton())));
-        }
-
-        ctx.Session?.Data.Set(RedeemMetricSessionKeys.Comment, comment);
-
-        return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<RedeemMetricConfirmScreen>()));
-    }
-
     private static async Task<IEndpointResult> ConfirmAsync(
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
@@ -134,12 +108,11 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
         var metricDefinitionId = ctx.Session?.Data.Get<Guid>(RedeemMetricSessionKeys.MetricDefinitionId) ?? Guid.Empty;
         var redemptionAmount = ctx.Session?.Data.Get<int>(RedeemMetricSessionKeys.RedemptionAmount) ?? 0;
         var redemptionCode = ctx.Session?.Data.GetString(RedeemMetricSessionKeys.RedemptionCode) ?? string.Empty;
-        var comment = ctx.Session?.Data.GetString(RedeemMetricSessionKeys.Comment) ?? string.Empty;
+        const string comment = "Redeem metric";
 
         if (metricDefinitionId == Guid.Empty
             || redemptionAmount <= 0
-            || !DomainRedemptionCode.IsValidCode(redemptionCode)
-            || string.IsNullOrWhiteSpace(comment))
+            || !DomainRedemptionCode.IsValidCode(redemptionCode))
         {
             return BotResults.ShowView(new ScreenView("Сценарий списания устарел. Начните заново.").BackButton());
         }
@@ -205,7 +178,6 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
         ctx.Session?.Data.Remove(RedeemMetricSessionKeys.RedemptionCode);
         ctx.Session?.Data.Remove(RedeemMetricSessionKeys.CustomerUserId);
         ctx.Session?.Data.Remove(RedeemMetricSessionKeys.CustomerName);
-        ctx.Session?.Data.Remove(RedeemMetricSessionKeys.Comment);
     }
 
     private static void ClearSelectedMetric(UpdateContext ctx)

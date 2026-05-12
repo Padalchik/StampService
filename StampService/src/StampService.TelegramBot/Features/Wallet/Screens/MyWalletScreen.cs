@@ -13,6 +13,8 @@ namespace StampService.TelegramBot.Features.Wallet.Screens;
 
 public sealed class MyWalletScreen : IScreen
 {
+    public const string ForceRefreshCodeSessionKey = "wallet.force_refresh_code";
+
     private readonly IQueryHandler<UserMetricBalancesResponse, GetUserMetricBalancesQuery> _balancesHandler;
     private readonly ICommandHandler<CreateRedemptionCodeResponse, CreateRedemptionCodeCommand> _createCodeHandler;
     private readonly ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> _ensureUserHandler;
@@ -41,8 +43,11 @@ public sealed class MyWalletScreen : IScreen
         if (userResult.IsFailed)
             return new ScreenView("Не удалось определить пользователя.").BackButton();
 
+        var forceRefreshCode = ctx.Session?.Data.Get<bool>(ForceRefreshCodeSessionKey) ?? false;
+        ctx.Session?.Data.Remove(ForceRefreshCodeSessionKey);
+
         var codeResult = await _createCodeHandler.Handle(
-            new CreateRedemptionCodeCommand(userResult.Value.UserId),
+            new CreateRedemptionCodeCommand(userResult.Value.UserId, ForceRefresh: forceRefreshCode),
             ctx.CancellationToken);
 
         if (codeResult.IsFailed)
@@ -57,17 +62,19 @@ public sealed class MyWalletScreen : IScreen
 
         var view = new ScreenView(
             "<b>Мой кошелёк</b>\n\n" +
-            $"CustomerCode: <code>{Html(userResult.Value.CustomerCode)}</code>\n" +
+            $"Код пользователя: <code>{Html(userResult.Value.CustomerCode)}</code>\n" +
             $"Код для списания: <code>{Html(codeResult.Value.Code)}</code>\n" +
-            $"Действует до: {codeResult.Value.ExpiresAtUtc:HH:mm:ss} UTC\n\n" +
+            $"Действует до: {FormatLocalTime(codeResult.Value.ExpiresAtUtc)}\n\n" +
             "<b>Балансы</b>\n\n" +
             BuildBalancesText(balancesResult.Value));
+
+        view.Row().Button<RefreshMyWalletAction>("🔄 Обновить данные");
 
         foreach (var brandId in GetBrandIds(balancesResult.Value))
         {
             var brandName = GetBrandName(balancesResult.Value, brandId);
             view.Row().Button<ViewWalletBrandHistoryAction, ViewWalletBrandHistoryPayload>(
-                $"История: {brandName}",
+                $"📈 История: {brandName}",
                 new ViewWalletBrandHistoryPayload(brandId, brandName));
         }
 
@@ -99,7 +106,7 @@ public sealed class MyWalletScreen : IScreen
             var coinValue = response.CoinWallets
                 .FirstOrDefault(wallet => wallet.BrandId == brandId)
                 ?.Value ?? 0;
-            lines.Add($"  - монетки {coinValue}");
+            lines.Add($"  - Монетки {coinValue}");
             brandBlocks.Add(string.Join("\n", lines));
         }
 
@@ -122,4 +129,11 @@ public sealed class MyWalletScreen : IScreen
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);
+
+    private static string FormatLocalTime(DateTime utcDateTime)
+    {
+        var utc = DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc);
+        var local = utc.ToLocalTime();
+        return $"{local:HH:mm:ss}";
+    }
 }

@@ -7,15 +7,13 @@ public class LoyaltyMetricDefinition : BaseEntity
 {
     public Guid BrandId { get; private set; }
     public Brand.Brand Brand { get; private set; } = null!;
-    public string Code { get; private set; }
     public string Name { get; private set; }
     public int RedemptionAmount { get; private set; }
     public bool IsActive { get; private set; }
 
-    private LoyaltyMetricDefinition(Guid brandId, string code, string name, int redemptionAmount)
+    private LoyaltyMetricDefinition(Guid brandId, string name, int redemptionAmount)
     {
         BrandId = brandId;
-        Code = code;
         Name = name;
         RedemptionAmount = redemptionAmount;
         IsActive = true;
@@ -24,54 +22,29 @@ public class LoyaltyMetricDefinition : BaseEntity
     // EF Core
     protected LoyaltyMetricDefinition()
     {
-        Code = null!;
         Name = null!;
     }
 
     public static Result<LoyaltyMetricDefinition> Create(
         Guid brandId,
-        string code,
         string name,
         int redemptionAmount)
     {
         if (brandId == Guid.Empty)
             return Result.Fail(DomainError.Validation(
                 "metric_definition.brand_id_empty",
-                "BrandId не может быть пустым GUID",
+                "BrandId cannot be empty GUID",
                 nameof(brandId)));
 
-        if (string.IsNullOrWhiteSpace(code))
-            return Result.Fail(DomainError.Validation(
-                "metric_definition.code_required",
-                "Code не может быть пустым",
-                nameof(code)));
+        var validateNameResult = ValidateName(name);
+        if (validateNameResult.IsFailed)
+            return Result.Fail(validateNameResult.Errors);
 
-        if (code.Length > Constants.MAX_METRIC_CODE_LENGTH)
-            return Result.Fail(DomainError.Validation(
-                "metric_definition.code_too_long",
-                $"Code не должен превышать {Constants.MAX_METRIC_CODE_LENGTH} символов",
-                nameof(code)));
+        var validateRedemptionAmountResult = ValidateRedemptionAmount(redemptionAmount);
+        if (validateRedemptionAmountResult.IsFailed)
+            return Result.Fail(validateRedemptionAmountResult.Errors);
 
-        if (string.IsNullOrWhiteSpace(name))
-            return Result.Fail(DomainError.Validation(
-                "metric_definition.name_required",
-                "Name не может быть пустым",
-                nameof(name)));
-
-        if (name.Length > Constants.MAX_METRIC_NAME_LENGTH)
-            return Result.Fail(DomainError.Validation(
-                "metric_definition.name_too_long",
-                $"Name не должен превышать {Constants.MAX_METRIC_NAME_LENGTH} символов",
-                nameof(name)));
-
-        if (redemptionAmount <= 0)
-            return Result.Fail(DomainError.Validation(
-                "metric_definition.redemption_amount_must_be_positive",
-                "RedemptionAmount must be positive",
-                nameof(redemptionAmount)));
-
-        var definition = new LoyaltyMetricDefinition(brandId, code.Trim(), name.Trim(), redemptionAmount);
-        return Result.Ok(definition);
+        return Result.Ok(new LoyaltyMetricDefinition(brandId, name.Trim(), redemptionAmount));
     }
 
     public void Deactivate()
@@ -102,91 +75,67 @@ public class LoyaltyMetricDefinition : BaseEntity
 
     public Result UpdateName(string name)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            return Result.Fail(DomainError.Validation(
-                "metric_definition.name_required",
-                "Name не может быть пустым",
-                nameof(name)));
-
-        if (name.Length > Constants.MAX_METRIC_NAME_LENGTH)
-            return Result.Fail(DomainError.Validation(
-                "metric_definition.name_too_long",
-                $"Name не должен превышать {Constants.MAX_METRIC_NAME_LENGTH} символов",
-                nameof(name)));
+        var validateNameResult = ValidateName(name);
+        if (validateNameResult.IsFailed)
+            return Result.Fail(validateNameResult.Errors);
 
         Name = name.Trim();
-        Touch();
-        return Result.Ok();
-    }
-
-    public Result UpdateCode(string code)
-    {
-        if (string.IsNullOrWhiteSpace(code))
-            return Result.Fail(DomainError.Validation(
-                "metric_definition.code_required",
-                "Code не может быть пустым",
-                nameof(code)));
-
-        if (code.Length > Constants.MAX_METRIC_CODE_LENGTH)
-            return Result.Fail(DomainError.Validation(
-                "metric_definition.code_too_long",
-                $"Code не должен превышать {Constants.MAX_METRIC_CODE_LENGTH} символов",
-                nameof(code)));
-
-        Code = code.Trim();
         Touch();
         return Result.Ok();
     }
 
     public Result UpdateRedemptionAmount(int redemptionAmount)
     {
-        if (redemptionAmount <= 0)
-            return Result.Fail(DomainError.Validation(
-                "metric_definition.redemption_amount_must_be_positive",
-                "RedemptionAmount must be positive",
-                nameof(redemptionAmount)));
+        var validateRedemptionAmountResult = ValidateRedemptionAmount(redemptionAmount);
+        if (validateRedemptionAmountResult.IsFailed)
+            return Result.Fail(validateRedemptionAmountResult.Errors);
 
         RedemptionAmount = redemptionAmount;
         Touch();
         return Result.Ok();
     }
 
-    public Result UpdateDetails(string code, string name, int redemptionAmount)
+    public Result UpdateDetails(string name, int redemptionAmount)
     {
-        if (string.IsNullOrWhiteSpace(code))
-            return Result.Fail(DomainError.Validation(
-                "metric_definition.code_required",
-                "Code РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїСѓСЃС‚С‹Рј",
-                nameof(code)));
+        var validateNameResult = ValidateName(name);
+        if (validateNameResult.IsFailed)
+            return Result.Fail(validateNameResult.Errors);
 
-        if (code.Length > Constants.MAX_METRIC_CODE_LENGTH)
-            return Result.Fail(DomainError.Validation(
-                "metric_definition.code_too_long",
-                $"Code РЅРµ РґРѕР»Р¶РµРЅ РїСЂРµРІС‹С€Р°С‚СЊ {Constants.MAX_METRIC_CODE_LENGTH} СЃРёРјРІРѕР»РѕРІ",
-                nameof(code)));
+        var validateRedemptionAmountResult = ValidateRedemptionAmount(redemptionAmount);
+        if (validateRedemptionAmountResult.IsFailed)
+            return Result.Fail(validateRedemptionAmountResult.Errors);
 
+        Name = name.Trim();
+        RedemptionAmount = redemptionAmount;
+        Touch();
+
+        return Result.Ok();
+    }
+
+    private static Result ValidateName(string name)
+    {
         if (string.IsNullOrWhiteSpace(name))
             return Result.Fail(DomainError.Validation(
                 "metric_definition.name_required",
-                "Name РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїСѓСЃС‚С‹Рј",
+                "Name cannot be empty",
                 nameof(name)));
 
         if (name.Length > Constants.MAX_METRIC_NAME_LENGTH)
             return Result.Fail(DomainError.Validation(
                 "metric_definition.name_too_long",
-                $"Name РЅРµ РґРѕР»Р¶РµРЅ РїСЂРµРІС‹С€Р°С‚СЊ {Constants.MAX_METRIC_NAME_LENGTH} СЃРёРјРІРѕР»РѕРІ",
+                $"Name cannot exceed {Constants.MAX_METRIC_NAME_LENGTH} characters",
                 nameof(name)));
 
+        return Result.Ok();
+    }
+
+    private static Result ValidateRedemptionAmount(int redemptionAmount)
+    {
         if (redemptionAmount <= 0)
             return Result.Fail(DomainError.Validation(
                 "metric_definition.redemption_amount_must_be_positive",
                 "RedemptionAmount must be positive",
                 nameof(redemptionAmount)));
-
-        Code = code.Trim();
-        Name = name.Trim();
-        RedemptionAmount = redemptionAmount;
-        Touch();
 
         return Result.Ok();
     }

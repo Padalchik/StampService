@@ -12,8 +12,9 @@ public sealed class EditMetricRedemptionAmountScreen : IScreen
         return ValueTask.FromResult(new ScreenView(
             "<b>Редактирование метрики</b>\n\n" +
             $"Текущее списание: {current}\n" +
-            "Введите новое количество или '-' чтобы оставить текущее:")
+            "Введите новое количество:")
             .AwaitInput<EnterEditMetricRedemptionAmountAction>()
+            .Button<KeepEditMetricRedemptionAmountAction>("Оставить эти данные")
             .BackButton());
     }
 }

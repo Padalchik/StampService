@@ -43,20 +43,7 @@ public class UpdateMetricHandler : ICommandHandler<MetricResponse, UpdateMetricC
         if (!canManage)
             return Result.Fail(AccessErrors.Denied());
 
-        var newCode = command.Request.Code.Trim();
-        if (!string.Equals(metric.Code, newCode, StringComparison.Ordinal))
-        {
-            var codeExists = await _metricRepository.CodeExistsAsync(
-                metric.BrandId,
-                newCode,
-                cancellationToken);
-
-            if (codeExists)
-                return Result.Fail(MetricErrors.CodeAlreadyExistsForBrand());
-        }
-
         var updateDetailsResult = metric.UpdateDetails(
-            command.Request.Code,
             command.Request.Name,
             command.Request.RedemptionAmount);
 

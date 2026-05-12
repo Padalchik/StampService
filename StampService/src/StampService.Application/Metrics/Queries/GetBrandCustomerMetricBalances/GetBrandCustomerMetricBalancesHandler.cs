@@ -73,7 +73,6 @@ public class GetBrandCustomerMetricBalancesHandler
 
             balances.Add(new BrandCustomerMetricBalanceResponse(
                 metric.Id,
-                metric.Code,
                 metric.Name,
                 balance?.Value ?? 0,
                 metric.IsActive));

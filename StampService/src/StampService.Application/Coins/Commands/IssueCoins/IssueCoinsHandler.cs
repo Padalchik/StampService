@@ -56,6 +56,7 @@ public class IssueCoinsHandler : ICommandHandler<CoinOperationResponse, IssueCoi
 
         var operationResult = await _coinLedgerService.IssueAsync(
             customer.Id,
+            command.RequestUserId,
             command.BrandId,
             command.Amount,
             command.Comment,

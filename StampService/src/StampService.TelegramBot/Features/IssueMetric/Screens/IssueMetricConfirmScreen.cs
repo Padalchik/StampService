@@ -14,15 +14,12 @@ public sealed class IssueMetricConfirmScreen : IScreen
         var metricName = ctx.Session?.Data.GetString(IssueMetricSessionKeys.MetricName) ?? "метрика";
         var recipientCustomerCode = ctx.Session?.Data.GetString(IssueMetricSessionKeys.RecipientCustomerCode) ?? "-";
         var amount = ctx.Session?.Data.Get<int>(IssueMetricSessionKeys.Amount) ?? 0;
-        var comment = ctx.Session?.Data.GetString(IssueMetricSessionKeys.Comment) ?? string.Empty;
-
         return ValueTask.FromResult(new ScreenView(
             "<b>Подтвердите выдачу</b>\n\n" +
             $"Бренд: {Html(brandName)}\n" +
             $"Метрика: {Html(metricName)}\n" +
             $"Код получателя: <code>{Html(recipientCustomerCode)}</code>\n" +
-            $"Количество: {amount}\n" +
-            $"Комментарий: {Html(comment)}")
+            $"Количество: {amount}")
             .Button<ConfirmIssueMetricAction>("✅ Подтвердить")
             .Row()
             .Button<CancelIssueMetricAction>("❌ Отмена"));

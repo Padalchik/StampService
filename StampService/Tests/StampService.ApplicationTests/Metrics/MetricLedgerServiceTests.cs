@@ -17,6 +17,7 @@ public class MetricLedgerServiceTests
             Guid.NewGuid(),
             Guid.NewGuid(),
             Guid.NewGuid(),
+            Guid.NewGuid(),
             5,
             "Issue stamps",
             CancellationToken.None);
@@ -40,11 +41,12 @@ public class MetricLedgerServiceTests
         var balance = MetricBalance.Create(userId, brandId, metricDefinitionId).Value;
         balance.SetMaterializedValue(100);
         balanceRepository.Add(balance);
-        transactionRepository.Add(StampTransaction.CreateIssue(balance.Id, 3, "Existing issue").Value);
+        transactionRepository.Add(StampTransaction.CreateIssue(balance.Id, 3, "Existing issue", Guid.NewGuid()).Value);
         var service = new MetricLedgerService(balanceRepository, transactionRepository);
 
         var result = await service.IssueAsync(
             userId,
+            Guid.NewGuid(),
             brandId,
             metricDefinitionId,
             2,
@@ -66,11 +68,12 @@ public class MetricLedgerServiceTests
         var transactionRepository = new FakeStampTransactionRepository();
         var balance = MetricBalance.Create(userId, brandId, metricDefinitionId).Value;
         balanceRepository.Add(balance);
-        transactionRepository.Add(StampTransaction.CreateIssue(balance.Id, 5, "Existing issue").Value);
+        transactionRepository.Add(StampTransaction.CreateIssue(balance.Id, 5, "Existing issue", Guid.NewGuid()).Value);
         var service = new MetricLedgerService(balanceRepository, transactionRepository);
 
         var result = await service.RedeemAsync(
             userId,
+            Guid.NewGuid(),
             brandId,
             metricDefinitionId,
             3,
@@ -94,6 +97,7 @@ public class MetricLedgerServiceTests
             Guid.NewGuid(),
             Guid.NewGuid(),
             Guid.NewGuid(),
+            Guid.NewGuid(),
             1,
             "Redeem stamps",
             CancellationToken.None);
@@ -111,11 +115,12 @@ public class MetricLedgerServiceTests
         var transactionRepository = new FakeStampTransactionRepository();
         var balance = MetricBalance.Create(userId, brandId, metricDefinitionId).Value;
         balanceRepository.Add(balance);
-        transactionRepository.Add(StampTransaction.CreateIssue(balance.Id, 2, "Existing issue").Value);
+        transactionRepository.Add(StampTransaction.CreateIssue(balance.Id, 2, "Existing issue", Guid.NewGuid()).Value);
         var service = new MetricLedgerService(balanceRepository, transactionRepository);
 
         var result = await service.RedeemAsync(
             userId,
+            Guid.NewGuid(),
             brandId,
             metricDefinitionId,
             3,
@@ -138,8 +143,8 @@ public class MetricLedgerServiceTests
         var balance = MetricBalance.Create(userId, brandId, metricDefinitionId).Value;
         balance.SetMaterializedValue(100);
         balanceRepository.Add(balance);
-        transactionRepository.Add(StampTransaction.CreateIssue(balance.Id, 10, "Issue").Value);
-        transactionRepository.Add(StampTransaction.CreateRedeem(balance.Id, 4, "Redeem").Value);
+        transactionRepository.Add(StampTransaction.CreateIssue(balance.Id, 10, "Issue", Guid.NewGuid()).Value);
+        transactionRepository.Add(StampTransaction.CreateRedeem(balance.Id, 4, "Redeem", Guid.NewGuid()).Value);
         var service = new MetricLedgerService(balanceRepository, transactionRepository);
 
         var result = await service.RecalculateMetricBalanceAsync(balance.Id, CancellationToken.None);
