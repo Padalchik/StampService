@@ -8,4 +8,5 @@ public record MetricTransactionResponse(
     string TransactionType,
     int Amount,
     string Comment,
+    Guid ActorUserId,
     DateTime CreatedAt);

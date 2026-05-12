@@ -37,6 +37,10 @@ public class StampTransactionConfiguration : IEntityTypeConfiguration<StampTrans
             .HasMaxLength(Constants.MAX_TRANSACTION_COMMENT_LENGTH)
             .HasColumnName("comment");
 
+        builder.Property(st => st.ActorUserId)
+            .IsRequired()
+            .HasColumnName("actor_user_id");
+
         builder.HasOne(st => st.MetricBalance)
             .WithMany()
             .HasForeignKey(st => st.MetricBalanceId)

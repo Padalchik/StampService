@@ -21,7 +21,7 @@ public class GetUserMetricTransactionsHandlerTests
         userRepository.Add(user);
         metricRepository.AddExisting(metric);
         balanceRepository.Add(balance);
-        transactionRepository.Add(StampTransaction.CreateIssue(balance.Id, 5, "Issue").Value);
+        transactionRepository.Add(StampTransaction.CreateIssue(balance.Id, 5, "Issue", Guid.NewGuid()).Value);
 
         var handler = new GetUserMetricTransactionsHandler(
             metricRepository,

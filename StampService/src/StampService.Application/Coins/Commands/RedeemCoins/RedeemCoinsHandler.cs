@@ -95,7 +95,11 @@ public class RedeemCoinsHandler : ICommandHandler<CoinOperationResponse, RedeemC
         if (currentBalance < command.Amount)
             return Result.Fail(CoinErrors.InsufficientFunds(currentBalance, command.Amount));
 
-        var transactionPrecheck = CoinTransaction.CreateRedeem(wallet.Id, command.Amount, command.Comment);
+        var transactionPrecheck = CoinTransaction.CreateRedeem(
+            wallet.Id,
+            command.Amount,
+            command.Comment,
+            command.RequestUserId);
         if (transactionPrecheck.IsFailed)
             return Result.Fail(transactionPrecheck.Errors);
 
@@ -108,6 +112,7 @@ public class RedeemCoinsHandler : ICommandHandler<CoinOperationResponse, RedeemC
 
         var operationResult = await _coinLedgerService.RedeemAsync(
             customer.Id,
+            command.RequestUserId,
             command.BrandId,
             command.Amount,
             command.Comment,

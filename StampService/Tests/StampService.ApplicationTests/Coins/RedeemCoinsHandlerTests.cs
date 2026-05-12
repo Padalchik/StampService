@@ -30,7 +30,7 @@ public class RedeemCoinsHandlerTests
         var wallet = CoinWallet.Create(customer.Id, brandId).Value;
         wallet.Add(10);
         walletRepository.Add(wallet);
-        transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 10, "Existing issue").Value);
+        transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 10, "Existing issue", actorUserId).Value);
         var redemptionCode = RedemptionCode.Create(
             customer.Id,
             "1234",
@@ -80,7 +80,7 @@ public class RedeemCoinsHandlerTests
         var wallet = CoinWallet.Create(customer.Id, brandId).Value;
         wallet.Add(2);
         walletRepository.Add(wallet);
-        transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 2, "Existing issue").Value);
+        transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 2, "Existing issue", actorUserId).Value);
         var redemptionCode = RedemptionCode.Create(
             customer.Id,
             "1234",

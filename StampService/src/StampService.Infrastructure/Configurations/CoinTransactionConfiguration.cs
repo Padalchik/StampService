@@ -37,6 +37,10 @@ public class CoinTransactionConfiguration : IEntityTypeConfiguration<CoinTransac
             .HasMaxLength(Constants.MAX_COIN_TRANSACTION_COMMENT_LENGTH)
             .HasColumnName("comment");
 
+        builder.Property(transaction => transaction.ActorUserId)
+            .IsRequired()
+            .HasColumnName("actor_user_id");
+
         builder.HasOne(transaction => transaction.CoinWallet)
             .WithMany()
             .HasForeignKey(transaction => transaction.CoinWalletId)

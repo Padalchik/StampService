@@ -87,6 +87,7 @@ public class GetCoinHistoryHandler : IQueryHandler<CoinTransactionsResponse, Get
                 transaction.Type.ToString(),
                 transaction.Amount,
                 transaction.Comment,
+                transaction.ActorUserId,
                 transaction.CreatedAt))
             .ToArray();
 

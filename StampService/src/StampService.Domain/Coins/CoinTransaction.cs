@@ -10,13 +10,15 @@ public class CoinTransaction : BaseEntity
     public CoinTransactionType Type { get; private set; }
     public int Amount { get; private set; }
     public string Comment { get; private set; }
+    public Guid ActorUserId { get; private set; }
 
-    private CoinTransaction(Guid coinWalletId, CoinTransactionType type, int amount, string comment)
+    private CoinTransaction(Guid coinWalletId, CoinTransactionType type, int amount, string comment, Guid actorUserId)
     {
         CoinWalletId = coinWalletId;
         Type = type;
         Amount = amount;
         Comment = comment;
+        ActorUserId = actorUserId;
     }
 
     // EF Core
@@ -25,27 +27,34 @@ public class CoinTransaction : BaseEntity
         Comment = null!;
     }
 
-    public static Result<CoinTransaction> CreateIssue(Guid coinWalletId, int amount, string comment)
+    public static Result<CoinTransaction> CreateIssue(Guid coinWalletId, int amount, string comment, Guid actorUserId)
     {
-        return Create(coinWalletId, CoinTransactionType.Issue, amount, comment);
+        return Create(coinWalletId, CoinTransactionType.Issue, amount, comment, actorUserId);
     }
 
-    public static Result<CoinTransaction> CreateRedeem(Guid coinWalletId, int amount, string comment)
+    public static Result<CoinTransaction> CreateRedeem(Guid coinWalletId, int amount, string comment, Guid actorUserId)
     {
-        return Create(coinWalletId, CoinTransactionType.Redeem, amount, comment);
+        return Create(coinWalletId, CoinTransactionType.Redeem, amount, comment, actorUserId);
     }
 
     private static Result<CoinTransaction> Create(
         Guid coinWalletId,
         CoinTransactionType type,
         int amount,
-        string comment)
+        string comment,
+        Guid actorUserId)
     {
         if (coinWalletId == Guid.Empty)
             return Result.Fail(DomainError.Validation(
                 "coin_transaction.coin_wallet_id_empty",
                 "CoinWalletId cannot be empty GUID",
                 nameof(coinWalletId)));
+
+        if (actorUserId == Guid.Empty)
+            return Result.Fail(DomainError.Validation(
+                "coin_transaction.actor_user_id_empty",
+                "ActorUserId cannot be empty GUID",
+                nameof(actorUserId)));
 
         if (amount <= 0)
             return Result.Fail(DomainError.Validation(
@@ -65,6 +74,6 @@ public class CoinTransaction : BaseEntity
                 $"Comment must not exceed {Constants.MAX_COIN_TRANSACTION_COMMENT_LENGTH} characters",
                 nameof(comment)));
 
-        return Result.Ok(new CoinTransaction(coinWalletId, type, amount, comment.Trim()));
+        return Result.Ok(new CoinTransaction(coinWalletId, type, amount, comment.Trim(), actorUserId));
     }
 }

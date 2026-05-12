@@ -44,6 +44,7 @@ public class RedeemMetricHandler : ICommandHandler<RedeemMetricResponse, RedeemM
         var metric = precheckResult.Value.Metric;
         var ledgerResult = await _metricLedgerService.RedeemAsync(
             useCodeResult.Value.UserId,
+            command.RedeemerUserId,
             metric.BrandId,
             command.MetricDefinitionId,
             metric.RedemptionAmount,

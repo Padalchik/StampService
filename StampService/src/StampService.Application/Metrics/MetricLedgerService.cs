@@ -19,6 +19,7 @@ public class MetricLedgerService : IMetricLedgerService
 
     public async Task<Result<MetricLedgerOperation>> IssueAsync(
         Guid userId,
+        Guid actorUserId,
         Guid brandId,
         Guid metricDefinitionId,
         int amount,
@@ -47,7 +48,7 @@ public class MetricLedgerService : IMetricLedgerService
                 return Result.Fail(syncResult.Errors);
         }
 
-        var transactionResult = StampTransaction.CreateIssue(balance.Id, amount, comment);
+        var transactionResult = StampTransaction.CreateIssue(balance.Id, amount, comment, actorUserId);
         if (transactionResult.IsFailed)
             return Result.Fail(transactionResult.Errors);
 
@@ -64,6 +65,7 @@ public class MetricLedgerService : IMetricLedgerService
 
     public async Task<Result<MetricLedgerOperation>> RedeemAsync(
         Guid userId,
+        Guid actorUserId,
         Guid brandId,
         Guid metricDefinitionId,
         int amount,
@@ -83,7 +85,7 @@ public class MetricLedgerService : IMetricLedgerService
         if (syncResult.IsFailed)
             return Result.Fail(syncResult.Errors);
 
-        var transactionResult = StampTransaction.CreateRedeem(balance.Id, amount, comment);
+        var transactionResult = StampTransaction.CreateRedeem(balance.Id, amount, comment, actorUserId);
         if (transactionResult.IsFailed)
             return Result.Fail(transactionResult.Errors);
 

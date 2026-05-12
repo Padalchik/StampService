@@ -49,8 +49,8 @@ public class GetCoinBalanceAndHistoryHandlerTests
         userRepository.Add(customer);
         var wallet = CoinWallet.Create(customer.Id, brandId).Value;
         walletRepository.Add(wallet);
-        transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 10, "Issue").Value);
-        transactionRepository.Add(CoinTransaction.CreateRedeem(wallet.Id, 4, "Redeem").Value);
+        transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 10, "Issue", Guid.NewGuid()).Value);
+        transactionRepository.Add(CoinTransaction.CreateRedeem(wallet.Id, 4, "Redeem", Guid.NewGuid()).Value);
 
         var handler = new GetCoinHistoryHandler(
             new BrandAccessService(membershipRepository),

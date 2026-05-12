@@ -6,6 +6,7 @@ public interface IMetricLedgerService
 {
     Task<Result<MetricLedgerOperation>> IssueAsync(
         Guid userId,
+        Guid actorUserId,
         Guid brandId,
         Guid metricDefinitionId,
         int amount,
@@ -14,6 +15,7 @@ public interface IMetricLedgerService
 
     Task<Result<MetricLedgerOperation>> RedeemAsync(
         Guid userId,
+        Guid actorUserId,
         Guid brandId,
         Guid metricDefinitionId,
         int amount,

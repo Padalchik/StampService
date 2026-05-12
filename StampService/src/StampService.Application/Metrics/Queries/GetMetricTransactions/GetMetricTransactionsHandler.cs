@@ -92,6 +92,7 @@ public class GetMetricTransactionsHandler : IQueryHandler<MetricTransactionsResp
                 transaction.Type.ToString(),
                 transaction.Amount,
                 transaction.Comment,
+                transaction.ActorUserId,
                 transaction.CreatedAt))
             .ToArray();
 

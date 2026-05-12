@@ -67,6 +67,7 @@ public class GetUserBrandWalletHistoryHandler
                 TransactionType: transaction.Type.ToString(),
                 Amount: transaction.Amount,
                 Comment: transaction.Comment,
+                ActorUserId: transaction.ActorUserId,
                 CreatedAt: transaction.CreatedAt)));
         }
 
@@ -89,6 +90,7 @@ public class GetUserBrandWalletHistoryHandler
                 TransactionType: transaction.Type.ToString(),
                 Amount: transaction.Amount,
                 Comment: transaction.Comment,
+                ActorUserId: transaction.ActorUserId,
                 CreatedAt: transaction.CreatedAt)));
         }
 

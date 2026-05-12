@@ -29,11 +29,11 @@ public class GetUserBrandWalletHistoryHandlerTests
         metricBalanceRepository.Add(metricBalance);
         metricBalanceRepository.Add(otherMetricBalance);
 
-        var oldMetricIssue = StampTransaction.CreateIssue(metricBalance.Id, 3, "metric issue").Value;
+        var oldMetricIssue = StampTransaction.CreateIssue(metricBalance.Id, 3, "metric issue", Guid.NewGuid()).Value;
         SetCreatedAt(oldMetricIssue, new DateTime(2026, 5, 8, 10, 0, 0, DateTimeKind.Utc));
-        var middleMetricRedeem = StampTransaction.CreateRedeem(metricBalance.Id, 1, "metric redeem").Value;
+        var middleMetricRedeem = StampTransaction.CreateRedeem(metricBalance.Id, 1, "metric redeem", Guid.NewGuid()).Value;
         SetCreatedAt(middleMetricRedeem, new DateTime(2026, 5, 8, 11, 0, 0, DateTimeKind.Utc));
-        var otherBrandMetricIssue = StampTransaction.CreateIssue(otherMetricBalance.Id, 9, "other brand").Value;
+        var otherBrandMetricIssue = StampTransaction.CreateIssue(otherMetricBalance.Id, 9, "other brand", Guid.NewGuid()).Value;
         SetCreatedAt(otherBrandMetricIssue, new DateTime(2026, 5, 8, 12, 0, 0, DateTimeKind.Utc));
         stampTransactionRepository.Add(oldMetricIssue);
         stampTransactionRepository.Add(middleMetricRedeem);
@@ -44,9 +44,9 @@ public class GetUserBrandWalletHistoryHandlerTests
         coinWalletRepository.Add(wallet);
         coinWalletRepository.Add(otherWallet);
 
-        var newestCoinIssue = CoinTransaction.CreateIssue(wallet.Id, 10, "coin issue").Value;
+        var newestCoinIssue = CoinTransaction.CreateIssue(wallet.Id, 10, "coin issue", Guid.NewGuid()).Value;
         SetCreatedAt(newestCoinIssue, new DateTime(2026, 5, 8, 12, 30, 0, DateTimeKind.Utc));
-        var otherBrandCoinIssue = CoinTransaction.CreateIssue(otherWallet.Id, 99, "other coin").Value;
+        var otherBrandCoinIssue = CoinTransaction.CreateIssue(otherWallet.Id, 99, "other coin", Guid.NewGuid()).Value;
         SetCreatedAt(otherBrandCoinIssue, new DateTime(2026, 5, 8, 13, 0, 0, DateTimeKind.Utc));
         coinTransactionRepository.Add(newestCoinIssue);
         coinTransactionRepository.Add(otherBrandCoinIssue);
@@ -97,11 +97,11 @@ public class GetUserBrandWalletHistoryHandlerTests
 
         var metricBalance = MetricBalance.Create(user.Id, brandId, Guid.NewGuid()).Value;
         metricBalanceRepository.Add(metricBalance);
-        var first = StampTransaction.CreateIssue(metricBalance.Id, 1, "first").Value;
+        var first = StampTransaction.CreateIssue(metricBalance.Id, 1, "first", Guid.NewGuid()).Value;
         SetCreatedAt(first, new DateTime(2026, 5, 8, 10, 0, 0, DateTimeKind.Utc));
-        var second = StampTransaction.CreateIssue(metricBalance.Id, 2, "second").Value;
+        var second = StampTransaction.CreateIssue(metricBalance.Id, 2, "second", Guid.NewGuid()).Value;
         SetCreatedAt(second, new DateTime(2026, 5, 8, 11, 0, 0, DateTimeKind.Utc));
-        var third = StampTransaction.CreateIssue(metricBalance.Id, 3, "third").Value;
+        var third = StampTransaction.CreateIssue(metricBalance.Id, 3, "third", Guid.NewGuid()).Value;
         SetCreatedAt(third, new DateTime(2026, 5, 8, 12, 0, 0, DateTimeKind.Utc));
         stampTransactionRepository.Add(first);
         stampTransactionRepository.Add(second);

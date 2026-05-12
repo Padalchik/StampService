@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using StampService.Application.Abstractions;
 using StampService.Application.Metrics.Queries.GetUserMetricBalances;
@@ -59,9 +60,11 @@ public sealed class MyWalletScreen : IScreen
             "<b>Мой кошелёк</b>\n\n" +
             $"CustomerCode: <code>{Html(userResult.Value.CustomerCode)}</code>\n" +
             $"Код для списания: <code>{Html(codeResult.Value.Code)}</code>\n" +
-            $"Действует до: {codeResult.Value.ExpiresAtUtc:HH:mm:ss} UTC\n\n" +
+            $"Действует до: {FormatLocalTime(codeResult.Value.ExpiresAtUtc)}\n\n" +
             "<b>Балансы</b>\n\n" +
             BuildBalancesText(balancesResult.Value));
+
+        view.Row().NavigateButton<MyWalletScreen>("Обновить данные");
 
         foreach (var brandId in GetBrandIds(balancesResult.Value))
         {
@@ -122,4 +125,17 @@ public sealed class MyWalletScreen : IScreen
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);
+
+    private static string FormatLocalTime(DateTime utcDateTime)
+    {
+        var utc = DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc);
+        var local = utc.ToLocalTime();
+        var offset = TimeZoneInfo.Local.GetUtcOffset(utc);
+        var sign = offset < TimeSpan.Zero ? "-" : "+";
+        var absoluteOffset = offset.Duration();
+
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{local:HH:mm:ss} UTC{sign}{absoluteOffset:hh\\:mm}");
+    }
 }

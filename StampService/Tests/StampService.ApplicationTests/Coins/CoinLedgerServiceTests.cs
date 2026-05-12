@@ -17,6 +17,7 @@ public class CoinLedgerServiceTests
         var result = await service.IssueAsync(
             Guid.NewGuid(),
             Guid.NewGuid(),
+            Guid.NewGuid(),
             10,
             "Welcome coins",
             CancellationToken.None);
@@ -39,11 +40,12 @@ public class CoinLedgerServiceTests
         var wallet = CoinWallet.Create(userId, brandId).Value;
         wallet.Add(3);
         walletRepository.Add(wallet);
-        transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 3, "Existing issue").Value);
+        transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 3, "Existing issue", Guid.NewGuid()).Value);
         var service = new CoinLedgerService(walletRepository, transactionRepository);
 
         var result = await service.IssueAsync(
             userId,
+            Guid.NewGuid(),
             brandId,
             7,
             "Purchase reward",
@@ -65,11 +67,12 @@ public class CoinLedgerServiceTests
         var wallet = CoinWallet.Create(userId, brandId).Value;
         wallet.Add(10);
         walletRepository.Add(wallet);
-        transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 10, "Existing issue").Value);
+        transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 10, "Existing issue", Guid.NewGuid()).Value);
         var service = new CoinLedgerService(walletRepository, transactionRepository);
 
         var result = await service.RedeemAsync(
             userId,
+            Guid.NewGuid(),
             brandId,
             4,
             "Free product",
@@ -91,6 +94,7 @@ public class CoinLedgerServiceTests
         var result = await service.RedeemAsync(
             Guid.NewGuid(),
             Guid.NewGuid(),
+            Guid.NewGuid(),
             1,
             "Free product",
             CancellationToken.None);
@@ -109,11 +113,12 @@ public class CoinLedgerServiceTests
         var wallet = CoinWallet.Create(userId, brandId).Value;
         wallet.Add(2);
         walletRepository.Add(wallet);
-        transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 2, "Existing issue").Value);
+        transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 2, "Existing issue", Guid.NewGuid()).Value);
         var service = new CoinLedgerService(walletRepository, transactionRepository);
 
         var result = await service.RedeemAsync(
             userId,
+            Guid.NewGuid(),
             brandId,
             3,
             "Free product",
@@ -135,11 +140,12 @@ public class CoinLedgerServiceTests
         var wallet = CoinWallet.Create(userId, brandId).Value;
         wallet.Add(2);
         walletRepository.Add(wallet);
-        transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 2, "Existing issue").Value);
+        transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 2, "Existing issue", Guid.NewGuid()).Value);
         var service = new CoinLedgerService(walletRepository, transactionRepository);
 
         var result = await service.IssueAsync(
             userId,
+            Guid.NewGuid(),
             brandId,
             1,
             string.Empty,
@@ -158,6 +164,7 @@ public class CoinLedgerServiceTests
         var service = new CoinLedgerService(walletRepository, transactionRepository);
 
         var result = await service.IssueAsync(
+            Guid.NewGuid(),
             Guid.NewGuid(),
             Guid.NewGuid(),
             1,
@@ -179,11 +186,12 @@ public class CoinLedgerServiceTests
         var wallet = CoinWallet.Create(userId, brandId).Value;
         wallet.Add(5);
         walletRepository.Add(wallet);
-        transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 5, "Existing issue").Value);
+        transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 5, "Existing issue", Guid.NewGuid()).Value);
         var service = new CoinLedgerService(walletRepository, transactionRepository);
 
         var result = await service.RedeemAsync(
             userId,
+            Guid.NewGuid(),
             brandId,
             1,
             string.Empty,

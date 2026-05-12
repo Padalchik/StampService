@@ -19,6 +19,7 @@ public class CoinLedgerService : ICoinLedgerService
 
     public async Task<Result<CoinLedgerOperation>> IssueAsync(
         Guid userId,
+        Guid actorUserId,
         Guid brandId,
         int amount,
         string comment,
@@ -46,7 +47,7 @@ public class CoinLedgerService : ICoinLedgerService
                 return Result.Fail(syncResult.Errors);
         }
 
-        var transactionResult = CoinTransaction.CreateIssue(wallet.Id, amount, comment);
+        var transactionResult = CoinTransaction.CreateIssue(wallet.Id, amount, comment, actorUserId);
         if (transactionResult.IsFailed)
             return Result.Fail(transactionResult.Errors);
 
@@ -66,6 +67,7 @@ public class CoinLedgerService : ICoinLedgerService
 
     public async Task<Result<CoinLedgerOperation>> RedeemAsync(
         Guid userId,
+        Guid actorUserId,
         Guid brandId,
         int amount,
         string comment,
@@ -86,7 +88,7 @@ public class CoinLedgerService : ICoinLedgerService
         if (wallet.Value < amount)
             return Result.Fail(CoinErrors.InsufficientFunds(wallet.Value, amount));
 
-        var transactionResult = CoinTransaction.CreateRedeem(wallet.Id, amount, comment);
+        var transactionResult = CoinTransaction.CreateRedeem(wallet.Id, amount, comment, actorUserId);
         if (transactionResult.IsFailed)
             return Result.Fail(transactionResult.Errors);
 

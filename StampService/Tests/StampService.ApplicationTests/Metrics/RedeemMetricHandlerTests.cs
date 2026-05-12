@@ -32,7 +32,7 @@ public class RedeemMetricHandlerTests
         var transactionRepository = new FakeStampTransactionRepository();
         var balance = MetricBalance.Create(customerUserId, brandId, metric.Id).Value;
         balanceRepository.Add(balance);
-        transactionRepository.Add(StampTransaction.CreateIssue(balance.Id, 10, "Initial issue").Value);
+        transactionRepository.Add(StampTransaction.CreateIssue(balance.Id, 10, "Initial issue", redeemerUserId).Value);
 
         var codeRepository = new FakeRedemptionCodeRepository();
         var redemptionCode = RedemptionCode.Create(
@@ -142,7 +142,7 @@ public class RedeemMetricHandlerTests
         var transactionRepository = new FakeStampTransactionRepository();
         var balance = MetricBalance.Create(customerUserId, brandId, metric.Id).Value;
         balanceRepository.Add(balance);
-        transactionRepository.Add(StampTransaction.CreateIssue(balance.Id, 3, "Initial issue").Value);
+        transactionRepository.Add(StampTransaction.CreateIssue(balance.Id, 3, "Initial issue", redeemerUserId).Value);
 
         var codeRepository = new FakeRedemptionCodeRepository();
         codeRepository.Add(RedemptionCode.Create(
