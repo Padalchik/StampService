@@ -6,9 +6,7 @@ using StampService.Contracts.DTOs.Brands;
 using StampService.TelegramBot.Features.Admin.Screens;
 using StampService.TelegramBot.Features.Brands.Actions;
 using StampService.TelegramBot.Features.Brands.Screens;
-using StampService.TelegramBot.Features.CustomerCode.Screens;
-using StampService.TelegramBot.Features.MetricBalances.Screens;
-using StampService.TelegramBot.Features.RedemptionCode.Screens;
+using StampService.TelegramBot.Features.Wallet.Screens;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
 
@@ -41,11 +39,7 @@ public sealed class MainMenuScreen : IScreen
         var view = new ScreenView(
             $"{greeting}\n\n" +
             "Выберите действие:")
-            .NavigateButton<MyCustomerCodeScreen>("Мой код")
-            .Row()
-            .NavigateButton<MyRedemptionCodeScreen>("Код для списания")
-            .Row()
-            .NavigateButton<MyBalancesScreen>("Мои балансы");
+            .NavigateButton<MyWalletScreen>("Мой кошелёк");
 
         if (_adminAccessService.IsAdmin(ctx.UserId))
         {

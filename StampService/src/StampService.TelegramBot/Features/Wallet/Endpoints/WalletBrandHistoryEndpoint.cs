@@ -1,30 +1,31 @@
 using System.Globalization;
 using System.Net;
 using StampService.Application.Abstractions;
-using StampService.Application.Metrics.Queries.GetUserMetricTransactions;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
-using StampService.Contracts.DTOs.Metrics;
-using StampService.TelegramBot.Features.MetricBalances.Actions;
+using StampService.Application.Wallet.Queries.GetUserBrandWalletHistory;
+using StampService.Contracts.DTOs.Users;
+using StampService.Contracts.DTOs.Wallet;
+using StampService.TelegramBot.Features.Wallet.Actions;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Endpoints;
 using TelegramBotFlow.Core.Hosting;
 using TelegramBotFlow.Core.Routing;
 using TelegramBotFlow.Core.Screens;
 
-namespace StampService.TelegramBot.Features.MetricBalances.Endpoints;
+namespace StampService.TelegramBot.Features.Wallet.Endpoints;
 
-public sealed class MetricBalanceHistoryEndpoint : IBotEndpoint
+public sealed class WalletBrandHistoryEndpoint : IBotEndpoint
 {
     public void MapEndpoint(BotApplication app)
     {
-        app.MapAction<ViewBalanceHistoryAction, ViewBalanceHistoryPayload>(HandleAsync);
+        app.MapAction<ViewWalletBrandHistoryAction, ViewWalletBrandHistoryPayload>(HandleAsync);
     }
 
     private static async Task<IEndpointResult> HandleAsync(
         UpdateContext ctx,
-        ViewBalanceHistoryPayload payload,
+        ViewWalletBrandHistoryPayload payload,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        IQueryHandler<MetricTransactionsResponse, GetUserMetricTransactionsQuery> transactionsHandler)
+        IQueryHandler<UserBrandWalletHistoryResponse, GetUserBrandWalletHistoryQuery> historyHandler)
     {
         var from = ctx.Update.CallbackQuery?.From ?? ctx.Update.Message?.From;
         var userResult = await ensureUserHandler.Handle(
@@ -38,37 +39,40 @@ public sealed class MetricBalanceHistoryEndpoint : IBotEndpoint
         if (userResult.IsFailed)
             return BotResults.ShowView(new ScreenView("Не удалось определить пользователя.").BackButton());
 
-        var transactionsResult = await transactionsHandler.Handle(
-            new GetUserMetricTransactionsQuery(
-                payload.MetricDefinitionId,
+        var historyResult = await historyHandler.Handle(
+            new GetUserBrandWalletHistoryQuery(
                 userResult.Value.UserId,
+                payload.BrandId,
                 Skip: 0,
                 Take: 10),
             ctx.CancellationToken);
 
-        if (transactionsResult.IsFailed)
+        if (historyResult.IsFailed)
             return BotResults.ShowView(new ScreenView("Не удалось загрузить историю.").BackButton());
 
-        var title = $"<b>{Html(payload.BrandName)}</b>\n{Html(payload.MetricName)}";
-        if (transactionsResult.Value.Items.Count == 0)
+        var brandName = string.IsNullOrWhiteSpace(historyResult.Value.BrandName)
+            ? payload.BrandName
+            : historyResult.Value.BrandName;
+        var title = $"<b>{Html(brandName)}</b>\nИстория кошелька";
+
+        if (historyResult.Value.Items.Count == 0)
         {
             return BotResults.ShowView(new ScreenView(
-                $"{title}\n\n" +
-                "Истории операций пока нет.")
+                $"{title}\n\nИстории операций пока нет.")
                 .BackButton());
         }
 
-        var lines = transactionsResult.Value.Items.Select(transaction =>
+        var lines = historyResult.Value.Items.Select(item =>
         {
-            var isIssue = transaction.TransactionType == "Issue";
+            var isIssue = item.TransactionType == "Issue";
             var marker = isIssue ? "🟢" : "🟡";
             var sign = isIssue ? "+" : "-";
-            var date = transaction.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
-            var comment = string.IsNullOrWhiteSpace(transaction.Comment)
+            var date = item.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
+            var comment = string.IsNullOrWhiteSpace(item.Comment)
                 ? string.Empty
-                : $" - {Html(transaction.Comment)}";
+                : $" - {Html(item.Comment)}";
 
-            return $"{marker} {date}: {sign}{transaction.Amount} {Html(payload.MetricName)}{comment}";
+            return $"{marker} {date}: {sign}{item.Amount} {Html(item.SourceName)}{comment}";
         });
 
         return BotResults.ShowView(new ScreenView(
@@ -78,8 +82,5 @@ public sealed class MetricBalanceHistoryEndpoint : IBotEndpoint
             .BackButton());
     }
 
-    private static string Html(string value)
-    {
-        return WebUtility.HtmlEncode(value);
-    }
+    private static string Html(string value) => WebUtility.HtmlEncode(value);
 }

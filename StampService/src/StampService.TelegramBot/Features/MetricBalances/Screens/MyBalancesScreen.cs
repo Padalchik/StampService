@@ -93,7 +93,7 @@ public sealed class MyBalancesScreen : IScreen
                 .Where(balance => balance.BrandId == brandId)
                 .OrderBy(balance => balance.MetricName))
             {
-                lines.Add($"  - {Html(balance.MetricName)} {balance.Value}/{balance.RedemptionAmount}");
+                lines.Add($"  - {Html(balance.MetricName)} {balance.RedemptionAmount}/{balance.Value}");
             }
 
             var coinValue = response.CoinWallets

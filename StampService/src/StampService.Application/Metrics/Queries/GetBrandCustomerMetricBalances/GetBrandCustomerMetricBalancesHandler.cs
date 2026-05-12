@@ -1,6 +1,7 @@
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Coins;
 using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Metrics;
@@ -15,17 +16,20 @@ public class GetBrandCustomerMetricBalancesHandler
     private readonly IBrandAccessService _brandAccessService;
     private readonly ILoyaltyMetricRepository _metricRepository;
     private readonly IMetricBalanceRepository _metricBalanceRepository;
+    private readonly ICoinWalletRepository _coinWalletRepository;
     private readonly IUserRepository _userRepository;
 
     public GetBrandCustomerMetricBalancesHandler(
         IBrandAccessService brandAccessService,
         ILoyaltyMetricRepository metricRepository,
         IMetricBalanceRepository metricBalanceRepository,
+        ICoinWalletRepository coinWalletRepository,
         IUserRepository userRepository)
     {
         _brandAccessService = brandAccessService;
         _metricRepository = metricRepository;
         _metricBalanceRepository = metricBalanceRepository;
+        _coinWalletRepository = coinWalletRepository;
         _userRepository = userRepository;
     }
 
@@ -75,11 +79,17 @@ public class GetBrandCustomerMetricBalancesHandler
                 metric.IsActive));
         }
 
+        var coinWallet = await _coinWalletRepository.GetByUserAndBrandAsync(
+            customer.Id,
+            query.BrandId,
+            cancellationToken);
+
         return Result.Ok(new BrandCustomerMetricBalancesResponse(
             query.BrandId,
             customer.Id,
             customer.Name,
             customer.CustomerCode,
+            coinWallet?.Value ?? 0,
             balances));
     }
 }

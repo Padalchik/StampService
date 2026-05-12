@@ -8,6 +8,7 @@ using StampService.Contracts.DTOs.Metrics;
 using StampService.TelegramBot.Common.Errors;
 using StampService.TelegramBot.Common.Routing;
 using StampService.TelegramBot.Features.Brands.Screens;
+using StampService.TelegramBot.Features.Coins.Actions;
 using StampService.TelegramBot.Features.CustomerBalances.Actions;
 using StampService.TelegramBot.Features.CustomerBalances.Screens;
 using TelegramBotFlow.Core.Context;
@@ -143,7 +144,7 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
                 ? string.Empty
                 : $" - {Html(transaction.Comment)}";
 
-            return $"{marker} {date}: {sign}{transaction.Amount}{comment}";
+            return $"{marker} {date}: {sign}{transaction.Amount} {Html(payload.MetricName)}{comment}";
         });
 
         return BotResults.ShowView(new ScreenView(
@@ -165,9 +166,12 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
             .Where(balance => balance.IsActive)
             .ToArray();
 
-        IEnumerable<string> lines = activeBalances.Length == 0
-            ? ["В бренде пока нет метрик."]
-            : activeBalances.Select(balance => $"{Html(balance.MetricName)}: {balance.Value}");
+        var lines = activeBalances.Length == 0
+            ? ["В бренде пока нет метрик.", $"монетки: {response.CoinBalanceValue}"]
+            : activeBalances
+                .Select(balance => $"{Html(balance.MetricName)}: {balance.Value}")
+                .Append($"монетки: {response.CoinBalanceValue}")
+                .ToArray();
 
         var view = new ScreenView(
             $"<b>{Html(brandName)}</b>\n\n" +
@@ -185,6 +189,10 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
                     balance.MetricDefinitionId,
                     balance.MetricName));
         }
+
+        view.Row().Button<ViewCoinHistoryAction, ViewCoinHistoryPayload>(
+            "История: монетки",
+            new ViewCoinHistoryPayload(response.CustomerCode));
 
         return view.NavigateButton<CustomerBalancesCodeScreen>("Другой клиент")
             .Row()

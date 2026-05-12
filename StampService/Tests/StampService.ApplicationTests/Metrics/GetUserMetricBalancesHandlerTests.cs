@@ -1,5 +1,6 @@
 using StampService.Application.Metrics.Queries.GetUserMetricBalances;
 using StampService.ApplicationTests.Fakes;
+using StampService.Domain.Coins;
 using StampService.Domain.Loyalty;
 using StampService.Domain.User;
 
@@ -51,6 +52,34 @@ public class GetUserMetricBalancesHandlerTests
 
         Assert.True(result.IsSuccess);
         Assert.Empty(result.Value.Balances);
+        Assert.Empty(result.Value.CoinWallets);
+    }
+
+    [Fact]
+    public async Task Handle_WhenUserHasCoinWallets_ShouldReturnThem()
+    {
+        var user = User.Create("user").Value;
+        var brandId = Guid.NewGuid();
+        var userRepository = new FakeUserRepository();
+        var coinWalletRepository = new FakeCoinWalletRepository();
+        userRepository.Add(user);
+        var wallet = CoinWallet.Create(user.Id, brandId).Value;
+        wallet.Add(11);
+        coinWalletRepository.Add(wallet);
+        var handler = new GetUserMetricBalancesHandler(
+            new FakeMetricBalanceRepository(),
+            coinWalletRepository,
+            userRepository);
+
+        var result = await handler.Handle(
+            new GetUserMetricBalancesQuery(user.Id),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Value.Balances);
+        var coinWallet = Assert.Single(result.Value.CoinWallets);
+        Assert.Equal(brandId, coinWallet.BrandId);
+        Assert.Equal(11, coinWallet.Value);
     }
 
     [Fact]
