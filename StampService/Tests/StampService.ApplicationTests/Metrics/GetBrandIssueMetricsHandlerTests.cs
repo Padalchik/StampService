@@ -19,11 +19,11 @@ public class GetBrandIssueMetricsHandlerTests
         var userRepository = new FakeUserRepository();
         userRepository.Add(user);
         membershipRepository.SetRole(user.Id, brandId, SystemRoles.Staff, "Coffee");
-        metricRepository.AddExisting(LoyaltyMetricDefinition.Create(brandId, "stamp", "Stamps", 1).Value);
-        var inactiveMetric = LoyaltyMetricDefinition.Create(brandId, "old", "Old", 1).Value;
+        metricRepository.AddExisting(LoyaltyMetricDefinition.Create(brandId, "Stamps", 1).Value);
+        var inactiveMetric = LoyaltyMetricDefinition.Create(brandId, "Old", 1).Value;
         inactiveMetric.Deactivate();
         metricRepository.AddExisting(inactiveMetric);
-        metricRepository.AddExisting(LoyaltyMetricDefinition.Create(Guid.NewGuid(), "other", "Other", 1).Value);
+        metricRepository.AddExisting(LoyaltyMetricDefinition.Create(Guid.NewGuid(), "Other", 1).Value);
         var handler = new GetBrandIssueMetricsHandler(
             new BrandAccessService(membershipRepository),
             metricRepository,
@@ -35,7 +35,7 @@ public class GetBrandIssueMetricsHandlerTests
 
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value);
-        Assert.Equal("stamp", result.Value.Single().Code);
+        Assert.Equal("Stamps", result.Value.Single().Name);
     }
 
     [Fact]

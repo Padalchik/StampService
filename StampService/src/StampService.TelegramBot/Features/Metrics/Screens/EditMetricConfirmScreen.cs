@@ -10,13 +10,11 @@ public sealed class EditMetricConfirmScreen : IScreen
     public ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
     {
         var name = ctx.Session?.Data.GetString(MetricManagementSessionKeys.EditName) ?? "-";
-        var code = ctx.Session?.Data.GetString(MetricManagementSessionKeys.EditCode) ?? "-";
         var redemptionAmount = ctx.Session?.Data.Get<int>(MetricManagementSessionKeys.EditRedemptionAmount) ?? 0;
 
         return ValueTask.FromResult(new ScreenView(
             "<b>Сохранить изменения?</b>\n\n" +
             $"Название: {Html(name)}\n" +
-            $"Код: <code>{Html(code)}</code>\n" +
             $"Списание: {redemptionAmount}")
             .Button<ConfirmEditMetricAction>("✅ Подтвердить")
             .Row()

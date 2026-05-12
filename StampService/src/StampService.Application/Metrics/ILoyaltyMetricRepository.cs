@@ -16,11 +16,6 @@ public interface ILoyaltyMetricRepository
         Guid brandId,
         CancellationToken cancellationToken);
 
-    Task<bool> CodeExistsAsync(
-        Guid brandId,
-        string code,
-        CancellationToken cancellationToken);
-
     void Add(LoyaltyMetricDefinition metric);
 
     Task SaveAsync(CancellationToken cancellationToken);

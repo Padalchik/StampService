@@ -16,8 +16,8 @@ public class GetRedeemMetricOptionsHandlerTests
         var brandId = Guid.NewGuid();
         var redeemer = User.Create("Staff", "1001").Value;
         var customer = User.Create("Customer", "2002").Value;
-        var availableMetric = LoyaltyMetricDefinition.Create(brandId, "coffee", "Coffee", 2).Value;
-        var unavailableMetric = LoyaltyMetricDefinition.Create(brandId, "cake", "Cake", 5).Value;
+        var availableMetric = LoyaltyMetricDefinition.Create(brandId, "Coffee", 2).Value;
+        var unavailableMetric = LoyaltyMetricDefinition.Create(brandId, "Cake", 5).Value;
         var userRepository = new FakeUserRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
         var metricRepository = new FakeLoyaltyMetricRepository();

@@ -14,8 +14,8 @@ public class GetBrandManageMetricsHandlerTests
     {
         var user = User.Create("Owner", "1234").Value;
         var brandId = Guid.NewGuid();
-        var activeMetric = LoyaltyMetricDefinition.Create(brandId, "A", "Active", 1).Value;
-        var inactiveMetric = LoyaltyMetricDefinition.Create(brandId, "I", "Inactive", 2).Value;
+        var activeMetric = LoyaltyMetricDefinition.Create(brandId, "Active", 1).Value;
+        var inactiveMetric = LoyaltyMetricDefinition.Create(brandId, "Inactive", 2).Value;
         inactiveMetric.Deactivate();
 
         var membershipRepository = new FakeBrandMembershipRepository();

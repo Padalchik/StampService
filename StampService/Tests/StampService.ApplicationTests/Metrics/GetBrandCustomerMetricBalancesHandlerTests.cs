@@ -17,9 +17,9 @@ public class GetBrandCustomerMetricBalancesHandlerTests
         var otherBrandId = Guid.NewGuid();
         var staff = User.Create("Staff", "1001").Value;
         var customer = User.Create("Customer", "2002").Value;
-        var activeMetric = LoyaltyMetricDefinition.Create(brandId, "coffee", "Coffee", 1).Value;
-        var inactiveMetric = LoyaltyMetricDefinition.Create(brandId, "cake", "Cake", 1).Value;
-        var otherBrandMetric = LoyaltyMetricDefinition.Create(otherBrandId, "tea", "Tea", 1).Value;
+        var activeMetric = LoyaltyMetricDefinition.Create(brandId, "Coffee", 1).Value;
+        var inactiveMetric = LoyaltyMetricDefinition.Create(brandId, "Cake", 1).Value;
+        var otherBrandMetric = LoyaltyMetricDefinition.Create(otherBrandId, "Tea", 1).Value;
         inactiveMetric.Deactivate();
 
         var userRepository = new FakeUserRepository();

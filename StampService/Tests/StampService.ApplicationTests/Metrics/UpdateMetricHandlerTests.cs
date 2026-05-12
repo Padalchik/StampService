@@ -14,7 +14,7 @@ public class UpdateMetricHandlerTests
     {
         var userId = Guid.NewGuid();
         var brandId = Guid.NewGuid();
-        var metric = LoyaltyMetricDefinition.Create(brandId, "OLD", "Old", 1).Value;
+        var metric = LoyaltyMetricDefinition.Create(brandId, "Old", 1).Value;
         var membershipRepository = new FakeBrandMembershipRepository();
         membershipRepository.SetRole(userId, brandId, SystemRoles.Owner);
         var metricRepository = new FakeLoyaltyMetricRepository();
@@ -28,41 +28,12 @@ public class UpdateMetricHandlerTests
             new UpdateMetricCommand(
                 metric.Id,
                 userId,
-                new UpdateMetricRequest("NEW", "New", 3)),
+                new UpdateMetricRequest("New", 3)),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal("NEW", result.Value.Code);
         Assert.Equal("New", result.Value.Name);
         Assert.Equal(3, result.Value.RedemptionAmount);
         Assert.True(result.Value.IsActive);
-    }
-
-    [Fact]
-    public async Task Handle_WhenCodeBelongsToAnotherMetric_ShouldFail()
-    {
-        var userId = Guid.NewGuid();
-        var brandId = Guid.NewGuid();
-        var metric = LoyaltyMetricDefinition.Create(brandId, "OLD", "Old", 1).Value;
-        var otherMetric = LoyaltyMetricDefinition.Create(brandId, "TAKEN", "Taken", 1).Value;
-        var membershipRepository = new FakeBrandMembershipRepository();
-        membershipRepository.SetRole(userId, brandId, SystemRoles.Owner);
-        var metricRepository = new FakeLoyaltyMetricRepository();
-        metricRepository.AddExisting(metric);
-        metricRepository.AddExisting(otherMetric);
-
-        var handler = new UpdateMetricHandler(
-            new BrandAccessService(membershipRepository),
-            metricRepository);
-
-        var result = await handler.Handle(
-            new UpdateMetricCommand(
-                metric.Id,
-                userId,
-                new UpdateMetricRequest("TAKEN", "New", 3)),
-            CancellationToken.None);
-
-        Assert.True(result.IsFailed);
-        Assert.Equal("OLD", metric.Code);
     }
 }

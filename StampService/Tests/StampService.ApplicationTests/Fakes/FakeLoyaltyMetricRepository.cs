@@ -38,15 +38,6 @@ public class FakeLoyaltyMetricRepository : ILoyaltyMetricRepository
         return Task.FromResult(result);
     }
 
-    public Task<bool> CodeExistsAsync(
-        Guid brandId,
-        string code,
-        CancellationToken cancellationToken)
-    {
-        return Task.FromResult(_metrics.Any(metric =>
-            metric.BrandId == brandId && metric.Code == code));
-    }
-
     public void Add(LoyaltyMetricDefinition metric)
     {
         _metrics.Add(metric);

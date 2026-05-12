@@ -10,7 +10,6 @@ internal static class MetricMapping
         return new MetricResponse(
             metric.Id,
             metric.BrandId,
-            metric.Code,
             metric.Name,
             metric.RedemptionAmount,
             metric.IsActive,

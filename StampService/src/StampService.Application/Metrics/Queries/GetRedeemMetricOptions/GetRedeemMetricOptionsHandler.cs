@@ -89,7 +89,6 @@ public class GetRedeemMetricOptionsHandler : IQueryHandler<RedeemMetricOptionsRe
             responseItems.Add(new RedeemMetricOptionResponse(
                 metric.Id,
                 metric.Name,
-                metric.Code,
                 currentBalance,
                 metric.RedemptionAmount,
                 currentBalance >= metric.RedemptionAmount));

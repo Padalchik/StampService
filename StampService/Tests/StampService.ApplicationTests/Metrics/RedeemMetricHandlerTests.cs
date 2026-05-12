@@ -19,7 +19,7 @@ public class RedeemMetricHandlerTests
         var redeemerUserId = Guid.NewGuid();
         var customerUserId = Guid.NewGuid();
         var brandId = Guid.NewGuid();
-        var metric = LoyaltyMetricDefinition.Create(brandId, "coffee", "Coffee", 3).Value;
+        var metric = LoyaltyMetricDefinition.Create(brandId, "Coffee", 3).Value;
 
         var metricRepository = new FakeLoyaltyMetricRepository();
         metricRepository.AddExisting(metric);
@@ -80,7 +80,7 @@ public class RedeemMetricHandlerTests
         var redeemerUserId = Guid.NewGuid();
         var customerUserId = Guid.NewGuid();
         var brandId = Guid.NewGuid();
-        var metric = LoyaltyMetricDefinition.Create(brandId, "coffee", "Coffee", 3).Value;
+        var metric = LoyaltyMetricDefinition.Create(brandId, "Coffee", 3).Value;
 
         var metricRepository = new FakeLoyaltyMetricRepository();
         metricRepository.AddExisting(metric);
@@ -129,7 +129,7 @@ public class RedeemMetricHandlerTests
         var redeemerUserId = Guid.NewGuid();
         var customerUserId = Guid.NewGuid();
         var brandId = Guid.NewGuid();
-        var metric = LoyaltyMetricDefinition.Create(brandId, "coffee", "Coffee", 5).Value;
+        var metric = LoyaltyMetricDefinition.Create(brandId, "Coffee", 5).Value;
 
         var metricRepository = new FakeLoyaltyMetricRepository();
         metricRepository.AddExisting(metric);

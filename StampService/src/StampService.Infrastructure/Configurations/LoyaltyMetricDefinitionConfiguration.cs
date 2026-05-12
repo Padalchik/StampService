@@ -25,11 +25,6 @@ public class LoyaltyMetricDefinitionConfiguration : IEntityTypeConfiguration<Loy
             .IsRequired()
             .HasColumnName("brand_id");
 
-        builder.Property(lmd => lmd.Code)
-            .IsRequired()
-            .HasMaxLength(Constants.MAX_METRIC_CODE_LENGTH)
-            .HasColumnName("code");
-
         builder.Property(lmd => lmd.Name)
             .IsRequired()
             .HasMaxLength(Constants.MAX_METRIC_NAME_LENGTH)
@@ -42,10 +37,6 @@ public class LoyaltyMetricDefinitionConfiguration : IEntityTypeConfiguration<Loy
         builder.Property(lmd => lmd.IsActive)
             .IsRequired()
             .HasColumnName("is_active");
-
-        builder.HasIndex(lmd => new { lmd.BrandId, lmd.Code })
-            .IsUnique()
-            .HasDatabaseName("ix_loyalty_metric_definitions_brand_id_code");
 
         builder.HasOne(lmd => lmd.Brand)
             .WithMany()

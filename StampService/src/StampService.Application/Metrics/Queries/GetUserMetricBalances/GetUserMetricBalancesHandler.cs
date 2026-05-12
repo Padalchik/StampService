@@ -54,7 +54,6 @@ public class GetUserMetricBalancesHandler
                     balance.BrandId,
                     balance.BrandName,
                     balance.MetricDefinitionId,
-                    balance.MetricCode,
                     balance.MetricName,
                     balance.RedemptionAmount,
                     balance.Value))

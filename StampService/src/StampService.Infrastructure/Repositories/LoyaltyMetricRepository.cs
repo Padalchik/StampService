@@ -41,18 +41,6 @@ public class LoyaltyMetricRepository : ILoyaltyMetricRepository
             .ToArrayAsync(cancellationToken);
     }
 
-    public async Task<bool> CodeExistsAsync(
-        Guid brandId,
-        string code,
-        CancellationToken cancellationToken)
-    {
-        return await _dbContext.LoyaltyMetricDefinitions
-            .AsNoTracking()
-            .AnyAsync(
-                metric => metric.BrandId == brandId && metric.Code == code,
-                cancellationToken);
-    }
-
     public void Add(LoyaltyMetricDefinition metric)
     {
         _dbContext.LoyaltyMetricDefinitions.Add(metric);

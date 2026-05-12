@@ -12,7 +12,7 @@ public class GetUserMetricTransactionsHandlerTests
     {
         var user = User.Create("user").Value;
         var brandId = Guid.NewGuid();
-        var metric = LoyaltyMetricDefinition.Create(brandId, "stamp", "Stamps", 1).Value;
+        var metric = LoyaltyMetricDefinition.Create(brandId, "Stamps", 1).Value;
         var balance = MetricBalance.Create(user.Id, brandId, metric.Id).Value;
         var userRepository = new FakeUserRepository();
         var metricRepository = new FakeLoyaltyMetricRepository();
@@ -43,7 +43,7 @@ public class GetUserMetricTransactionsHandlerTests
     public async Task Handle_WhenBalanceDoesNotExist_ShouldReturnEmptyHistory()
     {
         var user = User.Create("user").Value;
-        var metric = LoyaltyMetricDefinition.Create(Guid.NewGuid(), "stamp", "Stamps", 1).Value;
+        var metric = LoyaltyMetricDefinition.Create(Guid.NewGuid(), "Stamps", 1).Value;
         var userRepository = new FakeUserRepository();
         var metricRepository = new FakeLoyaltyMetricRepository();
         userRepository.Add(user);
@@ -133,7 +133,7 @@ public class GetUserMetricTransactionsHandlerTests
     public async Task Handle_WhenUserDoesNotExist_ShouldFail()
     {
         var metricRepository = new FakeLoyaltyMetricRepository();
-        var metric = LoyaltyMetricDefinition.Create(Guid.NewGuid(), "stamp", "Stamps", 1).Value;
+        var metric = LoyaltyMetricDefinition.Create(Guid.NewGuid(), "Stamps", 1).Value;
         metricRepository.AddExisting(metric);
         var handler = new GetUserMetricTransactionsHandler(
             metricRepository,
