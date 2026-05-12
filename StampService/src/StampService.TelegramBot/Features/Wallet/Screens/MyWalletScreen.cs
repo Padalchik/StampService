@@ -62,7 +62,7 @@ public sealed class MyWalletScreen : IScreen
 
         var view = new ScreenView(
             "<b>Мой кошелёк</b>\n\n" +
-            $"CustomerCode: <code>{Html(userResult.Value.CustomerCode)}</code>\n" +
+            $"Код пользователя: <code>{Html(userResult.Value.CustomerCode)}</code>\n" +
             $"Код для списания: <code>{Html(codeResult.Value.Code)}</code>\n" +
             $"Действует до: {FormatLocalTime(codeResult.Value.ExpiresAtUtc)}\n\n" +
             "<b>Балансы</b>\n\n" +

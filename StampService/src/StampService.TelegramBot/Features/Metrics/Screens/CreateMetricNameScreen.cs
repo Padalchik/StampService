@@ -8,7 +8,7 @@ public sealed class CreateMetricNameScreen : IScreen
 {
     public ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
     {
-        return ValueTask.FromResult(new ScreenView("<b>Новая метрика</b>\n\nВведите название:")
+        return ValueTask.FromResult(new ScreenView("<b>Новая метрика</b>\n\nВведите название для отображения пользователям:")
             .AwaitInput<EnterCreateMetricNameAction>()
             .BackButton());
     }
