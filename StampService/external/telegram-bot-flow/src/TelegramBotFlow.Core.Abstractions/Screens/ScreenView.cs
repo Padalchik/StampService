@@ -225,9 +225,6 @@ public sealed class ScreenView
     /// <summary>Добавляет кнопку возврата на предыдущий экран из стека.</summary>
     public ScreenView BackButton(string text = "⬅️ Назад")
     {
-        HasNavigationButton = true;
-        Row();
-        _buttonList.Add(new CallbackEntry(text, NavCallbacks.BACK));
         return this;
     }
 
