@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Net;
 using StampService.Application.Abstractions;
 using StampService.Application.Metrics.Queries.GetUserMetricBalances;
@@ -64,7 +63,7 @@ public sealed class MyWalletScreen : IScreen
             "<b>Балансы</b>\n\n" +
             BuildBalancesText(balancesResult.Value));
 
-        view.Row().NavigateButton<MyWalletScreen>("Обновить данные");
+        view.Row().NavigateButton<MyWalletScreen>("🔄 Обновить данные");
 
         foreach (var brandId in GetBrandIds(balancesResult.Value))
         {
@@ -102,7 +101,7 @@ public sealed class MyWalletScreen : IScreen
             var coinValue = response.CoinWallets
                 .FirstOrDefault(wallet => wallet.BrandId == brandId)
                 ?.Value ?? 0;
-            lines.Add($"  - монетки {coinValue}");
+            lines.Add($"  - Монетки {coinValue}");
             brandBlocks.Add(string.Join("\n", lines));
         }
 
@@ -130,12 +129,6 @@ public sealed class MyWalletScreen : IScreen
     {
         var utc = DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc);
         var local = utc.ToLocalTime();
-        var offset = TimeZoneInfo.Local.GetUtcOffset(utc);
-        var sign = offset < TimeSpan.Zero ? "-" : "+";
-        var absoluteOffset = offset.Duration();
-
-        return string.Create(
-            CultureInfo.InvariantCulture,
-            $"{local:HH:mm:ss} UTC{sign}{absoluteOffset:hh\\:mm}");
+        return $"{local:HH:mm:ss}";
     }
 }

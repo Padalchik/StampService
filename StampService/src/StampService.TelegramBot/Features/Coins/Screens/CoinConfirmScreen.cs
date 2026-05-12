@@ -11,7 +11,6 @@ public sealed class CoinConfirmScreen : IScreen
     {
         var mode = ctx.Session?.Data.GetString(CoinSessionKeys.Mode);
         var amount = ctx.Session?.Data.Get<int>(CoinSessionKeys.Amount) ?? 0;
-        var comment = ctx.Session?.Data.GetString(CoinSessionKeys.Comment) ?? string.Empty;
         var customerCode = ctx.Session?.Data.GetString(CoinSessionKeys.CustomerCode);
         var redemptionCode = ctx.Session?.Data.GetString(CoinSessionKeys.RedemptionCode);
 
@@ -26,8 +25,7 @@ public sealed class CoinConfirmScreen : IScreen
         var view = new ScreenView(
             $"<b>{title}</b>\n\n" +
             $"{subject}\n" +
-            $"Количество: {amount}\n" +
-            $"Комментарий: {Html(comment)}");
+            $"Количество: {amount}");
 
         if (mode == CoinSessionKeys.ModeIssue)
             view.Button<ConfirmIssueCoinsAction>("✅ Подтвердить");

@@ -30,7 +30,6 @@ public sealed class CoinEndpoint : IBotEndpoint
         app.MapInput<EnterCoinCustomerCodeAction>(EnterCustomerCodeAsync);
         app.MapInput<EnterCoinRedemptionCodeAction>(EnterRedemptionCodeAsync);
         app.MapInput<EnterCoinAmountAction>(EnterAmountAsync);
-        app.MapInput<EnterCoinCommentAction>(EnterCommentAsync);
         app.MapAction<ConfirmIssueCoinsAction>(ConfirmIssueAsync);
         app.MapAction<ConfirmRedeemCoinsAction>(ConfirmRedeemAsync);
         app.MapAction<CancelCoinOperationAction>(CancelAsync);
@@ -79,22 +78,6 @@ public sealed class CoinEndpoint : IBotEndpoint
             return Retry<CoinAmountScreen, EnterCoinAmountAction>("Количество монеток должно быть положительным числом.");
 
         ctx.Session?.Data.Set(CoinSessionKeys.Amount, amount);
-        return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<CoinCommentScreen>()));
-    }
-
-    private static Task<IEndpointResult> EnterCommentAsync(UpdateContext ctx)
-    {
-        var comment = ctx.MessageText?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(comment))
-            return Retry<CoinCommentScreen, EnterCoinCommentAction>("Комментарий обязателен.");
-
-        if (comment.Length > StampService.Domain.Coins.Constants.MAX_COIN_TRANSACTION_COMMENT_LENGTH)
-        {
-            return Retry<CoinCommentScreen, EnterCoinCommentAction>(
-                $"Комментарий не должен быть длиннее {StampService.Domain.Coins.Constants.MAX_COIN_TRANSACTION_COMMENT_LENGTH} символов.");
-        }
-
-        ctx.Session?.Data.Set(CoinSessionKeys.Comment, comment);
         return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<CoinConfirmScreen>()));
     }
 
@@ -106,9 +89,9 @@ public sealed class CoinEndpoint : IBotEndpoint
         var brandId = GetBrandId(ctx);
         var customerCode = ctx.Session?.Data.GetString(CoinSessionKeys.CustomerCode) ?? string.Empty;
         var amount = ctx.Session?.Data.Get<int>(CoinSessionKeys.Amount) ?? 0;
-        var comment = ctx.Session?.Data.GetString(CoinSessionKeys.Comment) ?? string.Empty;
+        const string comment = "Issue coins";
 
-        if (brandId == Guid.Empty || !UserEntity.IsValidCustomerCode(customerCode) || amount <= 0 || string.IsNullOrWhiteSpace(comment))
+        if (brandId == Guid.Empty || !UserEntity.IsValidCustomerCode(customerCode) || amount <= 0)
             return BotResults.ShowView(new ScreenView("Сценарий начисления монеток устарел. Начните заново.").BackButton());
 
         var actorUserId = await GetActorUserIdAsync(ctx, ensureUserHandler);
@@ -134,9 +117,9 @@ public sealed class CoinEndpoint : IBotEndpoint
         var brandId = GetBrandId(ctx);
         var redemptionCode = ctx.Session?.Data.GetString(CoinSessionKeys.RedemptionCode) ?? string.Empty;
         var amount = ctx.Session?.Data.Get<int>(CoinSessionKeys.Amount) ?? 0;
-        var comment = ctx.Session?.Data.GetString(CoinSessionKeys.Comment) ?? string.Empty;
+        const string comment = "Redeem coins";
 
-        if (brandId == Guid.Empty || !DomainRedemptionCode.IsValidCode(redemptionCode) || amount <= 0 || string.IsNullOrWhiteSpace(comment))
+        if (brandId == Guid.Empty || !DomainRedemptionCode.IsValidCode(redemptionCode) || amount <= 0)
             return BotResults.ShowView(new ScreenView("Сценарий списания монеток устарел. Начните заново.").BackButton());
 
         var actorUserId = await GetActorUserIdAsync(ctx, ensureUserHandler);
@@ -193,7 +176,7 @@ public sealed class CoinEndpoint : IBotEndpoint
             var marker = isIssue ? "🟢" : "🟡";
             var sign = isIssue ? "+" : "-";
             var date = transaction.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
-            var comment = string.IsNullOrWhiteSpace(transaction.Comment)
+            var comment = string.IsNullOrWhiteSpace(transaction.Comment) || IsAutoComment(transaction.Comment)
                 ? string.Empty
                 : $" - {Html(transaction.Comment)}";
 
@@ -255,8 +238,12 @@ public sealed class CoinEndpoint : IBotEndpoint
         ctx.Session?.Data.Remove(CoinSessionKeys.CustomerCode);
         ctx.Session?.Data.Remove(CoinSessionKeys.RedemptionCode);
         ctx.Session?.Data.Remove(CoinSessionKeys.Amount);
-        ctx.Session?.Data.Remove(CoinSessionKeys.Comment);
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);
+
+    private static bool IsAutoComment(string value)
+    {
+        return value is "Issue coins" or "Redeem coins";
+    }
 }
