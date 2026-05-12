@@ -57,7 +57,7 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
         if (!DomainRedemptionCode.IsValidCode(code))
         {
             return BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                "Код списания должен состоять из 6 цифр. Попробуйте еще раз.")
+                "Код списания должен состоять из 4 цифр. Попробуйте еще раз.")
                 .AwaitInput<EnterRedeemCodeAction>()
                 .BackButton()));
         }

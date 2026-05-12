@@ -53,7 +53,16 @@ public class CreateRedemptionCodeHandler
                 activeCode.ExpiresAtUtc));
         }
 
-        var code = await _codeGenerator.GenerateAsync(nowUtc, cancellationToken);
+        string code;
+        try
+        {
+            code = await _codeGenerator.GenerateAsync(nowUtc, cancellationToken);
+        }
+        catch (InvalidOperationException)
+        {
+            return Result.Fail(UserErrors.RedemptionCodePoolExhausted());
+        }
+
         var expiresAtUtc = nowUtc.Add(CodeLifetime);
 
         var redemptionCodeResult = RedemptionCode.Create(

@@ -31,7 +31,7 @@ public class GetRedeemMetricOptionsHandlerTests
         metricRepository.AddExisting(unavailableMetric);
         codeRepository.Add(RedemptionCode.Create(
             customer.Id,
-            "123456",
+            "1234",
             now.UtcDateTime.AddMinutes(5),
             now.UtcDateTime).Value);
 
@@ -48,12 +48,12 @@ public class GetRedeemMetricOptionsHandlerTests
             new FixedTimeProvider(now));
 
         var result = await handler.Handle(
-            new GetRedeemMetricOptionsQuery(redeemer.Id, brandId, "123456"),
+            new GetRedeemMetricOptionsQuery(redeemer.Id, brandId, "1234"),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(customer.Id, result.Value.CustomerUserId);
-        Assert.Equal("123456", result.Value.RedemptionCode);
+        Assert.Equal("1234", result.Value.RedemptionCode);
         Assert.Equal(2, result.Value.Metrics.Count);
 
         var available = result.Value.Metrics.Single(metric => metric.MetricDefinitionId == availableMetric.Id);
@@ -80,7 +80,7 @@ public class GetRedeemMetricOptionsHandlerTests
             new FixedTimeProvider(now));
 
         var result = await handler.Handle(
-            new GetRedeemMetricOptionsQuery(Guid.NewGuid(), Guid.NewGuid(), "123456"),
+            new GetRedeemMetricOptionsQuery(Guid.NewGuid(), Guid.NewGuid(), "1234"),
             CancellationToken.None);
 
         Assert.True(result.IsFailed);

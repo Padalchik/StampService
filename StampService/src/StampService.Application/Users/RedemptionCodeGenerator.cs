@@ -5,7 +5,7 @@ namespace StampService.Application.Users;
 
 public class RedemptionCodeGenerator : IRedemptionCodeGenerator
 {
-    private const int MaxAttempts = 25;
+    private const int RandomAttempts = 100;
 
     private readonly IRedemptionCodeRepository _redemptionCodeRepository;
 
@@ -16,12 +16,27 @@ public class RedemptionCodeGenerator : IRedemptionCodeGenerator
 
     public async Task<string> GenerateAsync(DateTime nowUtc, CancellationToken cancellationToken)
     {
-        for (var attempt = 0; attempt < MaxAttempts; attempt++)
+        var combinationsCount = (int)Math.Pow(10, RedemptionCode.CodeLength);
+        for (var attempt = 0; attempt < RandomAttempts; attempt++)
         {
             var code = RandomNumberGenerator
-                .GetInt32(0, 1_000_000)
+                .GetInt32(0, combinationsCount)
                 .ToString($"D{RedemptionCode.CodeLength}");
 
+            var exists = await _redemptionCodeRepository.ActiveCodeExistsAsync(
+                code,
+                nowUtc,
+                cancellationToken);
+
+            if (!exists)
+                return code;
+        }
+
+        var start = RandomNumberGenerator.GetInt32(0, combinationsCount);
+        for (var offset = 0; offset < combinationsCount; offset++)
+        {
+            var value = (start + offset) % combinationsCount;
+            var code = value.ToString($"D{RedemptionCode.CodeLength}");
             var exists = await _redemptionCodeRepository.ActiveCodeExistsAsync(
                 code,
                 nowUtc,

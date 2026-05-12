@@ -5,7 +5,7 @@ namespace StampService.Domain.User;
 
 public class RedemptionCode : BaseEntity
 {
-    public const int CodeLength = 6;
+    public const int CodeLength = 4;
 
     public Guid UserId { get; private set; }
     public User User { get; private set; } = null!;
@@ -41,7 +41,7 @@ public class RedemptionCode : BaseEntity
         if (!IsValidCode(code))
             return Result.Fail(DomainError.Validation(
                 "redemption_code.code_invalid",
-                "Redemption code must contain exactly 6 digits",
+                $"Redemption code must contain exactly {CodeLength} digits",
                 nameof(code)));
 
         if (expiresAtUtc <= nowUtc)

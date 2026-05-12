@@ -35,6 +35,7 @@ StampService - система лояльности, которая сейчас 
 - Не трогать чужие/старые изменения в worktree, не делать revert без явного запроса.
 - Пользователь хочет быстро наращивать бизнес-фичи для MVP и искать клиентов, поэтому не уходить надолго в технический перфекционизм без необходимости.
 - При этом пользователь требует экспертного качества в слоях ошибок, Application layer и бизнес-логике.
+- Миграции делать только через механизм EF чтобы быть уверенным в корректности (dotnet ef migrations add)
 
 ## 3. Архитектурные/UX принципы, которые уже согласованы
 
@@ -147,22 +148,6 @@ StampService - система лояльности, которая сейчас 
 - Вместо этого показывать историю по брендам: `История: <бренд>`.
 - История бренда должна объединять операции по метрикам и монеткам.
 
-Недавняя реализация для истории бренда:
-
-- Добавлены DTO:
-  - `src/StampService.Contracts/DTOs/Wallet/UserBrandWalletHistoryItemResponse.cs`
-  - `src/StampService.Contracts/DTOs/Wallet/UserBrandWalletHistoryResponse.cs`
-- Добавлен query:
-  - `src/StampService.Application/Wallet/Queries/GetUserBrandWalletHistory/GetUserBrandWalletHistoryQuery.cs`
-  - `src/StampService.Application/Wallet/Queries/GetUserBrandWalletHistory/GetUserBrandWalletHistoryHandler.cs`
-- Добавлен TG endpoint/actions:
-  - `src/StampService.TelegramBot/Features/Wallet/Actions/ViewWalletBrandHistoryAction.cs`
-  - `src/StampService.TelegramBot/Features/Wallet/Actions/ViewWalletBrandHistoryPayload.cs`
-  - `src/StampService.TelegramBot/Features/Wallet/Endpoints/WalletBrandHistoryEndpoint.cs`
-- `MyWalletScreen` теперь строит кнопки истории по уникальным brandId.
-
-Проверки build/test после этого не запускались.
-
 ## 5. Текущий UX главного меню и бренда
 
 ### Главное меню
@@ -242,48 +227,9 @@ StampService - система лояльности, которая сейчас 
 - Не протаскивать infrastructure exceptions в UX.
 - В Application layer не писать "лишь бы работало"; ошибки должны быть нормальной частью контракта use case.
 
-## 8. Текущее состояние файлов/незавершенность
+## 8. Следующие бизнес-фичи, которые обсуждались как возможные
 
-На момент записи этого файла пользователь попросил не запускать тесты/build, поэтому после последних изменений они не запускались.
-
-Недавние файлы, которые могли быть изменены или добавлены:
-
-- `src/StampService.TelegramBot/Features/Brands/Endpoints/BrandWorkspaceEndpoint.cs`
-- `src/StampService.TelegramBot/Features/Wallet/Screens/MyWalletScreen.cs`
-- `src/StampService.Application/Wallet/Queries/GetUserBrandWalletHistory/GetUserBrandWalletHistoryQuery.cs`
-- `src/StampService.Application/Wallet/Queries/GetUserBrandWalletHistory/GetUserBrandWalletHistoryHandler.cs`
-- `src/StampService.Contracts/DTOs/Wallet/UserBrandWalletHistoryItemResponse.cs`
-- `src/StampService.Contracts/DTOs/Wallet/UserBrandWalletHistoryResponse.cs`
-- `src/StampService.TelegramBot/Features/Wallet/Actions/ViewWalletBrandHistoryAction.cs`
-- `src/StampService.TelegramBot/Features/Wallet/Actions/ViewWalletBrandHistoryPayload.cs`
-- `src/StampService.TelegramBot/Features/Wallet/Endpoints/WalletBrandHistoryEndpoint.cs`
-
-## 9. Потенциальные риски/что проверить следующим
-
-Когда пользователь разрешит build/test:
-
-1. Запустить build решения.
-2. Запустить relevant tests или весь test suite.
-3. Проверить compile по новому `GetUserBrandWalletHistoryHandler`.
-4. Проверить, что Scrutor DI подхватывает новый query handler.
-5. Проверить, что `WalletBrandHistoryEndpoint` подхватывается `AddBotEndpoints(typeof(Program).Assembly)`.
-6. Проверить автопереход в бренд:
-   - только client work
-   - только metric work
-   - только staff
-   - несколько разделов
-   - нет разделов
-7. Проверить `Назад` после автоперехода. Возможный UX нюанс: если бренд сразу открыл единственный раздел, `Назад` может вернуть к списку брендов/главному меню, а не на экран бренда. Это, вероятно, нормально, потому что экран бренда был intentionally skipped, но если пользователь захочет промежуточный экран, нужно обсудить.
-8. Проверить историю бренда в кошельке:
-   - бренд с метриками и монетками
-   - бренд только с метриками
-   - бренд только с монетками
-   - бренд без операций
-   - сортировка по времени между разными источниками
-
-## 10. Следующие бизнес-фичи, которые обсуждались как возможные
-
-Пользователь хочет MVP и продажи, поэтому полезные следующие направления:
+Пользователь хочет MVP и продажи, поэтому полезные следующие направления (но это ещё не обсуждали):
 
 - Кампании/акции: временные правила начисления, например x2 монетки в определенные дни.
 - Реферальные механики: пригласи друга, получи монетки.
@@ -296,7 +242,7 @@ StampService - система лояльности, которая сейчас 
 
 Но ближайшее состояние проекта сейчас связано с завершением UX кошелька/истории и проверкой build/test после разрешения пользователя.
 
-## 11. Команды и окружение
+## 9. Команды и окружение
 
 Рабочая папка:
 
@@ -331,16 +277,5 @@ dotnet test
 dotnet ef database update
 ```
 
-## 12. Как продолжать в новом чате
-
-Начать с:
-
-1. Прочитать этот файл.
-2. Выполнить `git status --short`, чтобы увидеть актуальный worktree.
-3. Не запускать build/test без разрешения.
-4. Если пользователь просит продолжать разработку, сначала проверить свежие файлы, связанные с последним блоком:
-   - wallet history by brand
-   - brand auto-direct
-   - Telegram UX labels/buttons
-5. Если пользователь разрешит проверки, первым делом сделать build, потом focused tests.
-
+## 10. Последенее что было сделано:
+- Код списания теперь состоит из 4х цифр.

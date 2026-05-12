@@ -66,7 +66,7 @@ public sealed class CoinEndpoint : IBotEndpoint
     {
         var code = ctx.MessageText?.Trim() ?? string.Empty;
         if (!DomainRedemptionCode.IsValidCode(code))
-            return Retry<CoinRedemptionCodeScreen, EnterCoinRedemptionCodeAction>("Код списания должен состоять из 6 цифр.");
+            return Retry<CoinRedemptionCodeScreen, EnterCoinRedemptionCodeAction>("Код списания должен состоять из 4 цифр.");
 
         ctx.Session?.Data.Set(CoinSessionKeys.RedemptionCode, code);
         return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<CoinAmountScreen>()));
