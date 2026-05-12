@@ -14,7 +14,7 @@ public class UseRedemptionCodeHandlerTests
         var userId = Guid.NewGuid();
         var code = RedemptionCode.Create(
             userId,
-            "123456",
+            "1234",
             now.UtcDateTime.AddMinutes(3),
             now.UtcDateTime).Value;
         var repository = new FakeRedemptionCodeRepository();
@@ -24,7 +24,7 @@ public class UseRedemptionCodeHandlerTests
             new FixedTimeProvider(now));
 
         var result = await handler.Handle(
-            new UseRedemptionCodeCommand("123456"),
+            new UseRedemptionCodeCommand("1234"),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -35,9 +35,9 @@ public class UseRedemptionCodeHandlerTests
 
     [Theory]
     [InlineData("")]
+    [InlineData("123")]
     [InlineData("12345")]
-    [InlineData("1234567")]
-    [InlineData("12A456")]
+    [InlineData("12A4")]
     public async Task Handle_WhenCodeFormatIsInvalid_ShouldFail(string code)
     {
         var handler = new UseRedemptionCodeHandler(
@@ -60,7 +60,7 @@ public class UseRedemptionCodeHandlerTests
         var repository = new FakeRedemptionCodeRepository();
         repository.Add(RedemptionCode.Create(
             Guid.NewGuid(),
-            "123456",
+            "1234",
             now.UtcDateTime.AddMinutes(-1),
             now.UtcDateTime.AddMinutes(-2)).Value);
         var handler = new UseRedemptionCodeHandler(
@@ -68,7 +68,7 @@ public class UseRedemptionCodeHandlerTests
             new FixedTimeProvider(now));
 
         var result = await handler.Handle(
-            new UseRedemptionCodeCommand("123456"),
+            new UseRedemptionCodeCommand("1234"),
             CancellationToken.None);
 
         Assert.True(result.IsFailed);

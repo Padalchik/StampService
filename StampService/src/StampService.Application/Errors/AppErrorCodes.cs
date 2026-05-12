@@ -69,6 +69,7 @@ public static class AppErrorCodes
         public const string Invalid = "redemption_code.invalid";
         public const string NotFoundOrExpired = "redemption_code.not_found_or_expired";
         public const string AlreadyUsed = "redemption_code.already_used";
+        public const string PoolExhausted = "redemption_code.pool_exhausted";
     }
 
     public static class Recipient

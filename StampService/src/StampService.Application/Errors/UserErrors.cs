@@ -1,3 +1,5 @@
+using StampService.Domain.User;
+
 namespace StampService.Application.Errors;
 
 public static class UserErrors
@@ -33,11 +35,16 @@ public static class UserErrors
     public static AppError RedemptionCodeInvalid() =>
         AppError.Validation(
             AppErrorCodes.RedemptionCode.Invalid,
-            "Redemption code must contain exactly 6 digits",
+            $"Redemption code must contain exactly {RedemptionCode.CodeLength} digits",
             "redemptionCode");
 
     public static AppError RedemptionCodeNotFoundOrExpired() =>
         AppError.NotFound(
             AppErrorCodes.RedemptionCode.NotFoundOrExpired,
             "Redemption code not found or expired");
+
+    public static AppError RedemptionCodePoolExhausted() =>
+        AppError.Conflict(
+            AppErrorCodes.RedemptionCode.PoolExhausted,
+            "No redemption codes are available at the moment");
 }

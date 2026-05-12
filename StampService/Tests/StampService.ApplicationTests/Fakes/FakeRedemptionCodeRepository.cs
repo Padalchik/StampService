@@ -14,7 +14,9 @@ public class FakeRedemptionCodeRepository : IRedemptionCodeRepository
         CancellationToken cancellationToken)
     {
         var code = Codes
-            .Where(code => code.UserId == userId && code.IsActive(nowUtc))
+            .Where(code => code.UserId == userId
+                && RedemptionCode.IsValidCode(code.Code)
+                && code.IsActive(nowUtc))
             .OrderByDescending(code => code.CreatedAt)
             .FirstOrDefault();
 

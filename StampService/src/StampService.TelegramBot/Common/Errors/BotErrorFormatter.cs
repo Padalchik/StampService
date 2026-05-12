@@ -45,9 +45,10 @@ public static class BotErrorFormatter
             AppErrorCodes.MetricBalance.NotFound => "у клиента нет баланса по этой метрике",
             AppErrorCodes.Coin.WalletNotFound => "у клиента нет баланса монеток",
             AppErrorCodes.Recipient.NotFound => "получатель не найден",
-            AppErrorCodes.RedemptionCode.Invalid => "код списания должен состоять из 6 цифр",
+            AppErrorCodes.RedemptionCode.Invalid => "код списания должен состоять из 4 цифр",
             AppErrorCodes.RedemptionCode.NotFoundOrExpired => "код списания не найден или истёк",
             AppErrorCodes.RedemptionCode.AlreadyUsed => "код списания уже использован",
+            AppErrorCodes.RedemptionCode.PoolExhausted => "сейчас нет свободных кодов списания, попробуйте позже",
             AppErrorCodes.User.NotFound => context == BotErrorContext.IssueMetric
                 ? "получатель не найден"
                 : "пользователь не найден",

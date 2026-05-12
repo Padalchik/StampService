@@ -33,7 +33,7 @@ public class RedeemCoinsHandlerTests
         transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 10, "Existing issue").Value);
         var redemptionCode = RedemptionCode.Create(
             customer.Id,
-            "123456",
+            "1234",
             now.UtcDateTime.AddMinutes(3),
             now.UtcDateTime).Value;
         codeRepository.Add(redemptionCode);
@@ -50,7 +50,7 @@ public class RedeemCoinsHandlerTests
             new FixedTimeProvider(now));
 
         var result = await handler.Handle(
-            new RedeemCoinsCommand(brandId, actorUserId, "123456", 4, "Free product"),
+            new RedeemCoinsCommand(brandId, actorUserId, "1234", 4, "Free product"),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -83,7 +83,7 @@ public class RedeemCoinsHandlerTests
         transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 2, "Existing issue").Value);
         var redemptionCode = RedemptionCode.Create(
             customer.Id,
-            "123456",
+            "1234",
             now.UtcDateTime.AddMinutes(3),
             now.UtcDateTime).Value;
         codeRepository.Add(redemptionCode);
@@ -100,7 +100,7 @@ public class RedeemCoinsHandlerTests
             new FixedTimeProvider(now));
 
         var result = await handler.Handle(
-            new RedeemCoinsCommand(brandId, actorUserId, "123456", 4, "Free product"),
+            new RedeemCoinsCommand(brandId, actorUserId, "1234", 4, "Free product"),
             CancellationToken.None);
 
         Assert.True(result.IsFailed);

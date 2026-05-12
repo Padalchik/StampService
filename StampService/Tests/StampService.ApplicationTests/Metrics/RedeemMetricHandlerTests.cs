@@ -37,7 +37,7 @@ public class RedeemMetricHandlerTests
         var codeRepository = new FakeRedemptionCodeRepository();
         var redemptionCode = RedemptionCode.Create(
             customerUserId,
-            "123456",
+            "1234",
             now.UtcDateTime.AddMinutes(3),
             now.UtcDateTime).Value;
         codeRepository.Add(redemptionCode);
@@ -63,7 +63,7 @@ public class RedeemMetricHandlerTests
             new RedeemMetricCommand(
                 metric.Id,
                 redeemerUserId,
-                new RedeemMetricRequest("123456", "Redeem")),
+                new RedeemMetricRequest("1234", "Redeem")),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -92,7 +92,7 @@ public class RedeemMetricHandlerTests
         var codeRepository = new FakeRedemptionCodeRepository();
         var redemptionCode = RedemptionCode.Create(
             customerUserId,
-            "123456",
+            "1234",
             now.UtcDateTime.AddMinutes(3),
             now.UtcDateTime).Value;
         redemptionCode.Use(now.UtcDateTime.AddMinutes(1));
@@ -116,7 +116,7 @@ public class RedeemMetricHandlerTests
             new RedeemMetricCommand(
                 metric.Id,
                 redeemerUserId,
-                new RedeemMetricRequest("123456", "Redeem")),
+                new RedeemMetricRequest("1234", "Redeem")),
             CancellationToken.None);
 
         Assert.True(result.IsFailed);
@@ -147,7 +147,7 @@ public class RedeemMetricHandlerTests
         var codeRepository = new FakeRedemptionCodeRepository();
         codeRepository.Add(RedemptionCode.Create(
             customerUserId,
-            "123456",
+            "1234",
             now.UtcDateTime.AddMinutes(3),
             now.UtcDateTime).Value);
 
@@ -167,7 +167,7 @@ public class RedeemMetricHandlerTests
             new RedeemMetricCommand(
                 metric.Id,
                 redeemerUserId,
-                new RedeemMetricRequest("123456", "Redeem")),
+                new RedeemMetricRequest("1234", "Redeem")),
             CancellationToken.None);
 
         Assert.True(result.IsFailed);

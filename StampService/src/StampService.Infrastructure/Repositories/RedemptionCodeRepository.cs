@@ -20,6 +20,7 @@ public class RedemptionCodeRepository : IRedemptionCodeRepository
     {
         return await _dbContext.RedemptionCodes
             .Where(code => code.UserId == userId
+                && code.Code.Length == RedemptionCode.CodeLength
                 && code.UsedAtUtc == null
                 && code.ExpiresAtUtc > nowUtc)
             .OrderByDescending(code => code.CreatedAt)
