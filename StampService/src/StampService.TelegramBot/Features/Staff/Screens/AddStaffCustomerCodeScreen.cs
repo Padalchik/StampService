@@ -11,7 +11,7 @@ public sealed class AddStaffCustomerCodeScreen : IScreen
     {
         return ValueTask.FromResult(new ScreenView(
             $"<b>{Html(StaffBrandContext.GetBrandName(ctx))}</b>\n\n" +
-            "Введите CustomerCode сотрудника:")
+            "Введите код пользователя сотрудника:")
             .AwaitInput<EnterAddStaffCustomerCodeAction>()
             .BackButton());
     }

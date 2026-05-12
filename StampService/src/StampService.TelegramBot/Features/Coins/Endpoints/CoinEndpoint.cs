@@ -54,7 +54,7 @@ public sealed class CoinEndpoint : IBotEndpoint
     {
         var customerCode = ctx.MessageText?.Trim() ?? string.Empty;
         if (!UserEntity.IsValidCustomerCode(customerCode))
-            return await Retry<CoinCustomerCodeScreen, EnterCoinCustomerCodeAction>("CustomerCode должен состоять из 4 цифр.");
+            return await Retry<CoinCustomerCodeScreen, EnterCoinCustomerCodeAction>("Код пользователя должен состоять из 4 цифр.");
 
         ctx.Session?.Data.Set(CoinSessionKeys.CustomerCode, customerCode);
 

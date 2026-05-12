@@ -47,7 +47,7 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
         if (!UserEntity.IsValidCustomerCode(customerCode))
         {
             return BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                "CustomerCode должен состоять из 4 цифр.")
+                "Код пользователя должен состоять из 4 цифр.")
                 .AwaitInput<EnterCustomerBalancesCodeAction>()
                 .BackButton()));
         }

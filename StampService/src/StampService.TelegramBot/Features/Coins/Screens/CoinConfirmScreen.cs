@@ -19,7 +19,7 @@ public sealed class CoinConfirmScreen : IScreen
             : "Подтвердите списание";
 
         var subject = mode == CoinSessionKeys.ModeIssue
-            ? $"CustomerCode: <code>{Html(customerCode ?? "-")}</code>"
+            ? $"Код пользователя: <code>{Html(customerCode ?? "-")}</code>"
             : $"Код списания: <code>{Html(redemptionCode ?? "-")}</code>";
 
         var view = new ScreenView(

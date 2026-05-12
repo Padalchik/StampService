@@ -12,7 +12,7 @@ public sealed class CreateBrandOwnerCodeScreen : IScreen
         var brandName = ctx.Session?.Data.GetString(AdminSessionKeys.CreateBrandName) ?? "бренд";
         return ValueTask.FromResult(new ScreenView(
             $"<b>{Html(brandName)}</b>\n\n" +
-            "Введите CustomerCode владельца:")
+            "Введите код пользователя владельца:")
             .AwaitInput<EnterCreateBrandOwnerCodeAction>()
             .BackButton());
     }

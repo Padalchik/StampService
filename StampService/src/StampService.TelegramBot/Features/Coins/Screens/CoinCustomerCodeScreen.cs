@@ -15,7 +15,7 @@ public sealed class CoinCustomerCodeScreen : IScreen
 
         return ValueTask.FromResult(new ScreenView(
             $"<b>{title}</b>\n\n" +
-            "Введите CustomerCode клиента:")
+            "Введите код пользователя клиента:")
             .AwaitInput<EnterCoinCustomerCodeAction>()
             .BackButton());
     }

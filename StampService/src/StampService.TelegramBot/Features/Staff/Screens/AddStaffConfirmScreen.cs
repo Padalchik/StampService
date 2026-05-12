@@ -14,7 +14,7 @@ public sealed class AddStaffConfirmScreen : IScreen
         return ValueTask.FromResult(new ScreenView(
             "<b>Добавить сотрудника?</b>\n\n" +
             $"Бренд: {Html(StaffBrandContext.GetBrandName(ctx))}\n" +
-            $"CustomerCode: <code>{Html(customerCode)}</code>\n" +
+            $"Код пользователя: <code>{Html(customerCode)}</code>\n" +
             "Роль: Сотрудник")
             .Button<ConfirmAddStaffAction>("✅ Подтвердить")
             .Row()

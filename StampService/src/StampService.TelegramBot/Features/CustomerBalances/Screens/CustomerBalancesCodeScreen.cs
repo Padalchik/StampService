@@ -14,7 +14,7 @@ public sealed class CustomerBalancesCodeScreen : IScreen
 
         return ValueTask.FromResult(new ScreenView(
             $"<b>{Html(brandName)}</b>\n\n" +
-            "Введите CustomerCode клиента:")
+            "Введите код пользователя клиента:")
             .AwaitInput<EnterCustomerBalancesCodeAction>()
             .BackButton());
     }

@@ -56,7 +56,7 @@ public sealed class BrandStaffEndpoint : IBotEndpoint
         if (!UserEntity.IsValidCustomerCode(customerCode))
         {
             return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                "CustomerCode должен состоять из 4 цифр.")
+                "Код пользователя должен состоять из 4 цифр.")
                 .AwaitInput<EnterAddStaffCustomerCodeAction>()
                 .BackButton())));
         }
