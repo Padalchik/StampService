@@ -61,9 +61,7 @@ public sealed class MetricsListScreen : IScreen
         }
 
         return view.Row()
-            .Button<StartCreateMetricAction>("Создать метрику")
-            .Row()
-            .NavigateButton<BrandWorkspaceScreen>("К бренду")
+            .Button<StartCreateMetricAction>("➕ Создать новую метрику")
             .BackButton();
     }
 

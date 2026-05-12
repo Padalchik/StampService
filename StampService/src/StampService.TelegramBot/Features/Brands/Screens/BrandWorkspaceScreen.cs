@@ -3,6 +3,7 @@ using StampService.Application.Abstractions;
 using StampService.Application.Brands.Queries.GetBrandWorkspace;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Brands;
+using StampService.TelegramBot.Features.Metrics.Screens;
 using StampService.TelegramBot.Features.Staff.Actions;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
@@ -77,7 +78,7 @@ public sealed class BrandWorkspaceScreen : IScreen
 
         if (workspace.CanManageMetrics)
         {
-            view.Row().NavigateButton<MetricWorkScreen>("Работа с метриками");
+            view.Row().NavigateButton<MetricsListScreen>("Работа с метриками");
             hasActions = true;
         }
 
