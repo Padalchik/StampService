@@ -58,7 +58,7 @@ public sealed class MyBalancesScreen : IScreen
         foreach (var balance in balancesResult.Value.Balances)
         {
             view.Row().Button<ViewBalanceHistoryAction, ViewBalanceHistoryPayload>(
-                $"История: {balance.MetricName}",
+                $"📈 История: {balance.MetricName}",
                 new ViewBalanceHistoryPayload(
                     balance.MetricDefinitionId,
                     balance.BrandName,

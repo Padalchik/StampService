@@ -181,7 +181,7 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
         foreach (var balance in activeBalances)
         {
             view.Row().Button<ViewCustomerBalanceHistoryAction, ViewCustomerBalanceHistoryPayload>(
-                $"История: {balance.MetricName}",
+                $"📈 История: {balance.MetricName}",
                 new ViewCustomerBalanceHistoryPayload(
                     response.CustomerUserId,
                     response.CustomerName,
@@ -191,7 +191,7 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
         }
 
         view.Row().Button<ViewCoinHistoryAction, ViewCoinHistoryPayload>(
-            "История: монетки",
+            "📈 История: монетки",
             new ViewCoinHistoryPayload(response.CustomerCode));
 
         return view.NavigateButton<CustomerBalancesCodeScreen>("Другой клиент")

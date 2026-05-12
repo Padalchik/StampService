@@ -13,8 +13,9 @@ public sealed class EditMetricCodeScreen : IScreen
         return ValueTask.FromResult(new ScreenView(
             "<b>Редактирование метрики</b>\n\n" +
             $"Текущий код: <code>{Html(current)}</code>\n" +
-            "Введите новый код или '-' чтобы оставить текущий:")
+            "Введите новый код:")
             .AwaitInput<EnterEditMetricCodeAction>()
+            .Button<KeepEditMetricCodeAction>("Оставить эти данные")
             .BackButton());
     }
 

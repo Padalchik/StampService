@@ -79,6 +79,8 @@ public sealed class ScreenView
     /// </summary>
     public bool HasNavigationButton { get; private set; }
 
+    public bool SuppressAutoMenuButton { get; private set; }
+
     /// <summary>Создаёт представление экрана с текстом.</summary>
     public ScreenView(string text) => Text = text;
 
@@ -248,7 +250,19 @@ public sealed class ScreenView
     {
         HasNavigationButton = true;
         Row();
-        _buttonList.Add(new CallbackEntry(text, NavCallbacks.MENU));
+        var normalizedText = text is "\u2630 Menu" or "Главное меню"
+            ? "В главное меню"
+            : text;
+        var buttonText = normalizedText.StartsWith("🏠", StringComparison.Ordinal)
+            ? normalizedText
+            : $"🏠 {normalizedText}";
+        _buttonList.Add(new CallbackEntry(buttonText, NavCallbacks.MENU));
+        return this;
+    }
+
+    public ScreenView WithoutAutoMenuButton()
+    {
+        SuppressAutoMenuButton = true;
         return this;
     }
 
@@ -309,6 +323,14 @@ public sealed class ScreenView
     {
         var kb = new InlineKeyboard();
         var payloads = new Dictionary<string, string>();
+        var hasMenuButton = _buttonList.OfType<CallbackEntry>()
+            .Any(button => button.CallbackData == NavCallbacks.MENU);
+
+        if (!hasMenuButton && !SuppressAutoMenuButton)
+        {
+            _buttonList.Add(new RowSeparator());
+            _buttonList.Add(new CallbackEntry("🏠 В главное меню", NavCallbacks.MENU));
+        }
 
         foreach (object item in _buttonList)
         {

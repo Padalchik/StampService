@@ -69,7 +69,7 @@ public sealed class MyWalletScreen : IScreen
         {
             var brandName = GetBrandName(balancesResult.Value, brandId);
             view.Row().Button<ViewWalletBrandHistoryAction, ViewWalletBrandHistoryPayload>(
-                $"История: {brandName}",
+                $"📈 История: {brandName}",
                 new ViewWalletBrandHistoryPayload(brandId, brandName));
         }
 
