@@ -129,8 +129,6 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
                 $"{title}\n\n" +
                 "Истории операций пока нет.")
                 .NavigateButton<CustomerBalancesCodeScreen>("Другой клиент")
-                .Row()
-                .NavigateButton<BrandWorkspaceScreen>("К бренду")
                 .BackButton());
         }
 
@@ -152,8 +150,6 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
             "<b>Последние операции</b>\n" +
             string.Join("\n", lines))
             .NavigateButton<CustomerBalancesCodeScreen>("Другой клиент")
-            .Row()
-            .NavigateButton<BrandWorkspaceScreen>("К бренду")
             .BackButton());
     }
 
@@ -195,8 +191,6 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
             new ViewCoinHistoryPayload(response.CustomerCode));
 
         return view.NavigateButton<CustomerBalancesCodeScreen>("Другой клиент")
-            .Row()
-            .NavigateButton<BrandWorkspaceScreen>("К бренду")
             .BackButton();
     }
 

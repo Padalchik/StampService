@@ -4,6 +4,7 @@ using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Brands;
 using StampService.TelegramBot.Features.Brands.Actions;
 using StampService.TelegramBot.Features.Brands.Screens;
+using StampService.TelegramBot.Features.CoinProducts.Screens;
 using StampService.TelegramBot.Features.Metrics.Screens;
 using StampService.TelegramBot.Features.Staff.Screens;
 using TelegramBotFlow.Core.Context;
@@ -60,7 +61,10 @@ public sealed class BrandWorkspaceEndpoint : IBotEndpoint
             sections.Add(() => BotResults.NavigateTo<ClientWorkScreen>());
 
         if (workspace.CanManageMetrics)
+        {
             sections.Add(() => BotResults.NavigateTo<MetricsListScreen>());
+            sections.Add(() => BotResults.NavigateTo<CoinProductsListScreen>());
+        }
 
         if (workspace.CanManageStaff)
             sections.Add(() => BotResults.NavigateTo<BrandStaffListScreen>());

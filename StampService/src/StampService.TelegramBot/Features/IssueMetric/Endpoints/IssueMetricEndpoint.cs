@@ -132,8 +132,6 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
             $"Текущий баланс: {issueResult.Value.BalanceValue}")
             .NavigateButton<IssueMetricSelectScreen>("Выдать еще")
             .Row()
-            .NavigateButton<BrandWorkspaceScreen>("К бренду")
-            .Row()
             .MenuButton("Главное меню"));
     }
 
@@ -142,8 +140,6 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         ClearIssueSession(ctx);
 
         return Task.FromResult(BotResults.ShowView(new ScreenView("Выдача метрики отменена.")
-            .NavigateButton<BrandWorkspaceScreen>("К бренду")
-            .Row()
             .MenuButton("Главное меню")));
     }
 

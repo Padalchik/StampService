@@ -9,28 +9,15 @@ public sealed class CoinConfirmScreen : IScreen
 {
     public ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
     {
-        var mode = ctx.Session?.Data.GetString(CoinSessionKeys.Mode);
         var amount = ctx.Session?.Data.Get<int>(CoinSessionKeys.Amount) ?? 0;
         var customerCode = ctx.Session?.Data.GetString(CoinSessionKeys.CustomerCode);
-        var redemptionCode = ctx.Session?.Data.GetString(CoinSessionKeys.RedemptionCode);
-
-        var title = mode == CoinSessionKeys.ModeIssue
-            ? "Подтвердите начисление"
-            : "Подтвердите списание";
-
-        var subject = mode == CoinSessionKeys.ModeIssue
-            ? $"Код пользователя: <code>{Html(customerCode ?? "-")}</code>"
-            : $"Код списания: <code>{Html(redemptionCode ?? "-")}</code>";
 
         var view = new ScreenView(
-            $"<b>{title}</b>\n\n" +
-            $"{subject}\n" +
+            "<b>Подтвердите начисление</b>\n\n" +
+            $"Код пользователя: <code>{Html(customerCode ?? "-")}</code>\n" +
             $"Количество: {amount}");
 
-        if (mode == CoinSessionKeys.ModeIssue)
-            view.Button<ConfirmIssueCoinsAction>("✅ Подтвердить");
-        else
-            view.Button<ConfirmRedeemCoinsAction>("✅ Подтвердить");
+        view.Button<ConfirmIssueCoinsAction>("✅ Подтвердить");
 
         return ValueTask.FromResult(view.Row()
             .Button<CancelCoinOperationAction>("❌ Отмена"));

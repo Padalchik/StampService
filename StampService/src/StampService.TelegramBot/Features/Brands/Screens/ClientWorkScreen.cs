@@ -1,4 +1,5 @@
 using System.Net;
+using StampService.TelegramBot.Features.CoinProducts.Actions;
 using StampService.TelegramBot.Features.Coins.Actions;
 using StampService.TelegramBot.Features.CustomerBalances.Actions;
 using StampService.TelegramBot.Features.IssueMetric.Screens;
@@ -43,7 +44,7 @@ public sealed class ClientWorkScreen : IScreen
 
         if (canRedeem)
         {
-            view.Row().Button<StartRedeemCoinsAction>("🟡 Списать монетки");
+            view.Row().Button<StartPurchaseCoinProductAction>("🟡 Списать монетки");
             hasActions = true;
         }
 

@@ -8,13 +8,8 @@ public sealed class CoinAmountScreen : IScreen
 {
     public ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
     {
-        var mode = ctx.Session?.Data.GetString(CoinSessionKeys.Mode);
-        var title = mode == CoinSessionKeys.ModeIssue
-            ? "Начислить монетки"
-            : "Списать монетки";
-
         return ValueTask.FromResult(new ScreenView(
-            $"<b>{title}</b>\n\n" +
+            "<b>Начислить монетки</b>\n\n" +
             "Введите количество монеток:")
             .AwaitInput<EnterCoinAmountAction>()
             .BackButton());
