@@ -55,6 +55,7 @@ public class AppDbContext : DbContext
     public DbSet<StampTransaction> StampTransactions => Set<StampTransaction>();
 
     // Coins
+    public DbSet<CoinProduct> CoinProducts => Set<CoinProduct>();
     public DbSet<CoinWallet> CoinWallets => Set<CoinWallet>();
     public DbSet<CoinTransaction> CoinTransactions => Set<CoinTransaction>();
 }

@@ -39,6 +39,12 @@ public static class AppErrorCodes
         public const string InsufficientFunds = "coin.insufficient_funds";
     }
 
+    public static class CoinProduct
+    {
+        public const string NotFound = "coin_product.not_found";
+        public const string Inactive = "coin_product.inactive";
+    }
+
     public static class General
     {
         public const string ServerFailure = "server.failure";

@@ -157,8 +157,6 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
             $"Текущий баланс: {redeemResult.Value.BalanceValue}")
             .NavigateButton<RedeemMetricCodeScreen>("Списать еще")
             .Row()
-            .NavigateButton<BrandWorkspaceScreen>("К бренду")
-            .Row()
             .MenuButton("Главное меню"));
     }
 
@@ -167,8 +165,6 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
         ClearRedeemSession(ctx);
 
         return Task.FromResult(BotResults.ShowView(new ScreenView("Списание метрики отменено.")
-            .NavigateButton<BrandWorkspaceScreen>("К бренду")
-            .Row()
             .MenuButton("Главное меню")));
     }
 

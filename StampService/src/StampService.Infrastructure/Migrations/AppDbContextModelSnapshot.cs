@@ -193,6 +193,54 @@ namespace StampService.Infrastructure.Migrations
                     b.ToTable("locations", (string)null);
                 });
 
+            modelBuilder.Entity("StampService.Domain.Coins.CoinProduct", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BrandId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("brand_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("Price")
+                        .HasColumnType("integer")
+                        .HasColumnName("price");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BrandId")
+                        .HasDatabaseName("ix_coin_products_brand_id");
+
+                    b.ToTable("coin_products", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_coin_products_price_positive", "price > 0");
+                        });
+                });
+
             modelBuilder.Entity("StampService.Domain.Coins.CoinTransaction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -609,6 +657,17 @@ namespace StampService.Infrastructure.Migrations
                 {
                     b.HasOne("StampService.Domain.Brand.Brand", "Brand")
                         .WithMany("Locations")
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Brand");
+                });
+
+            modelBuilder.Entity("StampService.Domain.Coins.CoinProduct", b =>
+                {
+                    b.HasOne("StampService.Domain.Brand.Brand", "Brand")
+                        .WithMany()
                         .HasForeignKey("BrandId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
