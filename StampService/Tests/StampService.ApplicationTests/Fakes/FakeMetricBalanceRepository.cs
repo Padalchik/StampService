@@ -39,7 +39,6 @@ public class FakeMetricBalanceRepository : IMetricBalanceRepository
                 balance.BrandId,
                 $"Brand {balance.BrandId:N}",
                 balance.MetricDefinitionId,
-                $"metric-{balance.MetricDefinitionId:N}",
                 $"Metric {balance.MetricDefinitionId:N}",
                 1,
                 balance.Value))

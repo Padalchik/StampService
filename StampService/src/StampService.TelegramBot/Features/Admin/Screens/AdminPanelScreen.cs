@@ -36,7 +36,7 @@ public sealed class AdminPanelScreen : IScreen
         {
             var ownerText = string.IsNullOrWhiteSpace(brand.OwnerCustomerCode)
                 ? "без владельца"
-                : $"owner {brand.OwnerCustomerCode}";
+                : $"владелец {brand.OwnerCustomerCode}";
 
             view.Row().Button<OpenAdminBrandAction, OpenAdminBrandPayload>(
                 $"{brand.BrandName} ({ownerText})",

@@ -18,7 +18,7 @@ public sealed class IssueMetricConfirmScreen : IScreen
             "<b>Подтвердите выдачу</b>\n\n" +
             $"Бренд: {Html(brandName)}\n" +
             $"Метрика: {Html(metricName)}\n" +
-            $"Код получателя: <code>{Html(recipientCustomerCode)}</code>\n" +
+            $"Код пользователя: <code>{Html(recipientCustomerCode)}</code>\n" +
             $"Количество: {amount}")
             .Button<ConfirmIssueMetricAction>("✅ Подтвердить")
             .Row()
