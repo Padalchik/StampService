@@ -28,12 +28,12 @@ public sealed class MyCustomerCodeScreen : IScreen
 
         if (userResult.IsFailed)
         {
-            return new ScreenView("Не удалось получить клиентский код.")
+            return new ScreenView("Не удалось получить код пользователя.")
                 .BackButton();
         }
 
         return new ScreenView(
-            "<b>Мой клиентский код</b>\n\n" +
+            "<b>Мой код пользователя</b>\n\n" +
             $"<code>{userResult.Value.CustomerCode}</code>\n\n" +
             "Покажите этот код сотруднику, чтобы он выдал метрику.")
             .BackButton();

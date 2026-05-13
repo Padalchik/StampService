@@ -14,7 +14,7 @@ public sealed class IssueMetricAmountScreen : IScreen
         return ValueTask.FromResult(new ScreenView(
             "<b>Выдать метрику</b>\n\n" +
             $"Метрика: {metricName}\n" +
-            $"Код получателя: {recipientCustomerCode}\n\n" +
+            $"Код пользователя: {recipientCustomerCode}\n\n" +
             "Введите количество.")
             .AwaitInput<EnterIssueAmountAction>()
             .BackButton());

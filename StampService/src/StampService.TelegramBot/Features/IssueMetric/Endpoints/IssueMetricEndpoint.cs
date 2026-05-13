@@ -48,7 +48,7 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         if (recipientResult.IsFailed)
         {
             return BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                "Клиентский код должен состоять из 4 цифр и принадлежать существующему пользователю. Попробуйте еще раз.")
+                "Код пользователя должен состоять из 4 цифр и принадлежать существующему пользователю. Попробуйте еще раз.")
                 .AwaitInput<EnterIssueRecipientAction>()
                 .BackButton()));
         }

@@ -15,7 +15,7 @@ public sealed class IssueMetricCommentScreen : IScreen
         return ValueTask.FromResult(new ScreenView(
             "<b>Выдать метрику</b>\n\n" +
             $"Метрика: {metricName}\n" +
-            $"Код получателя: {recipientCustomerCode}\n" +
+            $"Код пользователя: {recipientCustomerCode}\n" +
             $"Количество: {amount}\n\n" +
             "Введите комментарий.")
             .AwaitInput<EnterIssueCommentAction>()
