@@ -3,6 +3,7 @@ using StampService.Application;
 using StampService.Application.Administration;
 using StampService.Infrastructure;
 using StampService.Infrastructure.Seeding;
+using StampService.TelegramBot.Common.Notifications;
 using StampService.TelegramBot.Features.MainMenu.Screens;
 using TelegramBotFlow.Core.Endpoints;
 using TelegramBotFlow.Core.Extensions;
@@ -33,6 +34,7 @@ if (string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("Default
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("Admin"));
+builder.Services.AddScoped<ICustomerNotificationService, CustomerNotificationService>();
 builder.Services.AddBotEndpoints(typeof(Program).Assembly);
 builder.Services.AddScreens(typeof(Program).Assembly);
 

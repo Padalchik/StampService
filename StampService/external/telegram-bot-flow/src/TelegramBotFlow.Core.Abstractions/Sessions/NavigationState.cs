@@ -128,6 +128,17 @@ public sealed class NavigationState
         throw new PayloadExpiredException();
     }
 
+    /// <summary>
+    /// Заставляет следующий render отправить новое nav-сообщение вместо редактирования старого.
+    /// Не очищает текущий экран, стек и payload-кэш, поэтому старые callback-кнопки остаются валидными.
+    /// </summary>
+    public void ForgetNavMessage()
+    {
+        NavMessageId = null;
+        CurrentMediaType = ScreenMediaType.None;
+        IsActionViewActive = false;
+    }
+
     internal IReadOnlyDictionary<string, string> GetAllPayloads() => _payloads;
 
     internal void PopulatePayloads(IReadOnlyDictionary<string, string> payloads)
