@@ -5,4 +5,6 @@ public record UpdateBrandResponse(
     string BrandName,
     bool IsMetricsEnabled,
     bool IsCoinsEnabled,
+    bool IsCoinProductRedemptionEnabled,
+    bool IsManualCoinRedemptionEnabled,
     DateTime? UpdatedAt);

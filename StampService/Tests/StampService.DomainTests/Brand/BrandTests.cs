@@ -13,6 +13,8 @@ public class BrandTests
         Assert.Equal("Coffee", result.Value.Name);
         Assert.True(result.Value.IsMetricsEnabled);
         Assert.True(result.Value.IsCoinsEnabled);
+        Assert.True(result.Value.IsCoinProductRedemptionEnabled);
+        Assert.False(result.Value.IsManualCoinRedemptionEnabled);
     }
 
     [Fact]
@@ -26,6 +28,8 @@ public class BrandTests
         Assert.Equal("Bakery", brand.Name);
         Assert.False(brand.IsMetricsEnabled);
         Assert.True(brand.IsCoinsEnabled);
+        Assert.True(brand.IsCoinProductRedemptionEnabled);
+        Assert.False(brand.IsManualCoinRedemptionEnabled);
     }
 
     [Fact]
@@ -39,5 +43,22 @@ public class BrandTests
         Assert.Equal("Coffee", brand.Name);
         Assert.True(brand.IsMetricsEnabled);
         Assert.True(brand.IsCoinsEnabled);
+    }
+
+    [Fact]
+    public void UpdateDetails_WhenCoinsEnabledWithoutRedemptionModes_ShouldFail()
+    {
+        var brand = BrandEntity.Create("Coffee").Value;
+
+        var result = brand.UpdateDetails(
+            "Coffee",
+            isMetricsEnabled: true,
+            isCoinsEnabled: true,
+            isCoinProductRedemptionEnabled: false,
+            isManualCoinRedemptionEnabled: false);
+
+        Assert.True(result.IsFailed);
+        Assert.True(brand.IsCoinProductRedemptionEnabled);
+        Assert.False(brand.IsManualCoinRedemptionEnabled);
     }
 }

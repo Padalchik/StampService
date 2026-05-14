@@ -23,6 +23,16 @@ public static class BrandErrors
             AppErrorCodes.Brand.CoinsDisabled,
             "Coins are disabled for this brand");
 
+    public static AppError CoinProductRedemptionDisabled() =>
+        AppError.Conflict(
+            AppErrorCodes.Brand.CoinProductRedemptionDisabled,
+            "Coin product redemption is disabled for this brand");
+
+    public static AppError ManualCoinRedemptionDisabled() =>
+        AppError.Conflict(
+            AppErrorCodes.Brand.ManualCoinRedemptionDisabled,
+            "Manual coin redemption is disabled for this brand");
+
     public static AppError OwnerRoleNotFound() =>
         AppError.Failure(
             AppErrorCodes.Role.OwnerNotFound,

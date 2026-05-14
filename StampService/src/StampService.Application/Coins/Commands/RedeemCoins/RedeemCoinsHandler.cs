@@ -2,7 +2,6 @@ using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
 using StampService.Application.Brands;
-using StampService.Application.Coins;
 using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Application.Users.Commands.UseRedemptionCode;
@@ -11,14 +10,13 @@ using StampService.Domain.Access;
 using StampService.Domain.Coins;
 using DomainRedemptionCode = StampService.Domain.User.RedemptionCode;
 
-namespace StampService.Application.CoinProducts.Commands.PurchaseCoinProduct;
+namespace StampService.Application.Coins.Commands.RedeemCoins;
 
-public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse, PurchaseCoinProductCommand>
+public class RedeemCoinsHandler : ICommandHandler<CoinOperationResponse, RedeemCoinsCommand>
 {
     private readonly IBrandAccessService _brandAccessService;
     private readonly IBrandRepository _brandRepository;
     private readonly ICoinLedgerService _coinLedgerService;
-    private readonly ICoinProductRepository _productRepository;
     private readonly ICoinTransactionRepository _coinTransactionRepository;
     private readonly ICoinWalletRepository _coinWalletRepository;
     private readonly IRedemptionCodeRepository _redemptionCodeRepository;
@@ -26,11 +24,10 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
     private readonly ICommandHandler<UseRedemptionCodeResponse, UseRedemptionCodeCommand> _useRedemptionCodeHandler;
     private readonly TimeProvider _timeProvider;
 
-    public PurchaseCoinProductHandler(
+    public RedeemCoinsHandler(
         IBrandAccessService brandAccessService,
         IBrandRepository brandRepository,
         ICoinLedgerService coinLedgerService,
-        ICoinProductRepository productRepository,
         ICoinTransactionRepository coinTransactionRepository,
         ICoinWalletRepository coinWalletRepository,
         IRedemptionCodeRepository redemptionCodeRepository,
@@ -41,7 +38,6 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
         _brandAccessService = brandAccessService;
         _brandRepository = brandRepository;
         _coinLedgerService = coinLedgerService;
-        _productRepository = productRepository;
         _coinTransactionRepository = coinTransactionRepository;
         _coinWalletRepository = coinWalletRepository;
         _redemptionCodeRepository = redemptionCodeRepository;
@@ -51,7 +47,7 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
     }
 
     public async Task<Result<CoinOperationResponse>> Handle(
-        PurchaseCoinProductCommand command,
+        RedeemCoinsCommand command,
         CancellationToken cancellationToken)
     {
         var brand = await _brandRepository.GetByIdAsync(command.BrandId, cancellationToken);
@@ -61,8 +57,8 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
         if (!brand.IsCoinsEnabled)
             return Result.Fail(BrandErrors.CoinsDisabled());
 
-        if (!brand.IsCoinProductRedemptionEnabled)
-            return Result.Fail(BrandErrors.CoinProductRedemptionDisabled());
+        if (!brand.IsManualCoinRedemptionEnabled)
+            return Result.Fail(BrandErrors.ManualCoinRedemptionDisabled());
 
         var canRedeem = await _brandAccessService.CanAsync(
             command.RequestUserId,
@@ -72,13 +68,6 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
 
         if (!canRedeem)
             return Result.Fail(AccessErrors.Denied());
-
-        var product = await _productRepository.GetByIdAsync(command.ProductId, cancellationToken);
-        if (product is null || product.BrandId != command.BrandId)
-            return Result.Fail(CoinProductErrors.NotFound());
-
-        if (!product.IsActive)
-            return Result.Fail(CoinProductErrors.IsNotActive());
 
         var code = command.RedemptionCode.Trim();
         if (!DomainRedemptionCode.IsValidCode(code))
@@ -108,13 +97,15 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
             wallet.Id,
             cancellationToken);
 
-        if (currentBalance < product.Price)
-            return Result.Fail(CoinErrors.InsufficientFunds(currentBalance, product.Price));
+        if (currentBalance < command.Amount)
+            return Result.Fail(CoinErrors.InsufficientFunds(currentBalance, command.Amount));
 
-        var comment = product.Name;
+        var comment = string.IsNullOrWhiteSpace(command.Comment)
+            ? "Manual coin redemption"
+            : command.Comment.Trim();
         var transactionPrecheck = CoinTransaction.CreateRedeem(
             wallet.Id,
-            product.Price,
+            command.Amount,
             comment,
             command.RequestUserId);
         if (transactionPrecheck.IsFailed)
@@ -131,7 +122,7 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
             customer.Id,
             command.RequestUserId,
             command.BrandId,
-            product.Price,
+            command.Amount,
             comment,
             cancellationToken);
 

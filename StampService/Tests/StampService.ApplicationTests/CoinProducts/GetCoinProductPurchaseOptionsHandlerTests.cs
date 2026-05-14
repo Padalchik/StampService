@@ -2,6 +2,7 @@ using StampService.Application.Access;
 using StampService.Application.CoinProducts.Queries.GetCoinProductPurchaseOptions;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.Access;
+using StampService.Domain.Brand;
 using StampService.Domain.Coins;
 using StampService.Domain.User;
 
@@ -13,7 +14,8 @@ public class GetCoinProductPurchaseOptionsHandlerTests
     public async Task Handle_WhenCodeIsActive_ShouldReturnProductsWithPurchaseAvailability()
     {
         var now = new DateTimeOffset(2026, 5, 13, 10, 0, 0, TimeSpan.Zero);
-        var brandId = Guid.NewGuid();
+        var brand = Brand.Create("Coffee").Value;
+        var brandId = brand.Id;
         var staffUserId = Guid.NewGuid();
         var customer = User.Create("Customer", "1234").Value;
         var availableProduct = CoinProduct.Create(brandId, "Coffee", 7).Value;
@@ -22,6 +24,7 @@ public class GetCoinProductPurchaseOptionsHandlerTests
         inactiveProduct.Deactivate();
 
         var membershipRepository = new FakeBrandMembershipRepository();
+        var brandRepository = new FakeBrandRepository();
         var productRepository = new FakeCoinProductRepository();
         var walletRepository = new FakeCoinWalletRepository();
         var transactionRepository = new FakeCoinTransactionRepository();
@@ -29,6 +32,7 @@ public class GetCoinProductPurchaseOptionsHandlerTests
         var userRepository = new FakeUserRepository();
 
         membershipRepository.SetRole(staffUserId, brandId, SystemRoles.Staff);
+        brandRepository.AddExisting(brand);
         userRepository.Add(customer);
         productRepository.Add(availableProduct);
         productRepository.Add(unavailableProduct);
@@ -46,6 +50,7 @@ public class GetCoinProductPurchaseOptionsHandlerTests
 
         var handler = new GetCoinProductPurchaseOptionsHandler(
             new BrandAccessService(membershipRepository),
+            brandRepository,
             productRepository,
             transactionRepository,
             walletRepository,
@@ -79,17 +84,20 @@ public class GetCoinProductPurchaseOptionsHandlerTests
     public async Task Handle_WhenWalletDoesNotExist_ShouldReturnZeroBalanceOptions()
     {
         var now = new DateTimeOffset(2026, 5, 13, 10, 0, 0, TimeSpan.Zero);
-        var brandId = Guid.NewGuid();
+        var brand = Brand.Create("Coffee").Value;
+        var brandId = brand.Id;
         var staffUserId = Guid.NewGuid();
         var customer = User.Create("Customer", "1234").Value;
         var product = CoinProduct.Create(brandId, "Coffee", 7).Value;
 
         var membershipRepository = new FakeBrandMembershipRepository();
+        var brandRepository = new FakeBrandRepository();
         var productRepository = new FakeCoinProductRepository();
         var codeRepository = new FakeRedemptionCodeRepository();
         var userRepository = new FakeUserRepository();
 
         membershipRepository.SetRole(staffUserId, brandId, SystemRoles.Staff);
+        brandRepository.AddExisting(brand);
         productRepository.Add(product);
         userRepository.Add(customer);
         codeRepository.Add(RedemptionCode.Create(
@@ -100,6 +108,7 @@ public class GetCoinProductPurchaseOptionsHandlerTests
 
         var handler = new GetCoinProductPurchaseOptionsHandler(
             new BrandAccessService(membershipRepository),
+            brandRepository,
             productRepository,
             new FakeCoinTransactionRepository(),
             new FakeCoinWalletRepository(),
@@ -122,6 +131,7 @@ public class GetCoinProductPurchaseOptionsHandlerTests
     {
         var handler = new GetCoinProductPurchaseOptionsHandler(
             new BrandAccessService(new FakeBrandMembershipRepository()),
+            new FakeBrandRepository(),
             new FakeCoinProductRepository(),
             new FakeCoinTransactionRepository(),
             new FakeCoinWalletRepository(),

@@ -10,6 +10,8 @@ public class Brand : BaseEntity
     public string Name { get; private set; }
     public bool IsMetricsEnabled { get; private set; }
     public bool IsCoinsEnabled { get; private set; }
+    public bool IsCoinProductRedemptionEnabled { get; private set; }
+    public bool IsManualCoinRedemptionEnabled { get; private set; }
     
     public IReadOnlySet<Location> Locations => _locations;
 
@@ -18,6 +20,8 @@ public class Brand : BaseEntity
         Name = name;
         IsMetricsEnabled = true;
         IsCoinsEnabled = true;
+        IsCoinProductRedemptionEnabled = true;
+        IsManualCoinRedemptionEnabled = false;
     }
     
     // EF Core
@@ -28,7 +32,12 @@ public class Brand : BaseEntity
     
     public static Result<Brand> Create(string name)
     {
-        var validationResult = ValidateDetails(name, isMetricsEnabled: true, isCoinsEnabled: true);
+        var validationResult = ValidateDetails(
+            name,
+            isMetricsEnabled: true,
+            isCoinsEnabled: true,
+            isCoinProductRedemptionEnabled: true,
+            isManualCoinRedemptionEnabled: false);
         if (validationResult.IsFailed)
             return Result.Fail(validationResult.Errors);
 
@@ -36,21 +45,38 @@ public class Brand : BaseEntity
         return Result.Ok(brand);
     }
 
-    public Result UpdateDetails(string name, bool isMetricsEnabled, bool isCoinsEnabled)
+    public Result UpdateDetails(
+        string name,
+        bool isMetricsEnabled,
+        bool isCoinsEnabled,
+        bool isCoinProductRedemptionEnabled = true,
+        bool isManualCoinRedemptionEnabled = false)
     {
-        var validationResult = ValidateDetails(name, isMetricsEnabled, isCoinsEnabled);
+        var validationResult = ValidateDetails(
+            name,
+            isMetricsEnabled,
+            isCoinsEnabled,
+            isCoinProductRedemptionEnabled,
+            isManualCoinRedemptionEnabled);
         if (validationResult.IsFailed)
             return Result.Fail(validationResult.Errors);
 
         Name = name.Trim();
         IsMetricsEnabled = isMetricsEnabled;
         IsCoinsEnabled = isCoinsEnabled;
+        IsCoinProductRedemptionEnabled = isCoinProductRedemptionEnabled;
+        IsManualCoinRedemptionEnabled = isManualCoinRedemptionEnabled;
         Touch();
 
         return Result.Ok();
     }
 
-    private static Result ValidateDetails(string name, bool isMetricsEnabled, bool isCoinsEnabled)
+    private static Result ValidateDetails(
+        string name,
+        bool isMetricsEnabled,
+        bool isCoinsEnabled,
+        bool isCoinProductRedemptionEnabled,
+        bool isManualCoinRedemptionEnabled)
     {
         if (string.IsNullOrWhiteSpace(name))
             return Result.Fail(DomainError.Validation(
@@ -69,6 +95,12 @@ public class Brand : BaseEntity
                 "brand.reward_types_required",
                 "At least one reward type must be enabled",
                 nameof(isMetricsEnabled)));
+
+        if (isCoinsEnabled && !isCoinProductRedemptionEnabled && !isManualCoinRedemptionEnabled)
+            return Result.Fail(DomainError.Validation(
+                "brand.coin_redemption_types_required",
+                "At least one coin redemption type must be enabled",
+                nameof(isCoinProductRedemptionEnabled)));
 
         return Result.Ok();
     }

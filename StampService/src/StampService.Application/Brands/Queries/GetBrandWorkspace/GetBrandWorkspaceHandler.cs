@@ -65,6 +65,8 @@ public class GetBrandWorkspaceHandler : IQueryHandler<BrandWorkspaceResponse, Ge
             membership.RoleSystemName,
             brand.IsMetricsEnabled,
             brand.IsCoinsEnabled,
+            brand.IsCoinProductRedemptionEnabled,
+            brand.IsManualCoinRedemptionEnabled,
             canIssue,
             canRedeem,
             canViewBalances,

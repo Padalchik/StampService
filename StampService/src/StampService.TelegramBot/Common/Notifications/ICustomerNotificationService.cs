@@ -16,6 +16,12 @@ public interface ICustomerNotificationService
         string productName,
         CancellationToken cancellationToken);
 
+    Task NotifyCoinsRedeemedAsync(
+        CoinOperationResponse operation,
+        string brandName,
+        string comment,
+        CancellationToken cancellationToken);
+
     Task NotifyMetricIssuedAsync(
         IssueMetricResponse operation,
         string brandName,

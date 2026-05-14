@@ -6,4 +6,6 @@ public record UpdateBrandRewardSettingsCommand(
     Guid ActorUserId,
     Guid BrandId,
     bool IsMetricsEnabled,
-    bool IsCoinsEnabled) : ICommand;
+    bool IsCoinsEnabled,
+    bool IsCoinProductRedemptionEnabled,
+    bool IsManualCoinRedemptionEnabled) : ICommand;

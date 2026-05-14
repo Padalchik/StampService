@@ -1,6 +1,7 @@
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Brands;
 using StampService.Application.Coins;
 using StampService.Application.Errors;
 using StampService.Application.Users;
@@ -14,6 +15,7 @@ public class GetCoinProductPurchaseOptionsHandler
     : IQueryHandler<CoinProductPurchaseOptionsResponse, GetCoinProductPurchaseOptionsQuery>
 {
     private readonly IBrandAccessService _brandAccessService;
+    private readonly IBrandRepository _brandRepository;
     private readonly ICoinProductRepository _productRepository;
     private readonly ICoinTransactionRepository _coinTransactionRepository;
     private readonly ICoinWalletRepository _coinWalletRepository;
@@ -23,6 +25,7 @@ public class GetCoinProductPurchaseOptionsHandler
 
     public GetCoinProductPurchaseOptionsHandler(
         IBrandAccessService brandAccessService,
+        IBrandRepository brandRepository,
         ICoinProductRepository productRepository,
         ICoinTransactionRepository coinTransactionRepository,
         ICoinWalletRepository coinWalletRepository,
@@ -31,6 +34,7 @@ public class GetCoinProductPurchaseOptionsHandler
         TimeProvider timeProvider)
     {
         _brandAccessService = brandAccessService;
+        _brandRepository = brandRepository;
         _productRepository = productRepository;
         _coinTransactionRepository = coinTransactionRepository;
         _coinWalletRepository = coinWalletRepository;
@@ -43,6 +47,16 @@ public class GetCoinProductPurchaseOptionsHandler
         GetCoinProductPurchaseOptionsQuery query,
         CancellationToken cancellationToken)
     {
+        var brand = await _brandRepository.GetByIdAsync(query.BrandId, cancellationToken);
+        if (brand is null)
+            return Result.Fail(BrandErrors.NotFound());
+
+        if (!brand.IsCoinsEnabled)
+            return Result.Fail(BrandErrors.CoinsDisabled());
+
+        if (!brand.IsCoinProductRedemptionEnabled)
+            return Result.Fail(BrandErrors.CoinProductRedemptionDisabled());
+
         var canRedeem = await _brandAccessService.CanAsync(
             query.RequestUserId,
             query.BrandId,

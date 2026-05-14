@@ -70,7 +70,7 @@ public class GetUserBrandRewardsHandler
             ?? brand.Name;
         var coinBalance = wallet?.Value ?? walletReadModel?.Value ?? 0;
 
-        var products = brand.IsCoinsEnabled
+        var products = brand.IsCoinsEnabled && brand.IsCoinProductRedemptionEnabled
             ? await _coinProductRepository.GetActiveByBrandAsync(query.BrandId, cancellationToken)
             : [];
 
@@ -80,6 +80,8 @@ public class GetUserBrandRewardsHandler
             brandName,
             brand.IsMetricsEnabled,
             brand.IsCoinsEnabled,
+            brand.IsCoinProductRedemptionEnabled,
+            brand.IsManualCoinRedemptionEnabled,
             coinBalance,
             products
                 .OrderBy(product => product.Price)

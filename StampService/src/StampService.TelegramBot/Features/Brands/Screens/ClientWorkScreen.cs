@@ -19,6 +19,8 @@ public sealed class ClientWorkScreen : IScreen
         var canViewBalances = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.CanViewBalancesSessionKey) ?? false;
         var isMetricsEnabled = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.IsMetricsEnabledSessionKey) ?? true;
         var isCoinsEnabled = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.IsCoinsEnabledSessionKey) ?? true;
+        var isCoinProductRedemptionEnabled = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.IsCoinProductRedemptionEnabledSessionKey) ?? true;
+        var isManualCoinRedemptionEnabled = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.IsManualCoinRedemptionEnabledSessionKey) ?? false;
 
         var view = new ScreenView(
             $"<b>{Html(brandName)}</b>\n\n" +
@@ -44,9 +46,15 @@ public sealed class ClientWorkScreen : IScreen
             hasActions = true;
         }
 
-        if (canRedeem && isCoinsEnabled)
+        if (canRedeem && isCoinsEnabled && isCoinProductRedemptionEnabled)
         {
-            view.Row().Button<StartPurchaseCoinProductAction>("🟡 Списать монетки");
+            view.Row().Button<StartPurchaseCoinProductAction>("🟡 Списать за товар");
+            hasActions = true;
+        }
+
+        if (canRedeem && isCoinsEnabled && isManualCoinRedemptionEnabled)
+        {
+            view.Row().Button<StartRedeemCoinsAction>("🟡 Списать монетки");
             hasActions = true;
         }
 

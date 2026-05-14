@@ -46,7 +46,9 @@ public class UpdateBrandRewardSettingsHandler : ICommandHandler<UpdateBrandRespo
         var updateResult = brand.UpdateDetails(
             brand.Name,
             command.IsMetricsEnabled,
-            command.IsCoinsEnabled);
+            command.IsCoinsEnabled,
+            command.IsCoinProductRedemptionEnabled,
+            command.IsManualCoinRedemptionEnabled);
 
         if (updateResult.IsFailed)
             return Result.Fail(updateResult.Errors);
@@ -58,6 +60,8 @@ public class UpdateBrandRewardSettingsHandler : ICommandHandler<UpdateBrandRespo
             brand.Name,
             brand.IsMetricsEnabled,
             brand.IsCoinsEnabled,
+            brand.IsCoinProductRedemptionEnabled,
+            brand.IsManualCoinRedemptionEnabled,
             brand.UpdatedAt));
     }
 }

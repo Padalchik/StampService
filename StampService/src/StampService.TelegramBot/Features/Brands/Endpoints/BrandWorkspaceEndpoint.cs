@@ -24,6 +24,8 @@ public sealed class BrandWorkspaceEndpoint : IBotEndpoint
         app.MapAction<OpenBrandSettingsAction>(OpenSettingsAsync);
         app.MapAction<ToggleBrandSettingsMetricsAction>(ToggleMetricsAsync);
         app.MapAction<ToggleBrandSettingsCoinsAction>(ToggleCoinsAsync);
+        app.MapAction<ToggleBrandSettingsCoinProductRedemptionAction>(ToggleCoinProductRedemptionAsync);
+        app.MapAction<ToggleBrandSettingsManualCoinRedemptionAction>(ToggleManualCoinRedemptionAsync);
         app.MapAction<ConfirmBrandSettingsAction>(ConfirmSettingsAsync);
         app.MapAction<CancelBrandSettingsAction>(CancelSettingsAsync);
 
@@ -72,7 +74,7 @@ public sealed class BrandWorkspaceEndpoint : IBotEndpoint
         if (workspace.CanManageMetrics && workspace.IsMetricsEnabled)
             sections.Add(() => BotResults.NavigateTo<MetricsListScreen>());
 
-        if (workspace.CanManageMetrics && workspace.IsCoinsEnabled)
+        if (workspace.CanManageMetrics && workspace.IsCoinsEnabled && workspace.IsCoinProductRedemptionEnabled)
             sections.Add(() => BotResults.NavigateTo<CoinProductsListScreen>());
 
         if (workspace.CanManageStaff)
@@ -95,6 +97,8 @@ public sealed class BrandWorkspaceEndpoint : IBotEndpoint
         ctx.Session?.Data.Set(BrandWorkspaceScreen.CanManageStaffSessionKey, workspace.CanManageStaff);
         ctx.Session?.Data.Set(BrandWorkspaceScreen.IsMetricsEnabledSessionKey, workspace.IsMetricsEnabled);
         ctx.Session?.Data.Set(BrandWorkspaceScreen.IsCoinsEnabledSessionKey, workspace.IsCoinsEnabled);
+        ctx.Session?.Data.Set(BrandWorkspaceScreen.IsCoinProductRedemptionEnabledSessionKey, workspace.IsCoinProductRedemptionEnabled);
+        ctx.Session?.Data.Set(BrandWorkspaceScreen.IsManualCoinRedemptionEnabledSessionKey, workspace.IsManualCoinRedemptionEnabled);
     }
 
     private static Task<IEndpointResult> OpenSettingsAsync(UpdateContext ctx)
@@ -109,6 +113,12 @@ public sealed class BrandWorkspaceEndpoint : IBotEndpoint
         ctx.Session?.Data.Set(
             BrandWorkspaceScreen.EditCoinsEnabledSessionKey,
             ctx.Session.Data.GetBool(BrandWorkspaceScreen.IsCoinsEnabledSessionKey) ?? true);
+        ctx.Session?.Data.Set(
+            BrandWorkspaceScreen.EditCoinProductRedemptionEnabledSessionKey,
+            ctx.Session.Data.GetBool(BrandWorkspaceScreen.IsCoinProductRedemptionEnabledSessionKey) ?? true);
+        ctx.Session?.Data.Set(
+            BrandWorkspaceScreen.EditManualCoinRedemptionEnabledSessionKey,
+            ctx.Session.Data.GetBool(BrandWorkspaceScreen.IsManualCoinRedemptionEnabledSessionKey) ?? false);
 
         return Task.FromResult(BotResults.NavigateTo<BrandSettingsScreen>());
     }
@@ -131,6 +141,24 @@ public sealed class BrandWorkspaceEndpoint : IBotEndpoint
         return Task.FromResult(BotResults.NavigateTo<BrandSettingsScreen>());
     }
 
+    private static Task<IEndpointResult> ToggleCoinProductRedemptionAsync(UpdateContext ctx)
+    {
+        var current = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.EditCoinProductRedemptionEnabledSessionKey)
+            ?? ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.IsCoinProductRedemptionEnabledSessionKey)
+            ?? true;
+        ctx.Session?.Data.Set(BrandWorkspaceScreen.EditCoinProductRedemptionEnabledSessionKey, !current);
+        return Task.FromResult(BotResults.NavigateTo<BrandSettingsScreen>());
+    }
+
+    private static Task<IEndpointResult> ToggleManualCoinRedemptionAsync(UpdateContext ctx)
+    {
+        var current = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.EditManualCoinRedemptionEnabledSessionKey)
+            ?? ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.IsManualCoinRedemptionEnabledSessionKey)
+            ?? false;
+        ctx.Session?.Data.Set(BrandWorkspaceScreen.EditManualCoinRedemptionEnabledSessionKey, !current);
+        return Task.FromResult(BotResults.NavigateTo<BrandSettingsScreen>());
+    }
+
     private static async Task<IEndpointResult> ConfirmSettingsAsync(
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
@@ -139,6 +167,8 @@ public sealed class BrandWorkspaceEndpoint : IBotEndpoint
         var brandId = ctx.Session?.Data.Get<Guid>(BrandWorkspaceScreen.BrandIdSessionKey) ?? Guid.Empty;
         var isMetricsEnabled = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.EditMetricsEnabledSessionKey) ?? true;
         var isCoinsEnabled = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.EditCoinsEnabledSessionKey) ?? true;
+        var isCoinProductRedemptionEnabled = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.EditCoinProductRedemptionEnabledSessionKey) ?? true;
+        var isManualCoinRedemptionEnabled = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.EditManualCoinRedemptionEnabledSessionKey) ?? false;
 
         if (brandId == Guid.Empty)
             return BotResults.ShowView(new ScreenView("Бренд не выбран.").BackButton());
@@ -160,7 +190,9 @@ public sealed class BrandWorkspaceEndpoint : IBotEndpoint
                 userResult.Value.UserId,
                 brandId,
                 isMetricsEnabled,
-                isCoinsEnabled),
+                isCoinsEnabled,
+                isCoinProductRedemptionEnabled,
+                isManualCoinRedemptionEnabled),
             ctx.CancellationToken);
 
         if (result.IsFailed)
@@ -169,6 +201,8 @@ public sealed class BrandWorkspaceEndpoint : IBotEndpoint
         ctx.Session?.Data.Set(BrandWorkspaceScreen.BrandNameSessionKey, result.Value.BrandName);
         ctx.Session?.Data.Set(BrandWorkspaceScreen.IsMetricsEnabledSessionKey, result.Value.IsMetricsEnabled);
         ctx.Session?.Data.Set(BrandWorkspaceScreen.IsCoinsEnabledSessionKey, result.Value.IsCoinsEnabled);
+        ctx.Session?.Data.Set(BrandWorkspaceScreen.IsCoinProductRedemptionEnabledSessionKey, result.Value.IsCoinProductRedemptionEnabled);
+        ctx.Session?.Data.Set(BrandWorkspaceScreen.IsManualCoinRedemptionEnabledSessionKey, result.Value.IsManualCoinRedemptionEnabled);
         ClearEditSettings(ctx);
 
         return BotResults.ShowView(new ScreenView(
@@ -189,6 +223,8 @@ public sealed class BrandWorkspaceEndpoint : IBotEndpoint
     {
         ctx.Session?.Data.Remove(BrandWorkspaceScreen.EditMetricsEnabledSessionKey);
         ctx.Session?.Data.Remove(BrandWorkspaceScreen.EditCoinsEnabledSessionKey);
+        ctx.Session?.Data.Remove(BrandWorkspaceScreen.EditCoinProductRedemptionEnabledSessionKey);
+        ctx.Session?.Data.Remove(BrandWorkspaceScreen.EditManualCoinRedemptionEnabledSessionKey);
     }
 
     private static string FormatEnabled(bool value) => value ? "включены" : "выключены";

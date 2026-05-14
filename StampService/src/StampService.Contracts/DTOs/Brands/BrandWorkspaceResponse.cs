@@ -6,6 +6,8 @@ public record BrandWorkspaceResponse(
     string RoleSystemName,
     bool IsMetricsEnabled,
     bool IsCoinsEnabled,
+    bool IsCoinProductRedemptionEnabled,
+    bool IsManualCoinRedemptionEnabled,
     bool CanIssue,
     bool CanRedeem,
     bool CanViewBalances,

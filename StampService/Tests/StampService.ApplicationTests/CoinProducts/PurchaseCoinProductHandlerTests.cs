@@ -112,15 +112,39 @@ public class PurchaseCoinProductHandlerTests
         Assert.Null(fixture.RedemptionCode.UsedAtUtc);
     }
 
+    [Fact]
+    public async Task Handle_WhenCoinProductRedemptionIsDisabled_ShouldFailWithoutConsumingCode()
+    {
+        var fixture = CreateFixture(productPrice: 7, balance: 10, coinProductRedemptionEnabled: false);
+
+        var result = await fixture.Handler.Handle(
+            new PurchaseCoinProductCommand(
+                fixture.BrandId,
+                fixture.StaffUserId,
+                "1234",
+                fixture.Product.Id),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Equal(AppErrorCodes.Brand.CoinProductRedemptionDisabled, result.Errors[0].Metadata["error_code"]);
+        Assert.Null(fixture.RedemptionCode.UsedAtUtc);
+    }
+
     private static Fixture CreateFixture(
         int productPrice,
         int balance,
         bool grantAccess = true,
-        bool coinsEnabled = true)
+        bool coinsEnabled = true,
+        bool coinProductRedemptionEnabled = true)
     {
         var now = new DateTimeOffset(2026, 5, 13, 10, 0, 0, TimeSpan.Zero);
         var brand = Brand.Create("Coffee").Value;
-        brand.UpdateDetails("Coffee", isMetricsEnabled: true, isCoinsEnabled: coinsEnabled);
+        brand.UpdateDetails(
+            "Coffee",
+            isMetricsEnabled: true,
+            isCoinsEnabled: coinsEnabled,
+            isCoinProductRedemptionEnabled: coinProductRedemptionEnabled,
+            isManualCoinRedemptionEnabled: !coinProductRedemptionEnabled);
         var brandId = brand.Id;
         var staffUserId = Guid.NewGuid();
         var customer = User.Create("Customer", "1234").Value;

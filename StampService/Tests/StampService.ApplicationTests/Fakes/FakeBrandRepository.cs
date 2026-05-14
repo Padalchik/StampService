@@ -51,6 +51,8 @@ public class FakeBrandRepository : IBrandRepository
                 _brands.TryGetValue(brandId, out var brand) ? brand.Name : $"Brand {brandId:N}",
                 _brands.TryGetValue(brandId, out brand) ? brand.IsMetricsEnabled : true,
                 _brands.TryGetValue(brandId, out brand) ? brand.IsCoinsEnabled : true,
+                _brands.TryGetValue(brandId, out brand) ? brand.IsCoinProductRedemptionEnabled : true,
+                _brands.TryGetValue(brandId, out brand) ? brand.IsManualCoinRedemptionEnabled : false,
                 null,
                 null,
                 null))

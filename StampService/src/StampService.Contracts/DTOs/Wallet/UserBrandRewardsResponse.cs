@@ -6,6 +6,8 @@ public record UserBrandRewardsResponse(
     string BrandName,
     bool IsMetricsEnabled,
     bool IsCoinsEnabled,
+    bool IsCoinProductRedemptionEnabled,
+    bool IsManualCoinRedemptionEnabled,
     int CoinBalance,
     IReadOnlyCollection<UserBrandCoinProductRewardResponse> CoinProducts,
     IReadOnlyCollection<UserBrandMetricRewardResponse> Metrics);

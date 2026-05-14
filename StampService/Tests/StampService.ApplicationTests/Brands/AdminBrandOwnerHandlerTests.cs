@@ -98,13 +98,17 @@ public class AdminBrandOwnerHandlerTests
                 owner.Id,
                 brand.Id,
                 IsMetricsEnabled: false,
-                IsCoinsEnabled: true),
+                IsCoinsEnabled: true,
+                IsCoinProductRedemptionEnabled: true,
+                IsManualCoinRedemptionEnabled: true),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Coffee", brand.Name);
         Assert.False(brand.IsMetricsEnabled);
         Assert.True(brand.IsCoinsEnabled);
+        Assert.True(brand.IsCoinProductRedemptionEnabled);
+        Assert.True(brand.IsManualCoinRedemptionEnabled);
     }
 
     [Fact]
@@ -125,7 +129,9 @@ public class AdminBrandOwnerHandlerTests
                 staff.Id,
                 brand.Id,
                 IsMetricsEnabled: false,
-                IsCoinsEnabled: true),
+                IsCoinsEnabled: true,
+                IsCoinProductRedemptionEnabled: true,
+                IsManualCoinRedemptionEnabled: false),
             CancellationToken.None);
 
         Assert.True(result.IsFailed);

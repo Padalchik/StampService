@@ -73,6 +73,8 @@ public class CreateBrandWithOwnerHandler : ICommandHandler<CreateBrandWithOwnerR
             brand.Name,
             brand.IsMetricsEnabled,
             brand.IsCoinsEnabled,
+            brand.IsCoinProductRedemptionEnabled,
+            brand.IsManualCoinRedemptionEnabled,
             owner.Id,
             owner.Name,
             owner.CustomerCode,

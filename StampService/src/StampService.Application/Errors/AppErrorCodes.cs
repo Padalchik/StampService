@@ -19,6 +19,8 @@ public static class AppErrorCodes
     {
         public const string IdEmpty = "brand.id_empty";
         public const string CoinsDisabled = "brand.coins_disabled";
+        public const string CoinProductRedemptionDisabled = "brand.coin_product_redemption_disabled";
+        public const string ManualCoinRedemptionDisabled = "brand.manual_coin_redemption_disabled";
         public const string MetricsDisabled = "brand.metrics_disabled";
         public const string NotFound = "brand.not_found";
         public const string OwnerAlreadyExists = "brand.owner_already_exists";

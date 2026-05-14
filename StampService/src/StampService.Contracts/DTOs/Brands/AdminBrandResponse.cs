@@ -5,6 +5,8 @@ public record AdminBrandResponse(
     string BrandName,
     bool IsMetricsEnabled,
     bool IsCoinsEnabled,
+    bool IsCoinProductRedemptionEnabled,
+    bool IsManualCoinRedemptionEnabled,
     Guid? OwnerUserId,
     string? OwnerName,
     string? OwnerCustomerCode);

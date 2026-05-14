@@ -33,6 +33,8 @@ public class GetAdminBrandsHandler : IQueryHandler<IReadOnlyCollection<AdminBran
                 brand.BrandName,
                 brand.IsMetricsEnabled,
                 brand.IsCoinsEnabled,
+                brand.IsCoinProductRedemptionEnabled,
+                brand.IsManualCoinRedemptionEnabled,
                 brand.OwnerUserId,
                 brand.OwnerName,
                 brand.OwnerCustomerCode))

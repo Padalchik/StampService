@@ -73,7 +73,7 @@ public class GetUserWalletOverviewHandler
                 ?? coinWallet?.BrandName
                 ?? brand.Name;
 
-            var activeProducts = brand.IsCoinsEnabled
+            var activeProducts = brand.IsCoinsEnabled && brand.IsCoinProductRedemptionEnabled
                 ? await _coinProductRepository.GetActiveByBrandAsync(
                     brandId,
                     cancellationToken)
@@ -84,6 +84,8 @@ public class GetUserWalletOverviewHandler
                 brandName,
                 brand.IsMetricsEnabled,
                 brand.IsCoinsEnabled,
+                brand.IsCoinProductRedemptionEnabled,
+                brand.IsManualCoinRedemptionEnabled,
                 coinBalance,
                 activeProducts
                     .Where(product => product.Price <= coinBalance)

@@ -45,6 +45,8 @@ public sealed class AdminPanelScreen : IScreen
                     brand.BrandName,
                     brand.IsMetricsEnabled,
                     brand.IsCoinsEnabled,
+                    brand.IsCoinProductRedemptionEnabled,
+                    brand.IsManualCoinRedemptionEnabled,
                     brand.OwnerUserId,
                     brand.OwnerName,
                     brand.OwnerCustomerCode));

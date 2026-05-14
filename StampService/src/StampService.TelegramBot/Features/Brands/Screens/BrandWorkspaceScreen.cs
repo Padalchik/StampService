@@ -24,8 +24,12 @@ public sealed class BrandWorkspaceScreen : IScreen
     public const string CanManageStaffSessionKey = "brand_workspace.can_manage_staff";
     public const string IsMetricsEnabledSessionKey = "brand_workspace.is_metrics_enabled";
     public const string IsCoinsEnabledSessionKey = "brand_workspace.is_coins_enabled";
+    public const string IsCoinProductRedemptionEnabledSessionKey = "brand_workspace.is_coin_product_redemption_enabled";
+    public const string IsManualCoinRedemptionEnabledSessionKey = "brand_workspace.is_manual_coin_redemption_enabled";
     public const string EditMetricsEnabledSessionKey = "brand_workspace.edit_metrics_enabled";
     public const string EditCoinsEnabledSessionKey = "brand_workspace.edit_coins_enabled";
+    public const string EditCoinProductRedemptionEnabledSessionKey = "brand_workspace.edit_coin_product_redemption_enabled";
+    public const string EditManualCoinRedemptionEnabledSessionKey = "brand_workspace.edit_manual_coin_redemption_enabled";
 
     private readonly ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> _ensureUserHandler;
     private readonly IQueryHandler<BrandWorkspaceResponse, GetBrandWorkspaceQuery> _workspaceHandler;
@@ -72,12 +76,14 @@ public sealed class BrandWorkspaceScreen : IScreen
         ctx.Session?.Data.Set(CanManageStaffSessionKey, workspace.CanManageStaff);
         ctx.Session?.Data.Set(IsMetricsEnabledSessionKey, workspace.IsMetricsEnabled);
         ctx.Session?.Data.Set(IsCoinsEnabledSessionKey, workspace.IsCoinsEnabled);
+        ctx.Session?.Data.Set(IsCoinProductRedemptionEnabledSessionKey, workspace.IsCoinProductRedemptionEnabled);
+        ctx.Session?.Data.Set(IsManualCoinRedemptionEnabledSessionKey, workspace.IsManualCoinRedemptionEnabled);
 
         var view = new ScreenView(
             $"<b>{Html(workspace.BrandName)}</b>\n" +
             $"Роль: {Html(workspace.RoleSystemName)}\n" +
             $"Метрики: {FormatEnabled(workspace.IsMetricsEnabled)}\n" +
-            $"Монетки: {FormatEnabled(workspace.IsCoinsEnabled)}\n\n" +
+            $"Монетки: {FormatEnabled(workspace.IsCoinsEnabled)}{BuildCoinModeSummary(workspace)}\n\n" +
             "Доступные действия:");
 
         var hasActions = false;
@@ -94,7 +100,7 @@ public sealed class BrandWorkspaceScreen : IScreen
             hasActions = true;
         }
 
-        if (workspace.CanManageMetrics && workspace.IsCoinsEnabled)
+        if (workspace.CanManageMetrics && workspace.IsCoinsEnabled && workspace.IsCoinProductRedemptionEnabled)
         {
             view.Row().NavigateButton<CoinProductsListScreen>("Товары за монетки");
             hasActions = true;
@@ -126,4 +132,20 @@ public sealed class BrandWorkspaceScreen : IScreen
     }
 
     private static string FormatEnabled(bool value) => value ? "включены" : "выключены";
+
+    private static string BuildCoinModeSummary(BrandWorkspaceResponse workspace)
+    {
+        if (!workspace.IsCoinsEnabled)
+            return string.Empty;
+
+        var modes = new List<string>();
+        if (workspace.IsCoinProductRedemptionEnabled)
+            modes.Add("товары");
+        if (workspace.IsManualCoinRedemptionEnabled)
+            modes.Add("произвольное списание");
+
+        return modes.Count == 0
+            ? string.Empty
+            : $" ({string.Join(", ", modes)})";
+    }
 }

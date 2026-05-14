@@ -40,11 +40,18 @@ public sealed class CustomerNotificationService : ICustomerNotificationService
         CancellationToken cancellationToken)
     {
         var previousBalance = operation.BalanceValue - operation.Amount;
-        var reachedProducts = await GetNewlyReachedProductsAsync(
-            operation.BrandId,
-            previousBalance,
-            operation.BalanceValue,
-            cancellationToken);
+        var isCoinProductRedemptionEnabled = await _dbContext.Brands
+            .AsNoTracking()
+            .Where(brand => brand.Id == operation.BrandId)
+            .Select(brand => brand.IsCoinProductRedemptionEnabled)
+            .FirstOrDefaultAsync(cancellationToken);
+        var reachedProducts = isCoinProductRedemptionEnabled
+            ? await GetNewlyReachedProductsAsync(
+                operation.BrandId,
+                previousBalance,
+                operation.BalanceValue,
+                cancellationToken)
+            : [];
 
         var text =
             $"<b>{Html(brandName)}</b>\n\n" +
@@ -74,6 +81,21 @@ public sealed class CustomerNotificationService : ICustomerNotificationService
             $"Баланс: {operation.BalanceValue}";
 
         await SendToUserAsync(operation.UserId, text, cancellationToken);
+    }
+
+    public Task NotifyCoinsRedeemedAsync(
+        CoinOperationResponse operation,
+        string brandName,
+        string comment,
+        CancellationToken cancellationToken)
+    {
+        var text =
+            $"<b>{Html(brandName)}</b>\n\n" +
+            $"Списано: {operation.Amount} монеток.\n" +
+            $"Назначение: {Html(comment)}.\n" +
+            $"Баланс: {operation.BalanceValue}";
+
+        return SendToUserAsync(operation.UserId, text, cancellationToken);
     }
 
     public Task NotifyMetricIssuedAsync(

@@ -129,7 +129,8 @@ public sealed class WalletBrandHistoryEndpoint : IBotEndpoint
         if (response.IsCoinsEnabled)
         {
             sections.Add($"Монетки: {response.CoinBalance}");
-            sections.Add(BuildProductsText(response));
+            if (response.IsCoinProductRedemptionEnabled)
+                sections.Add(BuildProductsText(response));
         }
 
         if (response.IsMetricsEnabled)

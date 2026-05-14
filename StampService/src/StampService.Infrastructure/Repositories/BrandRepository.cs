@@ -52,6 +52,8 @@ public class BrandRepository : IBrandRepository
                 brand.Name,
                 brand.IsMetricsEnabled,
                 brand.IsCoinsEnabled,
+                brand.IsCoinProductRedemptionEnabled,
+                brand.IsManualCoinRedemptionEnabled,
                 _dbContext.BrandMemberships
                     .Where(membership => membership.BrandId == brand.Id
                         && membership.Role.SystemName == SystemRoles.Owner)
