@@ -18,6 +18,8 @@ public static class AppErrorCodes
     public static class Brand
     {
         public const string IdEmpty = "brand.id_empty";
+        public const string CoinsDisabled = "brand.coins_disabled";
+        public const string MetricsDisabled = "brand.metrics_disabled";
         public const string NotFound = "brand.not_found";
         public const string OwnerAlreadyExists = "brand.owner_already_exists";
     }

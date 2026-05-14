@@ -1,9 +1,12 @@
 using Microsoft.Extensions.Options;
+using StampService.Application.Access;
 using StampService.Application.Administration;
 using StampService.Application.Brands.Commands.CreateBrandWithOwner;
 using StampService.Application.Brands.Commands.ReassignBrandOwner;
+using StampService.Application.Brands.Commands.UpdateBrandRewardSettings;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.Access;
+using StampService.Domain.Brand;
 using StampService.Domain.User;
 
 namespace StampService.ApplicationTests.Brands;
@@ -75,6 +78,58 @@ public class AdminBrandOwnerHandlerTests
             newOwner.Id,
             brandId,
             CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task UpdateBrandRewardSettings_WhenActorIsOwner_ShouldUpdateSettings()
+    {
+        var owner = User.Create("Owner", "1234").Value;
+        var brand = Brand.Create("Coffee").Value;
+        var brandRepository = new FakeBrandRepository();
+        var membershipRepository = new FakeBrandMembershipRepository();
+        brandRepository.AddExisting(brand);
+        membershipRepository.SetRole(owner.Id, brand.Id, SystemRoles.Owner);
+        var handler = new UpdateBrandRewardSettingsHandler(
+            new BrandAccessService(membershipRepository),
+            brandRepository);
+
+        var result = await handler.Handle(
+            new UpdateBrandRewardSettingsCommand(
+                owner.Id,
+                brand.Id,
+                IsMetricsEnabled: false,
+                IsCoinsEnabled: true),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Coffee", brand.Name);
+        Assert.False(brand.IsMetricsEnabled);
+        Assert.True(brand.IsCoinsEnabled);
+    }
+
+    [Fact]
+    public async Task UpdateBrandRewardSettings_WhenActorIsStaff_ShouldFail()
+    {
+        var staff = User.Create("Staff", "1234").Value;
+        var brand = Brand.Create("Coffee").Value;
+        var brandRepository = new FakeBrandRepository();
+        var membershipRepository = new FakeBrandMembershipRepository();
+        brandRepository.AddExisting(brand);
+        membershipRepository.SetRole(staff.Id, brand.Id, SystemRoles.Staff);
+        var handler = new UpdateBrandRewardSettingsHandler(
+            new BrandAccessService(membershipRepository),
+            brandRepository);
+
+        var result = await handler.Handle(
+            new UpdateBrandRewardSettingsCommand(
+                staff.Id,
+                brand.Id,
+                IsMetricsEnabled: false,
+                IsCoinsEnabled: true),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.True(brand.IsMetricsEnabled);
     }
 
     private static AdminAccessService CreateAdminAccessService()

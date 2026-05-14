@@ -3,6 +3,7 @@ using StampService.Application.Abstractions;
 using StampService.Application.Brands.Queries.GetBrandWorkspace;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Brands;
+using StampService.TelegramBot.Features.Brands.Actions;
 using StampService.TelegramBot.Features.CoinProducts.Screens;
 using StampService.TelegramBot.Features.Metrics.Screens;
 using StampService.TelegramBot.Features.Staff.Actions;
@@ -18,8 +19,13 @@ public sealed class BrandWorkspaceScreen : IScreen
     public const string CanIssueSessionKey = "brand_workspace.can_issue";
     public const string CanRedeemSessionKey = "brand_workspace.can_redeem";
     public const string CanViewBalancesSessionKey = "brand_workspace.can_view_balances";
+    public const string CanManageBrandSessionKey = "brand_workspace.can_manage_brand";
     public const string CanManageMetricsSessionKey = "brand_workspace.can_manage_metrics";
     public const string CanManageStaffSessionKey = "brand_workspace.can_manage_staff";
+    public const string IsMetricsEnabledSessionKey = "brand_workspace.is_metrics_enabled";
+    public const string IsCoinsEnabledSessionKey = "brand_workspace.is_coins_enabled";
+    public const string EditMetricsEnabledSessionKey = "brand_workspace.edit_metrics_enabled";
+    public const string EditCoinsEnabledSessionKey = "brand_workspace.edit_coins_enabled";
 
     private readonly ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> _ensureUserHandler;
     private readonly IQueryHandler<BrandWorkspaceResponse, GetBrandWorkspaceQuery> _workspaceHandler;
@@ -61,12 +67,17 @@ public sealed class BrandWorkspaceScreen : IScreen
         ctx.Session?.Data.Set(CanIssueSessionKey, workspace.CanIssue);
         ctx.Session?.Data.Set(CanRedeemSessionKey, workspace.CanRedeem);
         ctx.Session?.Data.Set(CanViewBalancesSessionKey, workspace.CanViewBalances);
+        ctx.Session?.Data.Set(CanManageBrandSessionKey, workspace.CanManageBrand);
         ctx.Session?.Data.Set(CanManageMetricsSessionKey, workspace.CanManageMetrics);
         ctx.Session?.Data.Set(CanManageStaffSessionKey, workspace.CanManageStaff);
+        ctx.Session?.Data.Set(IsMetricsEnabledSessionKey, workspace.IsMetricsEnabled);
+        ctx.Session?.Data.Set(IsCoinsEnabledSessionKey, workspace.IsCoinsEnabled);
 
         var view = new ScreenView(
             $"<b>{Html(workspace.BrandName)}</b>\n" +
-            $"Роль: {Html(workspace.RoleSystemName)}\n\n" +
+            $"Роль: {Html(workspace.RoleSystemName)}\n" +
+            $"Метрики: {FormatEnabled(workspace.IsMetricsEnabled)}\n" +
+            $"Монетки: {FormatEnabled(workspace.IsCoinsEnabled)}\n\n" +
             "Доступные действия:");
 
         var hasActions = false;
@@ -77,9 +88,14 @@ public sealed class BrandWorkspaceScreen : IScreen
             hasActions = true;
         }
 
-        if (workspace.CanManageMetrics)
+        if (workspace.CanManageMetrics && workspace.IsMetricsEnabled)
         {
             view.Row().NavigateButton<MetricsListScreen>("Работа с метриками");
+            hasActions = true;
+        }
+
+        if (workspace.CanManageMetrics && workspace.IsCoinsEnabled)
+        {
             view.Row().NavigateButton<CoinProductsListScreen>("Товары за монетки");
             hasActions = true;
         }
@@ -89,6 +105,12 @@ public sealed class BrandWorkspaceScreen : IScreen
             view.Row().Button<OpenBrandStaffAction, OpenBrandStaffPayload>(
                 "Сотрудники",
                 new OpenBrandStaffPayload(workspace.BrandId, workspace.BrandName));
+            hasActions = true;
+        }
+
+        if (workspace.CanManageBrand)
+        {
+            view.Row().Button<OpenBrandSettingsAction>("Настройки бренда");
             hasActions = true;
         }
 
@@ -102,4 +124,6 @@ public sealed class BrandWorkspaceScreen : IScreen
     {
         return WebUtility.HtmlEncode(value);
     }
+
+    private static string FormatEnabled(bool value) => value ? "включены" : "выключены";
 }

@@ -13,6 +13,16 @@ public static class BrandErrors
             "Brand id cannot be empty",
             "brandId");
 
+    public static AppError MetricsDisabled() =>
+        AppError.Conflict(
+            AppErrorCodes.Brand.MetricsDisabled,
+            "Metrics are disabled for this brand");
+
+    public static AppError CoinsDisabled() =>
+        AppError.Conflict(
+            AppErrorCodes.Brand.CoinsDisabled,
+            "Coins are disabled for this brand");
+
     public static AppError OwnerRoleNotFound() =>
         AppError.Failure(
             AppErrorCodes.Role.OwnerNotFound,

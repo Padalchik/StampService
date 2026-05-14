@@ -17,6 +17,8 @@ public sealed class ClientWorkScreen : IScreen
         var canIssue = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.CanIssueSessionKey) ?? false;
         var canRedeem = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.CanRedeemSessionKey) ?? false;
         var canViewBalances = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.CanViewBalancesSessionKey) ?? false;
+        var isMetricsEnabled = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.IsMetricsEnabledSessionKey) ?? true;
+        var isCoinsEnabled = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.IsCoinsEnabledSessionKey) ?? true;
 
         var view = new ScreenView(
             $"<b>{Html(brandName)}</b>\n\n" +
@@ -24,25 +26,25 @@ public sealed class ClientWorkScreen : IScreen
 
         var hasActions = false;
 
-        if (canIssue)
+        if (canIssue && isMetricsEnabled)
         {
             view.Row().NavigateButton<IssueMetricSelectScreen>("🟢 Выдать метрику");
             hasActions = true;
         }
 
-        if (canRedeem)
+        if (canRedeem && isMetricsEnabled)
         {
             view.Row().NavigateButton<RedeemMetricCodeScreen>("🟡 Списать метрику");
             hasActions = true;
         }
 
-        if (canIssue)
+        if (canIssue && isCoinsEnabled)
         {
             view.Row().Button<StartIssueCoinsAction>("🟢 Начислить монетки");
             hasActions = true;
         }
 
-        if (canRedeem)
+        if (canRedeem && isCoinsEnabled)
         {
             view.Row().Button<StartPurchaseCoinProductAction>("🟡 Списать монетки");
             hasActions = true;

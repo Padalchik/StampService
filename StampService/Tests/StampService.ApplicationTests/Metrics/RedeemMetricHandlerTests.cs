@@ -1,10 +1,12 @@
 using StampService.Application.Access;
+using StampService.Application.Errors;
 using StampService.Application.Metrics;
 using StampService.Application.Metrics.Commands.RedeemMetric;
 using StampService.Application.Users.Commands.UseRedemptionCode;
 using StampService.ApplicationTests.Fakes;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Access;
+using StampService.Domain.Brand;
 using StampService.Domain.Loyalty;
 using StampService.Domain.User;
 
@@ -18,13 +20,14 @@ public class RedeemMetricHandlerTests
         var now = new DateTimeOffset(2026, 5, 7, 10, 0, 0, TimeSpan.Zero);
         var redeemerUserId = Guid.NewGuid();
         var customerUserId = Guid.NewGuid();
-        var brandId = Guid.NewGuid();
+        var brand = Brand.Create("Coffee").Value;
+        var brandId = brand.Id;
         var metric = LoyaltyMetricDefinition.Create(brandId, "Coffee", 3).Value;
 
         var metricRepository = new FakeLoyaltyMetricRepository();
         metricRepository.AddExisting(metric);
         var brandRepository = new FakeBrandRepository();
-        brandRepository.AddExisting(brandId);
+        brandRepository.AddExisting(brand);
         var membershipRepository = new FakeBrandMembershipRepository();
         membershipRepository.SetRole(redeemerUserId, brandId, SystemRoles.Staff);
 
@@ -79,13 +82,14 @@ public class RedeemMetricHandlerTests
         var now = new DateTimeOffset(2026, 5, 7, 10, 0, 0, TimeSpan.Zero);
         var redeemerUserId = Guid.NewGuid();
         var customerUserId = Guid.NewGuid();
-        var brandId = Guid.NewGuid();
+        var brand = Brand.Create("Coffee").Value;
+        var brandId = brand.Id;
         var metric = LoyaltyMetricDefinition.Create(brandId, "Coffee", 3).Value;
 
         var metricRepository = new FakeLoyaltyMetricRepository();
         metricRepository.AddExisting(metric);
         var brandRepository = new FakeBrandRepository();
-        brandRepository.AddExisting(brandId);
+        brandRepository.AddExisting(brand);
         var membershipRepository = new FakeBrandMembershipRepository();
         membershipRepository.SetRole(redeemerUserId, brandId, SystemRoles.Staff);
 
@@ -128,13 +132,14 @@ public class RedeemMetricHandlerTests
         var now = new DateTimeOffset(2026, 5, 7, 10, 0, 0, TimeSpan.Zero);
         var redeemerUserId = Guid.NewGuid();
         var customerUserId = Guid.NewGuid();
-        var brandId = Guid.NewGuid();
+        var brand = Brand.Create("Coffee").Value;
+        var brandId = brand.Id;
         var metric = LoyaltyMetricDefinition.Create(brandId, "Coffee", 5).Value;
 
         var metricRepository = new FakeLoyaltyMetricRepository();
         metricRepository.AddExisting(metric);
         var brandRepository = new FakeBrandRepository();
-        brandRepository.AddExisting(brandId);
+        brandRepository.AddExisting(brand);
         var membershipRepository = new FakeBrandMembershipRepository();
         membershipRepository.SetRole(redeemerUserId, brandId, SystemRoles.Staff);
 
@@ -171,5 +176,52 @@ public class RedeemMetricHandlerTests
             CancellationToken.None);
 
         Assert.True(result.IsFailed);
+    }
+
+    [Fact]
+    public async Task Handle_WhenMetricsAreDisabled_ShouldFail()
+    {
+        var now = new DateTimeOffset(2026, 5, 7, 10, 0, 0, TimeSpan.Zero);
+        var redeemerUserId = Guid.NewGuid();
+        var customerUserId = Guid.NewGuid();
+        var brand = Brand.Create("Coffee").Value;
+        brand.UpdateDetails("Coffee", isMetricsEnabled: false, isCoinsEnabled: true);
+        var metric = LoyaltyMetricDefinition.Create(brand.Id, "Coffee", 3).Value;
+
+        var metricRepository = new FakeLoyaltyMetricRepository();
+        metricRepository.AddExisting(metric);
+        var brandRepository = new FakeBrandRepository();
+        brandRepository.AddExisting(brand);
+        var membershipRepository = new FakeBrandMembershipRepository();
+        membershipRepository.SetRole(redeemerUserId, brand.Id, SystemRoles.Staff);
+
+        var codeRepository = new FakeRedemptionCodeRepository();
+        codeRepository.Add(RedemptionCode.Create(
+            customerUserId,
+            "1234",
+            now.UtcDateTime.AddMinutes(3),
+            now.UtcDateTime).Value);
+
+        var handler = new RedeemMetricHandler(
+            new MetricLedgerService(new FakeMetricBalanceRepository(), new FakeStampTransactionRepository()),
+            new RedeemMetricValidationService(
+                new BrandAccessService(membershipRepository),
+                brandRepository,
+                metricRepository,
+                codeRepository,
+                new FakeMetricBalanceRepository(),
+                new FakeStampTransactionRepository(),
+                new FixedTimeProvider(now)),
+            new UseRedemptionCodeHandler(codeRepository, new FixedTimeProvider(now)));
+
+        var result = await handler.Handle(
+            new RedeemMetricCommand(
+                metric.Id,
+                redeemerUserId,
+                new RedeemMetricRequest("1234", "Redeem")),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Equal(AppErrorCodes.Brand.MetricsDisabled, result.Errors[0].Metadata["error_code"]);
     }
 }

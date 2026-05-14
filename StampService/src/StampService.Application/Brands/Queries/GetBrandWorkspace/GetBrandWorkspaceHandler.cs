@@ -12,15 +12,18 @@ public class GetBrandWorkspaceHandler : IQueryHandler<BrandWorkspaceResponse, Ge
 {
     private readonly IBrandAccessService _brandAccessService;
     private readonly IBrandMembershipRepository _brandMembershipRepository;
+    private readonly IBrandRepository _brandRepository;
     private readonly IUserRepository _userRepository;
 
     public GetBrandWorkspaceHandler(
         IBrandAccessService brandAccessService,
         IBrandMembershipRepository brandMembershipRepository,
+        IBrandRepository brandRepository,
         IUserRepository userRepository)
     {
         _brandAccessService = brandAccessService;
         _brandMembershipRepository = brandMembershipRepository;
+        _brandRepository = brandRepository;
         _userRepository = userRepository;
     }
 
@@ -46,14 +49,27 @@ public class GetBrandWorkspaceHandler : IQueryHandler<BrandWorkspaceResponse, Ge
         if (membership is null)
             return Result.Fail(BrandErrors.MembershipNotFound());
 
+        var brand = await _brandRepository.GetByIdAsync(query.BrandId, cancellationToken);
+        if (brand is null)
+            return Result.Fail(BrandErrors.NotFound());
+
+        var canIssue = await _brandAccessService.CanAsync(query.UserId, query.BrandId, PermissionCode.StampIssue, cancellationToken);
+        var canRedeem = await _brandAccessService.CanAsync(query.UserId, query.BrandId, PermissionCode.StampRedeem, cancellationToken);
+        var canViewBalances = await _brandAccessService.CanAsync(query.UserId, query.BrandId, PermissionCode.BalanceView, cancellationToken);
+        var canManageBrand = await _brandAccessService.CanAsync(query.UserId, query.BrandId, PermissionCode.BrandManage, cancellationToken);
+        var canManageMetrics = await _brandAccessService.CanAsync(query.UserId, query.BrandId, PermissionCode.MetricManage, cancellationToken);
+
         var response = new BrandWorkspaceResponse(
             query.BrandId,
-            membership.BrandName,
+            brand.Name,
             membership.RoleSystemName,
-            await _brandAccessService.CanAsync(query.UserId, query.BrandId, PermissionCode.StampIssue, cancellationToken),
-            await _brandAccessService.CanAsync(query.UserId, query.BrandId, PermissionCode.StampRedeem, cancellationToken),
-            await _brandAccessService.CanAsync(query.UserId, query.BrandId, PermissionCode.BalanceView, cancellationToken),
-            await _brandAccessService.CanAsync(query.UserId, query.BrandId, PermissionCode.MetricManage, cancellationToken),
+            brand.IsMetricsEnabled,
+            brand.IsCoinsEnabled,
+            canIssue,
+            canRedeem,
+            canViewBalances,
+            canManageBrand,
+            canManageMetrics,
             await _brandAccessService.CanAsync(query.UserId, query.BrandId, PermissionCode.StaffManage, cancellationToken));
 
         return Result.Ok(response);

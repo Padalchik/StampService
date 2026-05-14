@@ -38,6 +38,8 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
     {
         ctx.Session?.Data.Set(AdminSessionKeys.SelectedBrandId, payload.BrandId);
         ctx.Session?.Data.Set(AdminSessionKeys.SelectedBrandName, payload.BrandName);
+        ctx.Session?.Data.Set(AdminSessionKeys.SelectedBrandMetricsEnabled, payload.IsMetricsEnabled);
+        ctx.Session?.Data.Set(AdminSessionKeys.SelectedBrandCoinsEnabled, payload.IsCoinsEnabled);
 
         if (payload.OwnerUserId is { } ownerUserId)
             ctx.Session?.Data.Set(AdminSessionKeys.SelectedOwnerUserId, ownerUserId);
@@ -98,6 +100,8 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
             ctx,
             result.Value.BrandId,
             result.Value.BrandName,
+            result.Value.IsMetricsEnabled,
+            result.Value.IsCoinsEnabled,
             result.Value.OwnerUserId,
             result.Value.OwnerName,
             result.Value.OwnerCustomerCode);
@@ -160,6 +164,8 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
             ctx,
             brandId,
             brandName,
+            ctx.Session?.Data.Get<bool>(AdminSessionKeys.SelectedBrandMetricsEnabled) ?? true,
+            ctx.Session?.Data.Get<bool>(AdminSessionKeys.SelectedBrandCoinsEnabled) ?? true,
             result.Value.NewOwnerUserId,
             result.Value.NewOwnerName,
             result.Value.NewOwnerCustomerCode);
@@ -196,15 +202,29 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
         UpdateContext ctx,
         Guid brandId,
         string brandName,
+        bool isMetricsEnabled,
+        bool isCoinsEnabled,
         Guid ownerUserId,
         string ownerName,
         string ownerCustomerCode)
     {
-        ctx.Session?.Data.Set(AdminSessionKeys.SelectedBrandId, brandId);
-        ctx.Session?.Data.Set(AdminSessionKeys.SelectedBrandName, brandName);
+        StoreSelectedBrandSettings(ctx, brandId, brandName, isMetricsEnabled, isCoinsEnabled);
         ctx.Session?.Data.Set(AdminSessionKeys.SelectedOwnerUserId, ownerUserId);
         ctx.Session?.Data.Set(AdminSessionKeys.SelectedOwnerName, ownerName);
         ctx.Session?.Data.Set(AdminSessionKeys.SelectedOwnerCustomerCode, ownerCustomerCode);
+    }
+
+    private static void StoreSelectedBrandSettings(
+        UpdateContext ctx,
+        Guid brandId,
+        string brandName,
+        bool isMetricsEnabled,
+        bool isCoinsEnabled)
+    {
+        ctx.Session?.Data.Set(AdminSessionKeys.SelectedBrandId, brandId);
+        ctx.Session?.Data.Set(AdminSessionKeys.SelectedBrandName, brandName);
+        ctx.Session?.Data.Set(AdminSessionKeys.SelectedBrandMetricsEnabled, isMetricsEnabled);
+        ctx.Session?.Data.Set(AdminSessionKeys.SelectedBrandCoinsEnabled, isCoinsEnabled);
     }
 
     private static void ClearCreateSession(UpdateContext ctx)
@@ -222,4 +242,6 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);
+
+    private static string FormatEnabled(bool value) => value ? "включены" : "выключены";
 }

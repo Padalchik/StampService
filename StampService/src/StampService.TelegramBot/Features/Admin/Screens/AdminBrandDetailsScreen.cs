@@ -10,6 +10,8 @@ public sealed class AdminBrandDetailsScreen : IScreen
     public ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
     {
         var brandName = ctx.Session?.Data.GetString(AdminSessionKeys.SelectedBrandName) ?? "бренд";
+        var isMetricsEnabled = ctx.Session?.Data.Get<bool>(AdminSessionKeys.SelectedBrandMetricsEnabled) ?? true;
+        var isCoinsEnabled = ctx.Session?.Data.Get<bool>(AdminSessionKeys.SelectedBrandCoinsEnabled) ?? true;
         var ownerName = ctx.Session?.Data.GetString(AdminSessionKeys.SelectedOwnerName);
         var ownerCode = ctx.Session?.Data.GetString(AdminSessionKeys.SelectedOwnerCustomerCode);
 
@@ -19,7 +21,9 @@ public sealed class AdminBrandDetailsScreen : IScreen
 
         return ValueTask.FromResult(new ScreenView(
             $"<b>{Html(brandName)}</b>\n\n" +
-            $"Владелец: {ownerText}")
+            $"Владелец: {ownerText}\n" +
+            $"Метрики: {FormatEnabled(isMetricsEnabled)}\n" +
+            $"Монетки: {FormatEnabled(isCoinsEnabled)}")
             .Button<StartReassignOwnerAction>("Назначить владельца")
             .Row()
             .NavigateButton<AdminPanelScreen>("К брендам")
@@ -30,4 +34,6 @@ public sealed class AdminBrandDetailsScreen : IScreen
     {
         return WebUtility.HtmlEncode(value);
     }
+
+    private static string FormatEnabled(bool value) => value ? "включены" : "выключены";
 }

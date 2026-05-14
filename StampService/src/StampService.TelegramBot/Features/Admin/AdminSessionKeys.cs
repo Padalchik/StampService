@@ -4,6 +4,8 @@ public static class AdminSessionKeys
 {
     public const string SelectedBrandId = "admin.selected_brand_id";
     public const string SelectedBrandName = "admin.selected_brand_name";
+    public const string SelectedBrandMetricsEnabled = "admin.selected_brand.metrics_enabled";
+    public const string SelectedBrandCoinsEnabled = "admin.selected_brand.coins_enabled";
     public const string SelectedOwnerUserId = "admin.selected_owner_user_id";
     public const string SelectedOwnerName = "admin.selected_owner_name";
     public const string SelectedOwnerCustomerCode = "admin.selected_owner_customer_code";

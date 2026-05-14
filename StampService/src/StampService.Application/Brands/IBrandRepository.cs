@@ -9,5 +9,11 @@ public interface IBrandRepository
 
     Task<bool> ExistsAsync(Guid brandId, CancellationToken cancellationToken);
 
+    Task<Brand?> GetByIdAsync(Guid brandId, CancellationToken cancellationToken);
+
+    Task<Brand?> GetByIdForUpdateAsync(Guid brandId, CancellationToken cancellationToken);
+
     Task<IReadOnlyCollection<AdminBrandReadModel>> GetAdminBrandsAsync(CancellationToken cancellationToken);
+
+    Task SaveAsync(CancellationToken cancellationToken);
 }

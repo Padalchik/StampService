@@ -71,6 +71,8 @@ public class CreateBrandWithOwnerHandler : ICommandHandler<CreateBrandWithOwnerR
         return Result.Ok(new CreateBrandWithOwnerResponse(
             brand.Id,
             brand.Name,
+            brand.IsMetricsEnabled,
+            brand.IsCoinsEnabled,
             owner.Id,
             owner.Name,
             owner.CustomerCode,

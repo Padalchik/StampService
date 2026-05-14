@@ -1,5 +1,6 @@
 using FluentResults;
 using StampService.Application.Abstractions;
+using StampService.Application.Brands;
 using StampService.Application.CoinProducts;
 using StampService.Application.Coins;
 using StampService.Application.Errors;
@@ -14,17 +15,20 @@ public class GetUserBrandRewardsHandler
 {
     private readonly ICoinProductRepository _coinProductRepository;
     private readonly ICoinWalletRepository _coinWalletRepository;
+    private readonly IBrandRepository _brandRepository;
     private readonly IMetricBalanceRepository _metricBalanceRepository;
     private readonly IUserRepository _userRepository;
 
     public GetUserBrandRewardsHandler(
         ICoinProductRepository coinProductRepository,
         ICoinWalletRepository coinWalletRepository,
+        IBrandRepository brandRepository,
         IMetricBalanceRepository metricBalanceRepository,
         IUserRepository userRepository)
     {
         _coinProductRepository = coinProductRepository;
         _coinWalletRepository = coinWalletRepository;
+        _brandRepository = brandRepository;
         _metricBalanceRepository = metricBalanceRepository;
         _userRepository = userRepository;
     }
@@ -40,28 +44,42 @@ public class GetUserBrandRewardsHandler
         if (!userExists)
             return Result.Fail(UserErrors.NotFound());
 
-        var balances = (await _metricBalanceRepository.GetUserBalancesAsync(query.UserId, cancellationToken))
-            .Where(balance => balance.BrandId == query.BrandId)
-            .ToArray();
+        var brand = await _brandRepository.GetByIdAsync(query.BrandId, cancellationToken);
+        if (brand is null)
+            return Result.Fail(BrandErrors.NotFound());
 
-        var wallet = await _coinWalletRepository.GetByUserAndBrandAsync(
-            query.UserId,
-            query.BrandId,
-            cancellationToken);
+        var balances = brand.IsMetricsEnabled
+            ? (await _metricBalanceRepository.GetUserBalancesAsync(query.UserId, cancellationToken))
+                .Where(balance => balance.BrandId == query.BrandId)
+                .ToArray()
+            : [];
 
-        var coinWallets = await _coinWalletRepository.GetUserWalletsAsync(query.UserId, cancellationToken);
+        var wallet = brand.IsCoinsEnabled
+            ? await _coinWalletRepository.GetByUserAndBrandAsync(
+                query.UserId,
+                query.BrandId,
+                cancellationToken)
+            : null;
+
+        var coinWallets = brand.IsCoinsEnabled
+            ? await _coinWalletRepository.GetUserWalletsAsync(query.UserId, cancellationToken)
+            : [];
         var walletReadModel = coinWallets.FirstOrDefault(coinWallet => coinWallet.BrandId == query.BrandId);
         var brandName = balances.FirstOrDefault()?.BrandName
             ?? walletReadModel?.BrandName
-            ?? "бренд";
+            ?? brand.Name;
         var coinBalance = wallet?.Value ?? walletReadModel?.Value ?? 0;
 
-        var products = await _coinProductRepository.GetActiveByBrandAsync(query.BrandId, cancellationToken);
+        var products = brand.IsCoinsEnabled
+            ? await _coinProductRepository.GetActiveByBrandAsync(query.BrandId, cancellationToken)
+            : [];
 
         return Result.Ok(new UserBrandRewardsResponse(
             query.UserId,
             query.BrandId,
             brandName,
+            brand.IsMetricsEnabled,
+            brand.IsCoinsEnabled,
             coinBalance,
             products
                 .OrderBy(product => product.Price)

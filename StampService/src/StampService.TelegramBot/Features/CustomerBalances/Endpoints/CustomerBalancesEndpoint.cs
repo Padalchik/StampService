@@ -158,16 +158,24 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
         BrandCustomerMetricBalancesResponse response)
     {
         var brandName = ctx.Session?.Data.GetString(BrandWorkspaceScreen.BrandNameSessionKey) ?? "бренд";
+        var isMetricsEnabled = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.IsMetricsEnabledSessionKey) ?? true;
+        var isCoinsEnabled = ctx.Session?.Data.Get<bool>(BrandWorkspaceScreen.IsCoinsEnabledSessionKey) ?? true;
         var activeBalances = response.Balances
+            .Where(_ => isMetricsEnabled)
             .Where(balance => balance.IsActive)
             .ToArray();
 
-        var lines = activeBalances.Length == 0
-            ? ["В бренде пока нет метрик.", $"монетки: {response.CoinBalanceValue}"]
-            : activeBalances
-                .Select(balance => $"{Html(balance.MetricName)}: {balance.Value}")
-                .Append($"монетки: {response.CoinBalanceValue}")
-                .ToArray();
+        var lines = new List<string>();
+        if (isMetricsEnabled)
+        {
+            if (activeBalances.Length == 0)
+                lines.Add("В бренде пока нет метрик.");
+            else
+                lines.AddRange(activeBalances.Select(balance => $"{Html(balance.MetricName)}: {balance.Value}"));
+        }
+
+        if (isCoinsEnabled)
+            lines.Add($"монетки: {response.CoinBalanceValue}");
 
         var view = new ScreenView(
             $"<b>{Html(brandName)}</b>\n\n" +
@@ -186,9 +194,12 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
                     balance.MetricName));
         }
 
-        view.Row().Button<ViewCoinHistoryAction, ViewCoinHistoryPayload>(
-            "📈 История: монетки",
-            new ViewCoinHistoryPayload(response.CustomerCode));
+        if (isCoinsEnabled)
+        {
+            view.Row().Button<ViewCoinHistoryAction, ViewCoinHistoryPayload>(
+                "📈 История: монетки",
+                new ViewCoinHistoryPayload(response.CustomerCode));
+        }
 
         return view.NavigateButton<CustomerBalancesCodeScreen>("Другой клиент")
             .BackButton();

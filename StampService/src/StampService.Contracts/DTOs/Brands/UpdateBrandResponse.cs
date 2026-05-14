@@ -1,10 +1,8 @@
 namespace StampService.Contracts.DTOs.Brands;
 
-public record AdminBrandResponse(
+public record UpdateBrandResponse(
     Guid BrandId,
     string BrandName,
     bool IsMetricsEnabled,
     bool IsCoinsEnabled,
-    Guid? OwnerUserId,
-    string? OwnerName,
-    string? OwnerCustomerCode);
+    DateTime? UpdatedAt);

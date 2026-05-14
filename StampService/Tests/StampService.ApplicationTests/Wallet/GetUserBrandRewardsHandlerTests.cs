@@ -1,5 +1,6 @@
 using StampService.Application.Wallet.Queries.GetUserBrandRewards;
 using StampService.ApplicationTests.Fakes;
+using StampService.Domain.Brand;
 using StampService.Domain.Coins;
 using StampService.Domain.Loyalty;
 using StampService.Domain.User;
@@ -12,13 +13,16 @@ public class GetUserBrandRewardsHandlerTests
     public async Task Handle_WhenBrandHasProductsAndMetricBalances_ShouldReturnAvailability()
     {
         var user = User.Create("Customer", "1234").Value;
-        var brandId = Guid.NewGuid();
+        var brand = Brand.Create("Brand").Value;
+        var brandId = brand.Id;
         var otherBrandId = Guid.NewGuid();
         var userRepository = new FakeUserRepository();
         var productRepository = new FakeCoinProductRepository();
         var walletRepository = new FakeCoinWalletRepository();
+        var brandRepository = new FakeBrandRepository();
         var metricBalanceRepository = new FakeMetricBalanceRepository();
         userRepository.Add(user);
+        brandRepository.AddExisting(brand);
 
         var wallet = CoinWallet.Create(user.Id, brandId).Value;
         wallet.SetMaterializedValue(8);
@@ -45,6 +49,7 @@ public class GetUserBrandRewardsHandlerTests
         var handler = new GetUserBrandRewardsHandler(
             productRepository,
             walletRepository,
+            brandRepository,
             metricBalanceRepository,
             userRepository);
 
@@ -53,6 +58,8 @@ public class GetUserBrandRewardsHandlerTests
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
+        Assert.True(result.Value.IsMetricsEnabled);
+        Assert.True(result.Value.IsCoinsEnabled);
         Assert.Equal(8, result.Value.CoinBalance);
         Assert.Equal(2, result.Value.CoinProducts.Count);
 
@@ -76,6 +83,7 @@ public class GetUserBrandRewardsHandlerTests
         var handler = new GetUserBrandRewardsHandler(
             new FakeCoinProductRepository(),
             new FakeCoinWalletRepository(),
+            new FakeBrandRepository(),
             new FakeMetricBalanceRepository(),
             new FakeUserRepository());
 
@@ -84,5 +92,40 @@ public class GetUserBrandRewardsHandlerTests
             CancellationToken.None);
 
         Assert.True(result.IsFailed);
+    }
+
+    [Fact]
+    public async Task Handle_WhenMetricsAreDisabled_ShouldNotReturnMetricSectionData()
+    {
+        var user = User.Create("Customer", "1234").Value;
+        var brand = Brand.Create("Brand").Value;
+        brand.UpdateDetails("Brand", isMetricsEnabled: false, isCoinsEnabled: true);
+        var userRepository = new FakeUserRepository();
+        var productRepository = new FakeCoinProductRepository();
+        var walletRepository = new FakeCoinWalletRepository();
+        var brandRepository = new FakeBrandRepository();
+        var metricBalanceRepository = new FakeMetricBalanceRepository();
+        userRepository.Add(user);
+        brandRepository.AddExisting(brand);
+
+        var metric = MetricBalance.Create(user.Id, brand.Id, Guid.NewGuid()).Value;
+        metric.SetMaterializedValue(5);
+        metricBalanceRepository.Add(metric);
+
+        var handler = new GetUserBrandRewardsHandler(
+            productRepository,
+            walletRepository,
+            brandRepository,
+            metricBalanceRepository,
+            userRepository);
+
+        var result = await handler.Handle(
+            new GetUserBrandRewardsQuery(user.Id, brand.Id),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.False(result.Value.IsMetricsEnabled);
+        Assert.True(result.Value.IsCoinsEnabled);
+        Assert.Empty(result.Value.Metrics);
     }
 }

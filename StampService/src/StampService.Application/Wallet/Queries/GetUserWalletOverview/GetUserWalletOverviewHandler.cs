@@ -1,5 +1,6 @@
 using FluentResults;
 using StampService.Application.Abstractions;
+using StampService.Application.Brands;
 using StampService.Application.CoinProducts;
 using StampService.Application.Coins;
 using StampService.Application.Errors;
@@ -14,17 +15,20 @@ public class GetUserWalletOverviewHandler
 {
     private readonly ICoinProductRepository _coinProductRepository;
     private readonly ICoinWalletRepository _coinWalletRepository;
+    private readonly IBrandRepository _brandRepository;
     private readonly IMetricBalanceRepository _metricBalanceRepository;
     private readonly IUserRepository _userRepository;
 
     public GetUserWalletOverviewHandler(
         ICoinProductRepository coinProductRepository,
         ICoinWalletRepository coinWalletRepository,
+        IBrandRepository brandRepository,
         IMetricBalanceRepository metricBalanceRepository,
         IUserRepository userRepository)
     {
         _coinProductRepository = coinProductRepository;
         _coinWalletRepository = coinWalletRepository;
+        _brandRepository = brandRepository;
         _metricBalanceRepository = metricBalanceRepository;
         _userRepository = userRepository;
     }
@@ -56,22 +60,30 @@ public class GetUserWalletOverviewHandler
         var brands = new List<UserWalletBrandOverviewResponse>();
         foreach (var brandId in brandIds)
         {
+            var brand = await _brandRepository.GetByIdAsync(brandId, cancellationToken);
+            if (brand is null)
+                continue;
+
             var brandMetricBalances = metricBalances
                 .Where(balance => balance.BrandId == brandId)
                 .ToArray();
             var coinWallet = coinWallets.FirstOrDefault(wallet => wallet.BrandId == brandId);
-            var coinBalance = coinWallet?.Value ?? 0;
+            var coinBalance = brand.IsCoinsEnabled ? coinWallet?.Value ?? 0 : 0;
             var brandName = brandMetricBalances.FirstOrDefault()?.BrandName
                 ?? coinWallet?.BrandName
-                ?? "бренд";
+                ?? brand.Name;
 
-            var activeProducts = await _coinProductRepository.GetActiveByBrandAsync(
-                brandId,
-                cancellationToken);
+            var activeProducts = brand.IsCoinsEnabled
+                ? await _coinProductRepository.GetActiveByBrandAsync(
+                    brandId,
+                    cancellationToken)
+                : [];
 
             brands.Add(new UserWalletBrandOverviewResponse(
                 brandId,
                 brandName,
+                brand.IsMetricsEnabled,
+                brand.IsCoinsEnabled,
                 coinBalance,
                 activeProducts
                     .Where(product => product.Price <= coinBalance)
@@ -85,7 +97,7 @@ public class GetUserWalletOverviewHandler
                         MissingAmount: 0,
                         IsAvailable: true))
                     .ToArray(),
-                brandMetricBalances
+                (brand.IsMetricsEnabled ? brandMetricBalances : [])
                     .Where(balance => balance.Value >= balance.RedemptionAmount)
                     .OrderBy(balance => balance.MetricName)
                     .Select(balance => new UserBrandMetricRewardResponse(

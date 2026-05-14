@@ -43,6 +43,8 @@ public sealed class AdminPanelScreen : IScreen
                 new OpenAdminBrandPayload(
                     brand.BrandId,
                     brand.BrandName,
+                    brand.IsMetricsEnabled,
+                    brand.IsCoinsEnabled,
                     brand.OwnerUserId,
                     brand.OwnerName,
                     brand.OwnerCustomerCode));

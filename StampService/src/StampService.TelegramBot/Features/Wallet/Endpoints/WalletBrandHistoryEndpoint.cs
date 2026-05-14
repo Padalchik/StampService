@@ -124,14 +124,17 @@ public sealed class WalletBrandHistoryEndpoint : IBotEndpoint
 
     private static string BuildRewardsText(UserBrandRewardsResponse response, string brandName)
     {
-        var sections = new List<string>
-        {
-            $"<b>{Html(brandName)}</b>",
-            $"Монетки: {response.CoinBalance}"
-        };
+        var sections = new List<string> { $"<b>{Html(brandName)}</b>" };
 
-        sections.Add(BuildProductsText(response));
-        sections.Add(BuildMetricsText(response));
+        if (response.IsCoinsEnabled)
+        {
+            sections.Add($"Монетки: {response.CoinBalance}");
+            sections.Add(BuildProductsText(response));
+        }
+
+        if (response.IsMetricsEnabled)
+            sections.Add(BuildMetricsText(response));
+
         sections.Add("Чтобы получить награду, покажите код для списания сотруднику.");
 
         return string.Join("\n\n", sections);
