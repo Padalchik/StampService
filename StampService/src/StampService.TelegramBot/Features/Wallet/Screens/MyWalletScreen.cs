@@ -3,8 +3,10 @@ using StampService.Application.Abstractions;
 using StampService.Application.Metrics.Queries.GetUserMetricBalances;
 using StampService.Application.Users.Commands.CreateRedemptionCode;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
+using StampService.Application.Wallet.Queries.GetUserWalletOverview;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Contracts.DTOs.Users;
+using StampService.Contracts.DTOs.Wallet;
 using StampService.TelegramBot.Features.Wallet.Actions;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
@@ -18,15 +20,18 @@ public sealed class MyWalletScreen : IScreen
     private readonly IQueryHandler<UserMetricBalancesResponse, GetUserMetricBalancesQuery> _balancesHandler;
     private readonly ICommandHandler<CreateRedemptionCodeResponse, CreateRedemptionCodeCommand> _createCodeHandler;
     private readonly ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> _ensureUserHandler;
+    private readonly IQueryHandler<UserWalletOverviewResponse, GetUserWalletOverviewQuery> _overviewHandler;
 
     public MyWalletScreen(
         IQueryHandler<UserMetricBalancesResponse, GetUserMetricBalancesQuery> balancesHandler,
         ICommandHandler<CreateRedemptionCodeResponse, CreateRedemptionCodeCommand> createCodeHandler,
-        ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler)
+        ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
+        IQueryHandler<UserWalletOverviewResponse, GetUserWalletOverviewQuery> overviewHandler)
     {
         _balancesHandler = balancesHandler;
         _createCodeHandler = createCodeHandler;
         _ensureUserHandler = ensureUserHandler;
+        _overviewHandler = overviewHandler;
     }
 
     public async ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
@@ -60,13 +65,19 @@ public sealed class MyWalletScreen : IScreen
         if (balancesResult.IsFailed)
             return new ScreenView("Не удалось загрузить балансы.").BackButton();
 
+        var overviewResult = await _overviewHandler.Handle(
+            new GetUserWalletOverviewQuery(userResult.Value.UserId),
+            ctx.CancellationToken);
+
+        if (overviewResult.IsFailed)
+            return new ScreenView("Не удалось загрузить кошелёк.").BackButton();
+
         var view = new ScreenView(
             "<b>Мой кошелёк</b>\n\n" +
             $"Код пользователя: <code>{Html(userResult.Value.CustomerCode)}</code>\n" +
             $"Код для списания: <code>{Html(codeResult.Value.Code)}</code>\n" +
             $"Действует до: {FormatLocalTime(codeResult.Value.ExpiresAtUtc)}\n\n" +
-            "<b>Балансы</b>\n\n" +
-            BuildBalancesText(balancesResult.Value));
+            BuildOverviewText(overviewResult.Value));
 
         view.Row().Button<RefreshMyWalletAction>("🔄 Обновить данные");
 
@@ -74,7 +85,7 @@ public sealed class MyWalletScreen : IScreen
         {
             var brandName = GetBrandName(balancesResult.Value, brandId);
             view.Row().Button<ViewWalletBrandRewardsAction, ViewWalletBrandRewardsPayload>(
-                $"🎁 {brandName}",
+                $"▶️ {brandName}",
                 new ViewWalletBrandRewardsPayload(brandId, brandName));
         }
 
@@ -111,6 +122,43 @@ public sealed class MyWalletScreen : IScreen
         }
 
         return string.Join("\n\n", brandBlocks);
+    }
+
+    private static string BuildOverviewText(UserWalletOverviewResponse response)
+    {
+        if (response.Brands.Count == 0)
+            return "<b>Балансы</b>\n\nУ вас пока нет балансов.";
+
+        var brandBlocks = response.Brands.Select(brand =>
+        {
+            var lines = new List<string>
+            {
+                $"• <b>{Html(brand.BrandName)}</b>",
+                $"  - Монетки {brand.CoinBalance}"
+            };
+
+            if (brand.AvailableCoinProducts.Count > 0)
+            {
+                lines.Add("  - Доступные товары:");
+                lines.AddRange(brand.AvailableCoinProducts.Select(product =>
+                    $"    ✅ {Html(product.ProductName)} · {product.Price} монеток"));
+            }
+
+            if (brand.AvailableMetrics.Count > 0)
+            {
+                lines.Add("  - Доступные метрики:");
+                lines.AddRange(brand.AvailableMetrics.Select(metric =>
+                    $"    ✅ {Html(metric.MetricName)} · {metric.CurrentBalance}/{metric.RequiredAmount}"));
+            }
+
+            if (brand.AvailableCoinProducts.Count == 0 && brand.AvailableMetrics.Count == 0)
+                lines.Add("  - Доступных наград пока нет");
+
+            return string.Join("\n", lines);
+        });
+
+        return "<b>Балансы и доступные награды</b>\n\n" +
+            string.Join("\n\n", brandBlocks);
     }
 
     private static string GetBrandName(UserMetricBalancesResponse response, Guid brandId)
