@@ -100,27 +100,56 @@ public sealed class WalletBrandHistoryEndpoint : IBotEndpoint
                 .BackButton());
         }
 
-        var lines = historyResult.Value.Items.Select(item =>
-        {
-            var isIssue = item.TransactionType == "Issue";
-            var marker = isIssue ? "🟢" : "🟡";
-            var sign = isIssue ? "+" : "-";
-            var date = item.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
-            var comment = string.IsNullOrWhiteSpace(item.Comment) || IsAutoComment(item.Comment)
-                ? string.Empty
-                : $" - {Html(item.Comment)}";
-
-            return $"{marker} {date}: {sign}{item.Amount} {Html(item.SourceName)}{comment}";
-        });
+        var sections = BuildHistorySections(historyResult.Value);
 
         return BotResults.ShowView(new ScreenView(
             $"{title}\n\n" +
             "<b>Последние операции</b>\n" +
-            string.Join("\n", lines))
+            string.Join("\n\n", sections))
             .BackButton());
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);
+
+    private static IReadOnlyCollection<string> BuildHistorySections(UserBrandWalletHistoryResponse response)
+    {
+        var sections = new List<string>();
+
+        if (response.IsCoinsEnabled)
+            sections.Add(BuildHistorySection("Монеты", response.Items.Where(item => item.SourceType == "Coin")));
+
+        if (response.IsMetricsEnabled)
+            sections.Add(BuildHistorySection("Метрики", response.Items.Where(item => item.SourceType == "Metric")));
+
+        return sections;
+    }
+
+    private static string BuildHistorySection(
+        string title,
+        IEnumerable<UserBrandWalletHistoryItemResponse> items)
+    {
+        var lines = items
+            .OrderByDescending(item => item.CreatedAt)
+            .Select(FormatHistoryItem)
+            .ToArray();
+
+        return lines.Length == 0
+            ? $"<b>{title}</b>\nОпераций пока нет."
+            : $"<b>{title}</b>\n" + string.Join("\n", lines);
+    }
+
+    private static string FormatHistoryItem(UserBrandWalletHistoryItemResponse item)
+    {
+        var isIssue = item.TransactionType == "Issue";
+        var marker = isIssue ? "🟢" : "🟡";
+        var sign = isIssue ? "+" : "-";
+        var date = item.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
+        var comment = string.IsNullOrWhiteSpace(item.Comment) || IsAutoComment(item.Comment)
+            ? string.Empty
+            : $" - {Html(item.Comment)}";
+
+        return $"{marker} {date}: {sign}{item.Amount} {Html(item.SourceName)}{comment}";
+    }
 
     private static string BuildRewardsText(UserBrandRewardsResponse response, string brandName)
     {

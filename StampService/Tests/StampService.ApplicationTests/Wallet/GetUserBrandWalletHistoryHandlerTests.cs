@@ -209,6 +209,56 @@ public class GetUserBrandWalletHistoryHandlerTests
         Assert.Equal("Coin", item.SourceType);
     }
 
+    [Fact]
+    public async Task Handle_WhenCoinsAreDisabled_ShouldReturnOnlyMetricHistory()
+    {
+        var user = User.Create("Customer", "1234").Value;
+        var brand = Brand.Create("Brand").Value;
+        brand.UpdateDetails("Brand", isMetricsEnabled: true, isCoinsEnabled: false);
+        var userRepository = new FakeUserRepository();
+        var brandRepository = new FakeBrandRepository();
+        var metricBalanceRepository = new FakeMetricBalanceRepository();
+        var stampTransactionRepository = new FakeStampTransactionRepository();
+        var coinWalletRepository = new FakeCoinWalletRepository();
+        var coinTransactionRepository = new FakeCoinTransactionRepository();
+        userRepository.Add(user);
+        brandRepository.AddExisting(brand);
+
+        var metricBalance = MetricBalance.Create(user.Id, brand.Id, Guid.NewGuid()).Value;
+        metricBalanceRepository.Add(metricBalance);
+        stampTransactionRepository.Add(StampTransaction.CreateIssue(
+            metricBalance.Id,
+            3,
+            "metric issue",
+            Guid.NewGuid()).Value);
+
+        var wallet = CoinWallet.Create(user.Id, brand.Id).Value;
+        coinWalletRepository.Add(wallet);
+        coinTransactionRepository.Add(CoinTransaction.CreateIssue(
+            wallet.Id,
+            10,
+            "coin issue",
+            Guid.NewGuid()).Value);
+
+        var handler = new GetUserBrandWalletHistoryHandler(
+            coinTransactionRepository,
+            coinWalletRepository,
+            brandRepository,
+            metricBalanceRepository,
+            stampTransactionRepository,
+            userRepository);
+
+        var result = await handler.Handle(
+            new GetUserBrandWalletHistoryQuery(user.Id, brand.Id, Skip: 0, Take: 10),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Value.IsMetricsEnabled);
+        Assert.False(result.Value.IsCoinsEnabled);
+        var item = Assert.Single(result.Value.Items);
+        Assert.Equal("Metric", item.SourceType);
+    }
+
     [Theory]
     [InlineData(-1, 10)]
     [InlineData(0, 0)]
