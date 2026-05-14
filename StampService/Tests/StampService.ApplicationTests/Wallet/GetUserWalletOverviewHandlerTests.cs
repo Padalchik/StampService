@@ -131,4 +131,48 @@ public class GetUserWalletOverviewHandlerTests
         Assert.Empty(brandOverview.AvailableCoinProducts);
         Assert.NotEmpty(brandOverview.AvailableMetrics);
     }
+
+    [Fact]
+    public async Task Handle_WhenCoinProductRedemptionIsDisabled_ShouldIgnoreCoinProductsButKeepCoinBalance()
+    {
+        var user = User.Create("Customer", "1234").Value;
+        var brand = Brand.Create("Brand").Value;
+        brand.UpdateDetails(
+            "Brand",
+            isMetricsEnabled: true,
+            isCoinsEnabled: true,
+            isCoinProductRedemptionEnabled: false,
+            isManualCoinRedemptionEnabled: true);
+        var userRepository = new FakeUserRepository();
+        var productRepository = new FakeCoinProductRepository();
+        var walletRepository = new FakeCoinWalletRepository();
+        var brandRepository = new FakeBrandRepository();
+        var metricBalanceRepository = new FakeMetricBalanceRepository();
+        userRepository.Add(user);
+        brandRepository.AddExisting(brand);
+
+        var wallet = CoinWallet.Create(user.Id, brand.Id).Value;
+        wallet.SetMaterializedValue(10);
+        walletRepository.Add(wallet);
+        productRepository.Add(CoinProduct.Create(brand.Id, "Coffee", 1).Value);
+
+        var handler = new GetUserWalletOverviewHandler(
+            productRepository,
+            walletRepository,
+            brandRepository,
+            metricBalanceRepository,
+            userRepository);
+
+        var result = await handler.Handle(
+            new GetUserWalletOverviewQuery(user.Id),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        var brandOverview = Assert.Single(result.Value.Brands);
+        Assert.True(brandOverview.IsCoinsEnabled);
+        Assert.False(brandOverview.IsCoinProductRedemptionEnabled);
+        Assert.True(brandOverview.IsManualCoinRedemptionEnabled);
+        Assert.Equal(10, brandOverview.CoinBalance);
+        Assert.Empty(brandOverview.AvailableCoinProducts);
+    }
 }

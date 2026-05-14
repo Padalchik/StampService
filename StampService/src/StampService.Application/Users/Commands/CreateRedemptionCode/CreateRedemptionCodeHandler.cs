@@ -9,7 +9,7 @@ namespace StampService.Application.Users.Commands.CreateRedemptionCode;
 public class CreateRedemptionCodeHandler
     : ICommandHandler<CreateRedemptionCodeResponse, CreateRedemptionCodeCommand>
 {
-    private static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(5);
 
     private readonly IRedemptionCodeGenerator _codeGenerator;
     private readonly IRedemptionCodeRepository _redemptionCodeRepository;

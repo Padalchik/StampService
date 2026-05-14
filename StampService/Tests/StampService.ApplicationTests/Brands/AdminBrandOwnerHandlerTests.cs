@@ -138,6 +138,36 @@ public class AdminBrandOwnerHandlerTests
         Assert.True(brand.IsMetricsEnabled);
     }
 
+    [Fact]
+    public async Task UpdateBrandRewardSettings_WhenCoinsEnabledWithoutRedemptionModes_ShouldFailWithoutChangingBrand()
+    {
+        var owner = User.Create("Owner", "1234").Value;
+        var brand = Brand.Create("Coffee").Value;
+        var brandRepository = new FakeBrandRepository();
+        var membershipRepository = new FakeBrandMembershipRepository();
+        brandRepository.AddExisting(brand);
+        membershipRepository.SetRole(owner.Id, brand.Id, SystemRoles.Owner);
+        var handler = new UpdateBrandRewardSettingsHandler(
+            new BrandAccessService(membershipRepository),
+            brandRepository);
+
+        var result = await handler.Handle(
+            new UpdateBrandRewardSettingsCommand(
+                owner.Id,
+                brand.Id,
+                IsMetricsEnabled: true,
+                IsCoinsEnabled: true,
+                IsCoinProductRedemptionEnabled: false,
+                IsManualCoinRedemptionEnabled: false),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.True(brand.IsMetricsEnabled);
+        Assert.True(brand.IsCoinsEnabled);
+        Assert.True(brand.IsCoinProductRedemptionEnabled);
+        Assert.False(brand.IsManualCoinRedemptionEnabled);
+    }
+
     private static AdminAccessService CreateAdminAccessService()
     {
         return new AdminAccessService(Options.Create(new AdminOptions

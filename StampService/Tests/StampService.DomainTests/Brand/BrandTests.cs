@@ -32,6 +32,28 @@ public class BrandTests
         Assert.False(brand.IsManualCoinRedemptionEnabled);
     }
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void UpdateDetails_WhenCoinsEnabledWithAtLeastOneRedemptionMode_ShouldUpdateSettings(
+        bool isCoinProductRedemptionEnabled,
+        bool isManualCoinRedemptionEnabled)
+    {
+        var brand = BrandEntity.Create("Coffee").Value;
+
+        var result = brand.UpdateDetails(
+            "Coffee",
+            isMetricsEnabled: true,
+            isCoinsEnabled: true,
+            isCoinProductRedemptionEnabled,
+            isManualCoinRedemptionEnabled);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(isCoinProductRedemptionEnabled, brand.IsCoinProductRedemptionEnabled);
+        Assert.Equal(isManualCoinRedemptionEnabled, brand.IsManualCoinRedemptionEnabled);
+    }
+
     [Fact]
     public void UpdateDetails_WhenBothRewardTypesDisabled_ShouldFailWithoutChangingBrand()
     {

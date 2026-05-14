@@ -41,7 +41,7 @@ public class RedeemMetricHandlerTests
         var redemptionCode = RedemptionCode.Create(
             customerUserId,
             "1234",
-            now.UtcDateTime.AddMinutes(3),
+            now.UtcDateTime.AddMinutes(5),
             now.UtcDateTime).Value;
         codeRepository.Add(redemptionCode);
 
@@ -97,7 +97,7 @@ public class RedeemMetricHandlerTests
         var redemptionCode = RedemptionCode.Create(
             customerUserId,
             "1234",
-            now.UtcDateTime.AddMinutes(3),
+            now.UtcDateTime.AddMinutes(5),
             now.UtcDateTime).Value;
         redemptionCode.Use(now.UtcDateTime.AddMinutes(1));
         codeRepository.Add(redemptionCode);
@@ -153,7 +153,7 @@ public class RedeemMetricHandlerTests
         codeRepository.Add(RedemptionCode.Create(
             customerUserId,
             "1234",
-            now.UtcDateTime.AddMinutes(3),
+            now.UtcDateTime.AddMinutes(5),
             now.UtcDateTime).Value);
 
         var handler = new RedeemMetricHandler(
@@ -199,7 +199,7 @@ public class RedeemMetricHandlerTests
         codeRepository.Add(RedemptionCode.Create(
             customerUserId,
             "1234",
-            now.UtcDateTime.AddMinutes(3),
+            now.UtcDateTime.AddMinutes(5),
             now.UtcDateTime).Value);
 
         var handler = new RedeemMetricHandler(

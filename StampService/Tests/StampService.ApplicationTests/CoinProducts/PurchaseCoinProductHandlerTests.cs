@@ -173,7 +173,7 @@ public class PurchaseCoinProductHandlerTests
         var redemptionCode = RedemptionCode.Create(
             customer.Id,
             "1234",
-            now.UtcDateTime.AddMinutes(3),
+            now.UtcDateTime.AddMinutes(5),
             now.UtcDateTime).Value;
         codeRepository.Add(redemptionCode);
 

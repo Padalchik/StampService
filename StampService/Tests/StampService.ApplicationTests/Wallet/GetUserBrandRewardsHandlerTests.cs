@@ -128,4 +128,47 @@ public class GetUserBrandRewardsHandlerTests
         Assert.True(result.Value.IsCoinsEnabled);
         Assert.Empty(result.Value.Metrics);
     }
+
+    [Fact]
+    public async Task Handle_WhenCoinProductRedemptionIsDisabled_ShouldNotReturnCoinProducts()
+    {
+        var user = User.Create("Customer", "1234").Value;
+        var brand = Brand.Create("Brand").Value;
+        brand.UpdateDetails(
+            "Brand",
+            isMetricsEnabled: true,
+            isCoinsEnabled: true,
+            isCoinProductRedemptionEnabled: false,
+            isManualCoinRedemptionEnabled: true);
+        var userRepository = new FakeUserRepository();
+        var productRepository = new FakeCoinProductRepository();
+        var walletRepository = new FakeCoinWalletRepository();
+        var brandRepository = new FakeBrandRepository();
+        var metricBalanceRepository = new FakeMetricBalanceRepository();
+        userRepository.Add(user);
+        brandRepository.AddExisting(brand);
+
+        var wallet = CoinWallet.Create(user.Id, brand.Id).Value;
+        wallet.SetMaterializedValue(10);
+        walletRepository.Add(wallet);
+        productRepository.Add(CoinProduct.Create(brand.Id, "Coffee", 1).Value);
+
+        var handler = new GetUserBrandRewardsHandler(
+            productRepository,
+            walletRepository,
+            brandRepository,
+            metricBalanceRepository,
+            userRepository);
+
+        var result = await handler.Handle(
+            new GetUserBrandRewardsQuery(user.Id, brand.Id),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Value.IsCoinsEnabled);
+        Assert.False(result.Value.IsCoinProductRedemptionEnabled);
+        Assert.True(result.Value.IsManualCoinRedemptionEnabled);
+        Assert.Equal(10, result.Value.CoinBalance);
+        Assert.Empty(result.Value.CoinProducts);
+    }
 }

@@ -13,7 +13,7 @@ public class RedemptionCodeTests
         var result = RedemptionCode.Create(
             Guid.NewGuid(),
             "1234",
-            now.AddMinutes(3),
+            now.AddMinutes(5),
             now);
 
         Assert.True(result.IsSuccess);
@@ -33,7 +33,7 @@ public class RedemptionCodeTests
         var result = RedemptionCode.Create(
             Guid.NewGuid(),
             code,
-            now.AddMinutes(3),
+            now.AddMinutes(5),
             now);
 
         var error = Assert.IsType<DomainError>(result.Errors.Single());
@@ -44,7 +44,7 @@ public class RedemptionCodeTests
     public void Use_WhenCodeIsActive_ShouldMarkAsUsed()
     {
         var now = new DateTime(2026, 5, 7, 10, 0, 0, DateTimeKind.Utc);
-        var code = RedemptionCode.Create(Guid.NewGuid(), "1234", now.AddMinutes(3), now).Value;
+        var code = RedemptionCode.Create(Guid.NewGuid(), "1234", now.AddMinutes(5), now).Value;
 
         var result = code.Use(now.AddMinutes(1));
 
@@ -57,9 +57,9 @@ public class RedemptionCodeTests
     public void Use_WhenCodeIsExpired_ShouldFail()
     {
         var now = new DateTime(2026, 5, 7, 10, 0, 0, DateTimeKind.Utc);
-        var code = RedemptionCode.Create(Guid.NewGuid(), "1234", now.AddMinutes(3), now).Value;
+        var code = RedemptionCode.Create(Guid.NewGuid(), "1234", now.AddMinutes(5), now).Value;
 
-        var result = code.Use(now.AddMinutes(3));
+        var result = code.Use(now.AddMinutes(5));
 
         var error = Assert.IsType<DomainError>(result.Errors.Single());
         Assert.Equal("redemption_code.expired", error.Code);

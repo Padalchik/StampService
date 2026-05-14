@@ -28,7 +28,7 @@ public class CreateRedemptionCodeHandlerTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal("1234", result.Value.Code);
-        Assert.Equal(now.UtcDateTime.AddMinutes(3), result.Value.ExpiresAtUtc);
+        Assert.Equal(now.UtcDateTime.AddMinutes(5), result.Value.ExpiresAtUtc);
         Assert.Single(codeRepository.Codes);
         Assert.Equal(1, codeRepository.SaveCount);
     }
@@ -90,6 +90,7 @@ public class CreateRedemptionCodeHandlerTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal("2222", result.Value.Code);
+        Assert.Equal(now.UtcDateTime.AddMinutes(5), result.Value.ExpiresAtUtc);
         Assert.Equal(now.UtcDateTime, existingCode.ExpiresAtUtc);
         Assert.False(existingCode.IsActive(now.UtcDateTime));
         Assert.False(await codeRepository.ActiveCodeExistsAsync("1111", now.UtcDateTime, CancellationToken.None));
