@@ -73,9 +73,9 @@ public sealed class MyWalletScreen : IScreen
         foreach (var brandId in GetBrandIds(balancesResult.Value))
         {
             var brandName = GetBrandName(balancesResult.Value, brandId);
-            view.Row().Button<ViewWalletBrandHistoryAction, ViewWalletBrandHistoryPayload>(
-                $"📈 История: {brandName}",
-                new ViewWalletBrandHistoryPayload(brandId, brandName));
+            view.Row().Button<ViewWalletBrandRewardsAction, ViewWalletBrandRewardsPayload>(
+                $"🎁 {brandName}",
+                new ViewWalletBrandRewardsPayload(brandId, brandName));
         }
 
         return view.BackButton();

@@ -6,6 +6,7 @@ namespace StampService.ApplicationTests.Fakes;
 public class FakeMetricBalanceRepository : IMetricBalanceRepository
 {
     private readonly List<MetricBalance> _balances = [];
+    private readonly Dictionary<Guid, MetricReadModel> _metricReadModels = [];
 
     public IReadOnlyCollection<MetricBalance> Balances => _balances;
 
@@ -39,8 +40,8 @@ public class FakeMetricBalanceRepository : IMetricBalanceRepository
                 balance.BrandId,
                 $"Brand {balance.BrandId:N}",
                 balance.MetricDefinitionId,
-                $"Metric {balance.MetricDefinitionId:N}",
-                1,
+                GetMetricName(balance.MetricDefinitionId),
+                GetRedemptionAmount(balance.MetricDefinitionId),
                 balance.Value))
             .ToArray();
 
@@ -52,8 +53,29 @@ public class FakeMetricBalanceRepository : IMetricBalanceRepository
         _balances.Add(balance);
     }
 
+    public void SetMetricReadModel(Guid metricDefinitionId, string metricName, int redemptionAmount)
+    {
+        _metricReadModels[metricDefinitionId] = new MetricReadModel(metricName, redemptionAmount);
+    }
+
     public Task SaveAsync(CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
+
+    private string GetMetricName(Guid metricDefinitionId)
+    {
+        return _metricReadModels.TryGetValue(metricDefinitionId, out var readModel)
+            ? readModel.Name
+            : $"Metric {metricDefinitionId:N}";
+    }
+
+    private int GetRedemptionAmount(Guid metricDefinitionId)
+    {
+        return _metricReadModels.TryGetValue(metricDefinitionId, out var readModel)
+            ? readModel.RedemptionAmount
+            : 1;
+    }
+
+    private sealed record MetricReadModel(string Name, int RedemptionAmount);
 }
