@@ -6,8 +6,12 @@ using StampService.Application.CustomerNotifications.Queries.GetCustomerRewardDi
 using StampService.Domain.CustomerNotifications;
 using StampService.Domain.User;
 using StampService.Infrastructure;
+using StampService.TelegramBot.Features.Wallet.Screens;
+using Telegram.Bot.Types.ReplyMarkups;
 using TelegramBotFlow.Core.Messaging;
 using TelegramBotFlow.Core.Sessions;
+using TelegramBotFlow.Core.Screens;
+using TelegramBotFlow.Core.UI;
 
 namespace StampService.TelegramBot.Common.Notifications;
 
@@ -86,7 +90,11 @@ public sealed class CustomerRewardDigestSender
 
         try
         {
-            await _botNotifier.SendTextAsync(chatId.Value, BuildMessage(digestResult.Value), ct: cancellationToken);
+            await _botNotifier.SendTextAsync(
+                chatId.Value,
+                BuildMessage(digestResult.Value),
+                BuildWalletKeyboard(),
+                ct: cancellationToken);
             await ForceNextScreenToNewMessageAsync(chatId.Value, cancellationToken);
 
             state.MarkDigestSent(nowUtc);
@@ -120,6 +128,12 @@ public sealed class CustomerRewardDigestSender
         parts.Add("Откройте кошелёк, чтобы воспользоваться.");
 
         return string.Join("\n\n", parts);
+    }
+
+    private static InlineKeyboardMarkup BuildWalletKeyboard()
+    {
+        var screenId = ScreenIdConvention.GetIdFromType(typeof(MyWalletScreen));
+        return InlineKeyboard.SingleButton("Мой кошелёк", $"nav:{screenId}");
     }
 
     private async Task ForceNextScreenToNewMessageAsync(
