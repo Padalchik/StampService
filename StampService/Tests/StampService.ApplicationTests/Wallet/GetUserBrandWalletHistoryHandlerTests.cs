@@ -1,5 +1,6 @@
 using StampService.Application.Wallet.Queries.GetUserBrandWalletHistory;
 using StampService.ApplicationTests.Fakes;
+using StampService.Domain.Brand;
 using StampService.Domain.Coins;
 using StampService.Domain.Loyalty;
 using StampService.Domain.Shared;
@@ -13,7 +14,8 @@ public class GetUserBrandWalletHistoryHandlerTests
     public async Task Handle_WhenBrandHasMetricAndCoinTransactions_ShouldReturnUnifiedHistoryNewestFirst()
     {
         var user = User.Create("Customer", "1234").Value;
-        var brandId = Guid.NewGuid();
+        var brand = Brand.Create("Brand").Value;
+        var brandId = brand.Id;
         var otherBrandId = Guid.NewGuid();
         var metricId = Guid.NewGuid();
         var otherMetricId = Guid.NewGuid();
@@ -22,7 +24,9 @@ public class GetUserBrandWalletHistoryHandlerTests
         var stampTransactionRepository = new FakeStampTransactionRepository();
         var coinWalletRepository = new FakeCoinWalletRepository();
         var coinTransactionRepository = new FakeCoinTransactionRepository();
+        var brandRepository = new FakeBrandRepository();
         userRepository.Add(user);
+        brandRepository.AddExisting(brand);
 
         var metricBalance = MetricBalance.Create(user.Id, brandId, metricId).Value;
         var otherMetricBalance = MetricBalance.Create(user.Id, otherBrandId, otherMetricId).Value;
@@ -54,6 +58,7 @@ public class GetUserBrandWalletHistoryHandlerTests
         var handler = new GetUserBrandWalletHistoryHandler(
             coinTransactionRepository,
             coinWalletRepository,
+            brandRepository,
             metricBalanceRepository,
             stampTransactionRepository,
             userRepository);
@@ -64,6 +69,8 @@ public class GetUserBrandWalletHistoryHandlerTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(brandId, result.Value.BrandId);
+        Assert.True(result.Value.IsMetricsEnabled);
+        Assert.True(result.Value.IsCoinsEnabled);
         Assert.Equal(3, result.Value.Items.Count);
 
         var items = result.Value.Items.ToArray();
@@ -87,13 +94,16 @@ public class GetUserBrandWalletHistoryHandlerTests
     public async Task Handle_WhenSkipAndTakeAreProvided_ShouldPageUnifiedHistoryAfterSorting()
     {
         var user = User.Create("Customer", "1234").Value;
-        var brandId = Guid.NewGuid();
+        var brand = Brand.Create("Brand").Value;
+        var brandId = brand.Id;
         var userRepository = new FakeUserRepository();
         var metricBalanceRepository = new FakeMetricBalanceRepository();
         var stampTransactionRepository = new FakeStampTransactionRepository();
         var coinWalletRepository = new FakeCoinWalletRepository();
         var coinTransactionRepository = new FakeCoinTransactionRepository();
+        var brandRepository = new FakeBrandRepository();
         userRepository.Add(user);
+        brandRepository.AddExisting(brand);
 
         var metricBalance = MetricBalance.Create(user.Id, brandId, Guid.NewGuid()).Value;
         metricBalanceRepository.Add(metricBalance);
@@ -110,6 +120,7 @@ public class GetUserBrandWalletHistoryHandlerTests
         var handler = new GetUserBrandWalletHistoryHandler(
             coinTransactionRepository,
             coinWalletRepository,
+            brandRepository,
             metricBalanceRepository,
             stampTransactionRepository,
             userRepository);
@@ -128,21 +139,124 @@ public class GetUserBrandWalletHistoryHandlerTests
     public async Task Handle_WhenBrandHasNoWalletOrMetricBalances_ShouldReturnEmptyHistory()
     {
         var user = User.Create("Customer", "1234").Value;
+        var brand = Brand.Create("Brand").Value;
         var userRepository = new FakeUserRepository();
+        var brandRepository = new FakeBrandRepository();
         userRepository.Add(user);
+        brandRepository.AddExisting(brand);
         var handler = new GetUserBrandWalletHistoryHandler(
             new FakeCoinTransactionRepository(),
             new FakeCoinWalletRepository(),
+            brandRepository,
             new FakeMetricBalanceRepository(),
             new FakeStampTransactionRepository(),
             userRepository);
 
         var result = await handler.Handle(
-            new GetUserBrandWalletHistoryQuery(user.Id, Guid.NewGuid(), Skip: 0, Take: 10),
+            new GetUserBrandWalletHistoryQuery(user.Id, brand.Id, Skip: 0, Take: 10),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Empty(result.Value.Items);
+    }
+
+    [Fact]
+    public async Task Handle_WhenMetricsAreDisabled_ShouldReturnOnlyCoinHistory()
+    {
+        var user = User.Create("Customer", "1234").Value;
+        var brand = Brand.Create("Brand").Value;
+        brand.UpdateDetails("Brand", isMetricsEnabled: false, isCoinsEnabled: true);
+        var userRepository = new FakeUserRepository();
+        var brandRepository = new FakeBrandRepository();
+        var metricBalanceRepository = new FakeMetricBalanceRepository();
+        var stampTransactionRepository = new FakeStampTransactionRepository();
+        var coinWalletRepository = new FakeCoinWalletRepository();
+        var coinTransactionRepository = new FakeCoinTransactionRepository();
+        userRepository.Add(user);
+        brandRepository.AddExisting(brand);
+
+        var metricBalance = MetricBalance.Create(user.Id, brand.Id, Guid.NewGuid()).Value;
+        metricBalanceRepository.Add(metricBalance);
+        stampTransactionRepository.Add(StampTransaction.CreateIssue(
+            metricBalance.Id,
+            3,
+            "metric issue",
+            Guid.NewGuid()).Value);
+
+        var wallet = CoinWallet.Create(user.Id, brand.Id).Value;
+        coinWalletRepository.Add(wallet);
+        coinTransactionRepository.Add(CoinTransaction.CreateIssue(
+            wallet.Id,
+            10,
+            "coin issue",
+            Guid.NewGuid()).Value);
+
+        var handler = new GetUserBrandWalletHistoryHandler(
+            coinTransactionRepository,
+            coinWalletRepository,
+            brandRepository,
+            metricBalanceRepository,
+            stampTransactionRepository,
+            userRepository);
+
+        var result = await handler.Handle(
+            new GetUserBrandWalletHistoryQuery(user.Id, brand.Id, Skip: 0, Take: 10),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.False(result.Value.IsMetricsEnabled);
+        var item = Assert.Single(result.Value.Items);
+        Assert.Equal("Coin", item.SourceType);
+    }
+
+    [Fact]
+    public async Task Handle_WhenCoinsAreDisabled_ShouldReturnOnlyMetricHistory()
+    {
+        var user = User.Create("Customer", "1234").Value;
+        var brand = Brand.Create("Brand").Value;
+        brand.UpdateDetails("Brand", isMetricsEnabled: true, isCoinsEnabled: false);
+        var userRepository = new FakeUserRepository();
+        var brandRepository = new FakeBrandRepository();
+        var metricBalanceRepository = new FakeMetricBalanceRepository();
+        var stampTransactionRepository = new FakeStampTransactionRepository();
+        var coinWalletRepository = new FakeCoinWalletRepository();
+        var coinTransactionRepository = new FakeCoinTransactionRepository();
+        userRepository.Add(user);
+        brandRepository.AddExisting(brand);
+
+        var metricBalance = MetricBalance.Create(user.Id, brand.Id, Guid.NewGuid()).Value;
+        metricBalanceRepository.Add(metricBalance);
+        stampTransactionRepository.Add(StampTransaction.CreateIssue(
+            metricBalance.Id,
+            3,
+            "metric issue",
+            Guid.NewGuid()).Value);
+
+        var wallet = CoinWallet.Create(user.Id, brand.Id).Value;
+        coinWalletRepository.Add(wallet);
+        coinTransactionRepository.Add(CoinTransaction.CreateIssue(
+            wallet.Id,
+            10,
+            "coin issue",
+            Guid.NewGuid()).Value);
+
+        var handler = new GetUserBrandWalletHistoryHandler(
+            coinTransactionRepository,
+            coinWalletRepository,
+            brandRepository,
+            metricBalanceRepository,
+            stampTransactionRepository,
+            userRepository);
+
+        var result = await handler.Handle(
+            new GetUserBrandWalletHistoryQuery(user.Id, brand.Id, Skip: 0, Take: 10),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Value.IsMetricsEnabled);
+        Assert.False(result.Value.IsCoinsEnabled);
+        var item = Assert.Single(result.Value.Items);
+        Assert.Equal("Metric", item.SourceType);
     }
 
     [Theory]
@@ -154,6 +268,7 @@ public class GetUserBrandWalletHistoryHandlerTests
         var handler = new GetUserBrandWalletHistoryHandler(
             new FakeCoinTransactionRepository(),
             new FakeCoinWalletRepository(),
+            new FakeBrandRepository(),
             new FakeMetricBalanceRepository(),
             new FakeStampTransactionRepository(),
             new FakeUserRepository());
@@ -171,6 +286,7 @@ public class GetUserBrandWalletHistoryHandlerTests
         var handler = new GetUserBrandWalletHistoryHandler(
             new FakeCoinTransactionRepository(),
             new FakeCoinWalletRepository(),
+            new FakeBrandRepository(),
             new FakeMetricBalanceRepository(),
             new FakeStampTransactionRepository(),
             new FakeUserRepository());

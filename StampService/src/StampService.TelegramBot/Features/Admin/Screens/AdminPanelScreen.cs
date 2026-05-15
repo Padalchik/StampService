@@ -43,6 +43,10 @@ public sealed class AdminPanelScreen : IScreen
                 new OpenAdminBrandPayload(
                     brand.BrandId,
                     brand.BrandName,
+                    brand.IsMetricsEnabled,
+                    brand.IsCoinsEnabled,
+                    brand.IsCoinProductRedemptionEnabled,
+                    brand.IsManualCoinRedemptionEnabled,
                     brand.OwnerUserId,
                     brand.OwnerName,
                     brand.OwnerCustomerCode));
@@ -50,6 +54,8 @@ public sealed class AdminPanelScreen : IScreen
 
         return view.Row()
             .Button<StartCreateBrandAction>("Создать бренд")
+            .Row()
+            .NavigateButton<AdminRewardDigestSettingsScreen>("Дайджест наград")
             .Row()
             .MenuButton("Главное меню")
             .BackButton();

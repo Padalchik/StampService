@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using StampService.Domain.Access;
 using StampService.Domain.Brand;
 using StampService.Domain.Coins;
+using StampService.Domain.CustomerNotifications;
 using StampService.Domain.Loyalty;
 using StampService.Domain.Shared;
 
@@ -40,6 +41,7 @@ public class AppDbContext : DbContext
     public DbSet<StampService.Domain.User.User> Users => Set<StampService.Domain.User.User>();
     public DbSet<StampService.Domain.User.UserIdentity> UserIdentities => Set<StampService.Domain.User.UserIdentity>();
     public DbSet<StampService.Domain.User.RedemptionCode> RedemptionCodes => Set<StampService.Domain.User.RedemptionCode>();
+    public DbSet<StampService.Domain.User.CustomerDigestState> CustomerDigestStates => Set<StampService.Domain.User.CustomerDigestState>();
 
     // Brand
     public DbSet<Brand> Brands => Set<Brand>();
@@ -58,4 +60,7 @@ public class AppDbContext : DbContext
     public DbSet<CoinProduct> CoinProducts => Set<CoinProduct>();
     public DbSet<CoinWallet> CoinWallets => Set<CoinWallet>();
     public DbSet<CoinTransaction> CoinTransactions => Set<CoinTransaction>();
+
+    // Customer notifications
+    public DbSet<RewardDigestSettings> RewardDigestSettings => Set<RewardDigestSettings>();
 }

@@ -54,9 +54,15 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
         PurchaseCoinProductCommand command,
         CancellationToken cancellationToken)
     {
-        var brandExists = await _brandRepository.ExistsAsync(command.BrandId, cancellationToken);
-        if (!brandExists)
+        var brand = await _brandRepository.GetByIdAsync(command.BrandId, cancellationToken);
+        if (brand is null)
             return Result.Fail(BrandErrors.NotFound());
+
+        if (!brand.IsCoinsEnabled)
+            return Result.Fail(BrandErrors.CoinsDisabled());
+
+        if (!brand.IsCoinProductRedemptionEnabled)
+            return Result.Fail(BrandErrors.CoinProductRedemptionDisabled());
 
         var canRedeem = await _brandAccessService.CanAsync(
             command.RequestUserId,

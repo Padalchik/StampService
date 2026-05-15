@@ -4,6 +4,7 @@ using StampService.Application.Metrics.Queries.GetRedeemMetricOptions;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.TelegramBot.Common.Errors;
+using StampService.TelegramBot.Common.Notifications;
 using StampService.TelegramBot.Common.Routing;
 using StampService.TelegramBot.Features.Brands.Screens;
 using StampService.TelegramBot.Features.RedeemMetric.Actions;
@@ -103,7 +104,8 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
     private static async Task<IEndpointResult> ConfirmAsync(
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        ICommandHandler<RedeemMetricResponse, RedeemMetricCommand> redeemMetricHandler)
+        ICommandHandler<RedeemMetricResponse, RedeemMetricCommand> redeemMetricHandler,
+        ICustomerNotificationService customerNotificationService)
     {
         var metricDefinitionId = ctx.Session?.Data.Get<Guid>(RedeemMetricSessionKeys.MetricDefinitionId) ?? Guid.Empty;
         var redemptionAmount = ctx.Session?.Data.Get<int>(RedeemMetricSessionKeys.RedemptionAmount) ?? 0;
@@ -148,6 +150,14 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
                 $"Не удалось списать метрику: {BotErrorFormatter.Format(redeemResult.Errors, BotErrorContext.RedeemMetric)}")
                 .BackButton());
         }
+
+        var brandName = ctx.Session?.Data.GetString(BrandWorkspaceScreen.BrandNameSessionKey) ?? "бренд";
+        var metricName = ctx.Session?.Data.GetString(RedeemMetricSessionKeys.MetricName) ?? "метрика";
+        await customerNotificationService.NotifyMetricRedeemedAsync(
+            redeemResult.Value,
+            brandName,
+            metricName,
+            ctx.CancellationToken);
 
         ClearRedeemSession(ctx);
 

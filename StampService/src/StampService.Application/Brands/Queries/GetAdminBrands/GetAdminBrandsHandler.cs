@@ -31,6 +31,10 @@ public class GetAdminBrandsHandler : IQueryHandler<IReadOnlyCollection<AdminBran
             .Select(brand => new AdminBrandResponse(
                 brand.BrandId,
                 brand.BrandName,
+                brand.IsMetricsEnabled,
+                brand.IsCoinsEnabled,
+                brand.IsCoinProductRedemptionEnabled,
+                brand.IsManualCoinRedemptionEnabled,
                 brand.OwnerUserId,
                 brand.OwnerName,
                 brand.OwnerCustomerCode))

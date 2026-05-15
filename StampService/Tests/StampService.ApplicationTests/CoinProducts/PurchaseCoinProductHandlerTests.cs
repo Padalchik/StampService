@@ -1,9 +1,11 @@
 using StampService.Application.Access;
 using StampService.Application.CoinProducts.Commands.PurchaseCoinProduct;
 using StampService.Application.Coins;
+using StampService.Application.Errors;
 using StampService.Application.Users.Commands.UseRedemptionCode;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.Access;
+using StampService.Domain.Brand;
 using StampService.Domain.Coins;
 using StampService.Domain.User;
 
@@ -92,10 +94,58 @@ public class PurchaseCoinProductHandlerTests
         Assert.Null(fixture.RedemptionCode.UsedAtUtc);
     }
 
-    private static Fixture CreateFixture(int productPrice, int balance, bool grantAccess = true)
+    [Fact]
+    public async Task Handle_WhenCoinsAreDisabled_ShouldFailWithoutConsumingCode()
+    {
+        var fixture = CreateFixture(productPrice: 7, balance: 10, coinsEnabled: false);
+
+        var result = await fixture.Handler.Handle(
+            new PurchaseCoinProductCommand(
+                fixture.BrandId,
+                fixture.StaffUserId,
+                "1234",
+                fixture.Product.Id),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Equal(AppErrorCodes.Brand.CoinsDisabled, result.Errors[0].Metadata["error_code"]);
+        Assert.Null(fixture.RedemptionCode.UsedAtUtc);
+    }
+
+    [Fact]
+    public async Task Handle_WhenCoinProductRedemptionIsDisabled_ShouldFailWithoutConsumingCode()
+    {
+        var fixture = CreateFixture(productPrice: 7, balance: 10, coinProductRedemptionEnabled: false);
+
+        var result = await fixture.Handler.Handle(
+            new PurchaseCoinProductCommand(
+                fixture.BrandId,
+                fixture.StaffUserId,
+                "1234",
+                fixture.Product.Id),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Equal(AppErrorCodes.Brand.CoinProductRedemptionDisabled, result.Errors[0].Metadata["error_code"]);
+        Assert.Null(fixture.RedemptionCode.UsedAtUtc);
+    }
+
+    private static Fixture CreateFixture(
+        int productPrice,
+        int balance,
+        bool grantAccess = true,
+        bool coinsEnabled = true,
+        bool coinProductRedemptionEnabled = true)
     {
         var now = new DateTimeOffset(2026, 5, 13, 10, 0, 0, TimeSpan.Zero);
-        var brandId = Guid.NewGuid();
+        var brand = Brand.Create("Coffee").Value;
+        brand.UpdateDetails(
+            "Coffee",
+            isMetricsEnabled: true,
+            isCoinsEnabled: coinsEnabled,
+            isCoinProductRedemptionEnabled: coinProductRedemptionEnabled,
+            isManualCoinRedemptionEnabled: !coinProductRedemptionEnabled);
+        var brandId = brand.Id;
         var staffUserId = Guid.NewGuid();
         var customer = User.Create("Customer", "1234").Value;
         var product = CoinProduct.Create(brandId, "Coffee", productPrice).Value;
@@ -108,7 +158,7 @@ public class PurchaseCoinProductHandlerTests
         var codeRepository = new FakeRedemptionCodeRepository();
         var userRepository = new FakeUserRepository();
 
-        brandRepository.AddExisting(brandId);
+        brandRepository.AddExisting(brand);
         if (grantAccess)
             membershipRepository.SetRole(staffUserId, brandId, SystemRoles.Staff);
 
@@ -123,7 +173,7 @@ public class PurchaseCoinProductHandlerTests
         var redemptionCode = RedemptionCode.Create(
             customer.Id,
             "1234",
-            now.UtcDateTime.AddMinutes(3),
+            now.UtcDateTime.AddMinutes(5),
             now.UtcDateTime).Value;
         codeRepository.Add(redemptionCode);
 

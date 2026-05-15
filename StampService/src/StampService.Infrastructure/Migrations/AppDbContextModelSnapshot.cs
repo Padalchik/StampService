@@ -110,6 +110,30 @@ namespace StampService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
+                    b.Property<bool>("IsCoinProductRedemptionEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_coin_product_redemption_enabled");
+
+                    b.Property<bool>("IsCoinsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_coins_enabled");
+
+                    b.Property<bool>("IsManualCoinRedemptionEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_manual_coin_redemption_enabled");
+
+                    b.Property<bool>("IsMetricsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_metrics_enabled");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -339,6 +363,54 @@ namespace StampService.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("StampService.Domain.CustomerNotifications.RewardDigestSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<int>("BatchSize")
+                        .HasColumnType("integer")
+                        .HasColumnName("batch_size");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("enabled");
+
+                    b.Property<int>("MaxBrandsPerMessage")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_brands_per_message");
+
+                    b.Property<int>("MaxRewardsPerBrand")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_rewards_per_brand");
+
+                    b.Property<int>("MessageToUserIntervalMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("message_to_user_interval_minutes");
+
+                    b.Property<int>("ScanIntervalMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("scan_interval_minutes");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("reward_digest_settings", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_reward_digest_settings_batch_size_positive", "batch_size > 0");
+
+                            t.HasCheckConstraint("ck_reward_digest_settings_max_brands_positive", "max_brands_per_message > 0");
+
+                            t.HasCheckConstraint("ck_reward_digest_settings_max_rewards_positive", "max_rewards_per_brand > 0");
+
+                            t.HasCheckConstraint("ck_reward_digest_settings_message_interval_positive", "message_to_user_interval_minutes > 0");
+
+                            t.HasCheckConstraint("ck_reward_digest_settings_scan_interval_positive", "scan_interval_minutes > 0");
+
+                            t.HasCheckConstraint("ck_reward_digest_settings_singleton", "id = 1");
+                        });
+                });
+
             modelBuilder.Entity("StampService.Domain.Loyalty.LoyaltyMetricDefinition", b =>
                 {
                     b.Property<Guid>("Id")
@@ -488,6 +560,31 @@ namespace StampService.Infrastructure.Migrations
 
                             t.HasCheckConstraint("ck_stamp_transactions_transaction_type", "transaction_type IN (1, 2)");
                         });
+                });
+
+            modelBuilder.Entity("StampService.Domain.User.CustomerDigestState", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTime?>("LastDigestSentAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_digest_sent_at_utc");
+
+                    b.Property<DateTime?>("LastWalletOpenedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_wallet_opened_at_utc");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("LastDigestSentAtUtc")
+                        .HasDatabaseName("ix_customer_digest_states_last_digest_sent_at_utc");
+
+                    b.HasIndex("LastWalletOpenedAtUtc")
+                        .HasDatabaseName("ix_customer_digest_states_last_wallet_opened_at_utc");
+
+                    b.ToTable("customer_digest_states", (string)null);
                 });
 
             modelBuilder.Entity("StampService.Domain.User.RedemptionCode", b =>
@@ -752,6 +849,17 @@ namespace StampService.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("MetricBalance");
+                });
+
+            modelBuilder.Entity("StampService.Domain.User.CustomerDigestState", b =>
+                {
+                    b.HasOne("StampService.Domain.User.User", "User")
+                        .WithOne()
+                        .HasForeignKey("StampService.Domain.User.CustomerDigestState", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("StampService.Domain.User.RedemptionCode", b =>

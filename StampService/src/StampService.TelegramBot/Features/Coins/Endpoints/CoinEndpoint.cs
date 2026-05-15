@@ -2,10 +2,12 @@ using System.Globalization;
 using System.Net;
 using StampService.Application.Abstractions;
 using StampService.Application.Coins.Commands.IssueCoins;
+using StampService.Application.Coins.Commands.RedeemCoins;
 using StampService.Application.Coins.Queries.GetCoinHistory;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Coins;
 using StampService.TelegramBot.Common.Errors;
+using StampService.TelegramBot.Common.Notifications;
 using StampService.TelegramBot.Common.Routing;
 using StampService.TelegramBot.Features.Brands.Screens;
 using StampService.TelegramBot.Features.Coins.Actions;
@@ -15,6 +17,7 @@ using TelegramBotFlow.Core.Endpoints;
 using TelegramBotFlow.Core.Hosting;
 using TelegramBotFlow.Core.Routing;
 using TelegramBotFlow.Core.Screens;
+using DomainRedemptionCode = StampService.Domain.User.RedemptionCode;
 using UserEntity = StampService.Domain.User.User;
 
 namespace StampService.TelegramBot.Features.Coins.Endpoints;
@@ -24,9 +27,13 @@ public sealed class CoinEndpoint : IBotEndpoint
     public void MapEndpoint(BotApplication app)
     {
         app.MapAction<StartIssueCoinsAction>(StartIssueAsync);
+        app.MapAction<StartRedeemCoinsAction>(StartRedeemAsync);
         app.MapInput<EnterCoinCustomerCodeAction>(EnterCustomerCodeAsync);
+        app.MapInput<EnterCoinRedemptionCodeAction>(EnterRedemptionCodeAsync);
         app.MapInput<EnterCoinAmountAction>(EnterAmountAsync);
+        app.MapInput<EnterCoinCommentAction>(EnterCommentAsync);
         app.MapAction<ConfirmIssueCoinsAction>(ConfirmIssueAsync);
+        app.MapAction<ConfirmRedeemCoinsAction>(ConfirmRedeemAsync);
         app.MapAction<CancelCoinOperationAction>(CancelAsync);
         app.MapAction<ViewCoinHistoryAction, ViewCoinHistoryPayload>(ViewHistoryAsync);
     }
@@ -35,6 +42,12 @@ public sealed class CoinEndpoint : IBotEndpoint
     {
         ClearOperation(ctx);
         return Task.FromResult(BotResults.NavigateTo<CoinCustomerCodeScreen>());
+    }
+
+    private static Task<IEndpointResult> StartRedeemAsync(UpdateContext ctx)
+    {
+        ClearOperation(ctx);
+        return Task.FromResult(BotResults.NavigateTo<CoinRedemptionCodeScreen>());
     }
 
     private static async Task<IEndpointResult> EnterCustomerCodeAsync(UpdateContext ctx)
@@ -47,6 +60,16 @@ public sealed class CoinEndpoint : IBotEndpoint
         return BotInputResults.DeleteInputThen(BotResults.NavigateTo<CoinAmountScreen>());
     }
 
+    private static async Task<IEndpointResult> EnterRedemptionCodeAsync(UpdateContext ctx)
+    {
+        var code = ctx.MessageText?.Trim() ?? string.Empty;
+        if (!DomainRedemptionCode.IsValidCode(code))
+            return await Retry<CoinRedemptionCodeScreen, EnterCoinRedemptionCodeAction>("Код списания должен состоять из 4 цифр.");
+
+        ctx.Session?.Data.Set(CoinSessionKeys.RedemptionCode, code);
+        return BotInputResults.DeleteInputThen(BotResults.NavigateTo<CoinRedeemAmountScreen>());
+    }
+
     private static Task<IEndpointResult> EnterAmountAsync(UpdateContext ctx)
     {
         var text = ctx.MessageText?.Trim() ?? string.Empty;
@@ -54,13 +77,28 @@ public sealed class CoinEndpoint : IBotEndpoint
             return Retry<CoinAmountScreen, EnterCoinAmountAction>("Количество монеток должно быть положительным числом.");
 
         ctx.Session?.Data.Set(CoinSessionKeys.Amount, amount);
-        return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<CoinConfirmScreen>()));
+        var isRedeem = !string.IsNullOrWhiteSpace(ctx.Session?.Data.GetString(CoinSessionKeys.RedemptionCode));
+        return Task.FromResult(BotInputResults.DeleteInputThen(
+            isRedeem
+                ? BotResults.NavigateTo<CoinCommentScreen>()
+                : BotResults.NavigateTo<CoinConfirmScreen>()));
+    }
+
+    private static Task<IEndpointResult> EnterCommentAsync(UpdateContext ctx)
+    {
+        var comment = ctx.MessageText?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(comment))
+            return Retry<CoinCommentScreen, EnterCoinCommentAction>("Назначение списания обязательно.");
+
+        ctx.Session?.Data.Set(CoinSessionKeys.Comment, comment);
+        return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<CoinRedeemConfirmScreen>()));
     }
 
     private static async Task<IEndpointResult> ConfirmIssueAsync(
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        ICommandHandler<CoinOperationResponse, IssueCoinsCommand> issueHandler)
+        ICommandHandler<CoinOperationResponse, IssueCoinsCommand> issueHandler,
+        ICustomerNotificationService customerNotificationService)
     {
         var brandId = GetBrandId(ctx);
         var customerCode = ctx.Session?.Data.GetString(CoinSessionKeys.CustomerCode) ?? string.Empty;
@@ -81,8 +119,50 @@ public sealed class CoinEndpoint : IBotEndpoint
         if (result.IsFailed)
             return BotResults.ShowView(new ScreenView($"Не удалось начислить монетки: {BotErrorFormatter.Format(result.Errors)}").BackButton());
 
+        var brandName = ctx.Session?.Data.GetString(BrandWorkspaceScreen.BrandNameSessionKey) ?? "бренд";
+        await customerNotificationService.NotifyCoinsIssuedAsync(
+            result.Value,
+            brandName,
+            ctx.CancellationToken);
+
         ClearOperation(ctx);
         return BotResults.ShowView(OperationResultView("Монетки начислены", result.Value));
+    }
+
+    private static async Task<IEndpointResult> ConfirmRedeemAsync(
+        UpdateContext ctx,
+        ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
+        ICommandHandler<CoinOperationResponse, RedeemCoinsCommand> redeemHandler,
+        ICustomerNotificationService customerNotificationService)
+    {
+        var brandId = GetBrandId(ctx);
+        var redemptionCode = ctx.Session?.Data.GetString(CoinSessionKeys.RedemptionCode) ?? string.Empty;
+        var amount = ctx.Session?.Data.Get<int>(CoinSessionKeys.Amount) ?? 0;
+        var comment = ctx.Session?.Data.GetString(CoinSessionKeys.Comment) ?? string.Empty;
+
+        if (brandId == Guid.Empty || !DomainRedemptionCode.IsValidCode(redemptionCode) || amount <= 0 || string.IsNullOrWhiteSpace(comment))
+            return BotResults.ShowView(new ScreenView("Сценарий списания монеток устарел. Начните заново.").BackButton());
+
+        var actorUserId = await GetActorUserIdAsync(ctx, ensureUserHandler);
+        if (actorUserId is null)
+            return BotResults.ShowView(new ScreenView("Не удалось определить пользователя.").BackButton());
+
+        var result = await redeemHandler.Handle(
+            new RedeemCoinsCommand(brandId, actorUserId.Value, redemptionCode, amount, comment),
+            ctx.CancellationToken);
+
+        if (result.IsFailed)
+            return BotResults.ShowView(new ScreenView($"Не удалось списать монетки: {BotErrorFormatter.Format(result.Errors)}").BackButton());
+
+        var brandName = ctx.Session?.Data.GetString(BrandWorkspaceScreen.BrandNameSessionKey) ?? "бренд";
+        await customerNotificationService.NotifyCoinsRedeemedAsync(
+            result.Value,
+            brandName,
+            comment,
+            ctx.CancellationToken);
+
+        ClearOperation(ctx);
+        return BotResults.ShowView(OperationResultView("Монетки списаны", result.Value));
     }
 
     private static Task<IEndpointResult> CancelAsync(UpdateContext ctx)
@@ -181,13 +261,15 @@ public sealed class CoinEndpoint : IBotEndpoint
     private static void ClearOperation(UpdateContext ctx)
     {
         ctx.Session?.Data.Remove(CoinSessionKeys.CustomerCode);
+        ctx.Session?.Data.Remove(CoinSessionKeys.RedemptionCode);
         ctx.Session?.Data.Remove(CoinSessionKeys.Amount);
+        ctx.Session?.Data.Remove(CoinSessionKeys.Comment);
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);
 
     private static bool IsAutoComment(string value)
     {
-        return value is "Issue coins" or "Purchase product";
+        return value is "Issue coins" or "Purchase product" or "Manual coin redemption";
     }
 }

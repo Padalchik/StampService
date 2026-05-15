@@ -1,5 +1,6 @@
 using FluentResults;
 using StampService.Application.Abstractions;
+using StampService.Application.Brands;
 using StampService.Application.Coins;
 using StampService.Application.Errors;
 using StampService.Application.Metrics;
@@ -15,6 +16,7 @@ public class GetUserBrandWalletHistoryHandler
 
     private readonly ICoinTransactionRepository _coinTransactionRepository;
     private readonly ICoinWalletRepository _coinWalletRepository;
+    private readonly IBrandRepository _brandRepository;
     private readonly IMetricBalanceRepository _metricBalanceRepository;
     private readonly IStampTransactionRepository _stampTransactionRepository;
     private readonly IUserRepository _userRepository;
@@ -22,12 +24,14 @@ public class GetUserBrandWalletHistoryHandler
     public GetUserBrandWalletHistoryHandler(
         ICoinTransactionRepository coinTransactionRepository,
         ICoinWalletRepository coinWalletRepository,
+        IBrandRepository brandRepository,
         IMetricBalanceRepository metricBalanceRepository,
         IStampTransactionRepository stampTransactionRepository,
         IUserRepository userRepository)
     {
         _coinTransactionRepository = coinTransactionRepository;
         _coinWalletRepository = coinWalletRepository;
+        _brandRepository = brandRepository;
         _metricBalanceRepository = metricBalanceRepository;
         _stampTransactionRepository = stampTransactionRepository;
         _userRepository = userRepository;
@@ -47,10 +51,16 @@ public class GetUserBrandWalletHistoryHandler
         if (!userExists)
             return Result.Fail(UserErrors.NotFound());
 
+        var brand = await _brandRepository.GetByIdAsync(query.BrandId, cancellationToken);
+        if (brand is null)
+            return Result.Fail(BrandErrors.NotFound());
+
         var sourceTake = query.Skip + query.Take;
-        var balances = (await _metricBalanceRepository.GetUserBalancesAsync(query.UserId, cancellationToken))
-            .Where(balance => balance.BrandId == query.BrandId)
-            .ToArray();
+        var balances = brand.IsMetricsEnabled
+            ? (await _metricBalanceRepository.GetUserBalancesAsync(query.UserId, cancellationToken))
+                .Where(balance => balance.BrandId == query.BrandId)
+                .ToArray()
+            : [];
 
         var items = new List<UserBrandWalletHistoryItemResponse>();
         foreach (var balance in balances)
@@ -71,10 +81,12 @@ public class GetUserBrandWalletHistoryHandler
                 CreatedAt: transaction.CreatedAt)));
         }
 
-        var wallet = await _coinWalletRepository.GetByUserAndBrandAsync(
-            query.UserId,
-            query.BrandId,
-            cancellationToken);
+        var wallet = brand.IsCoinsEnabled
+            ? await _coinWalletRepository.GetByUserAndBrandAsync(
+                query.UserId,
+                query.BrandId,
+                cancellationToken)
+            : null;
 
         if (wallet is not null)
         {
@@ -95,10 +107,12 @@ public class GetUserBrandWalletHistoryHandler
         }
 
         var brandName = balances.FirstOrDefault()?.BrandName
-            ?? (await _coinWalletRepository.GetUserWalletsAsync(query.UserId, cancellationToken))
-                .FirstOrDefault(wallet => wallet.BrandId == query.BrandId)
-                ?.BrandName
-            ?? "бренд";
+            ?? (brand.IsCoinsEnabled
+                ? (await _coinWalletRepository.GetUserWalletsAsync(query.UserId, cancellationToken))
+                    .FirstOrDefault(wallet => wallet.BrandId == query.BrandId)
+                    ?.BrandName
+                : null)
+            ?? brand.Name;
 
         var pageItems = items
             .OrderByDescending(item => item.CreatedAt)
@@ -110,6 +124,8 @@ public class GetUserBrandWalletHistoryHandler
             query.UserId,
             query.BrandId,
             brandName,
+            brand.IsMetricsEnabled,
+            brand.IsCoinsEnabled,
             query.Skip,
             query.Take,
             pageItems));

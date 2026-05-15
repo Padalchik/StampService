@@ -21,6 +21,26 @@ public class BrandConfiguration : IEntityTypeConfiguration<Brand>
             .HasMaxLength(Constants.MAX_BRAND_NAME_LENGTH)
             .HasColumnName("name");
 
+        builder.Property(b => b.IsMetricsEnabled)
+            .IsRequired()
+            .HasDefaultValue(true)
+            .HasColumnName("is_metrics_enabled");
+
+        builder.Property(b => b.IsCoinsEnabled)
+            .IsRequired()
+            .HasDefaultValue(true)
+            .HasColumnName("is_coins_enabled");
+
+        builder.Property(b => b.IsCoinProductRedemptionEnabled)
+            .IsRequired()
+            .HasDefaultValue(true)
+            .HasColumnName("is_coin_product_redemption_enabled");
+
+        builder.Property(b => b.IsManualCoinRedemptionEnabled)
+            .IsRequired()
+            .HasDefaultValue(false)
+            .HasColumnName("is_manual_coin_redemption_enabled");
+
         builder.HasMany(b => b.Locations)
             .WithOne(l => l.Brand)
             .HasForeignKey(l => l.BrandId)

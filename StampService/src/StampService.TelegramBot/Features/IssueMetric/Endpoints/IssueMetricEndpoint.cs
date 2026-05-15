@@ -4,6 +4,7 @@ using StampService.Application.Users;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.TelegramBot.Common.Errors;
+using StampService.TelegramBot.Common.Notifications;
 using StampService.TelegramBot.Common.Routing;
 using StampService.TelegramBot.Features.Brands.Screens;
 using StampService.TelegramBot.Features.IssueMetric.Actions;
@@ -77,7 +78,8 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
     private static async Task<IEndpointResult> ConfirmAsync(
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        ICommandHandler<IssueMetricResponse, IssueMetricCommand> issueMetricHandler)
+        ICommandHandler<IssueMetricResponse, IssueMetricCommand> issueMetricHandler,
+        ICustomerNotificationService customerNotificationService)
     {
         var metricDefinitionId = ctx.Session?.Data.Get<Guid>(IssueMetricSessionKeys.MetricDefinitionId) ?? Guid.Empty;
         var recipientUserId = ctx.Session?.Data.Get<Guid>(IssueMetricSessionKeys.RecipientUserId) ?? Guid.Empty;
@@ -123,6 +125,14 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
                 $"Не удалось выдать метрику: {BotErrorFormatter.Format(issueResult.Errors, BotErrorContext.IssueMetric)}")
                 .BackButton());
         }
+
+        var brandName = ctx.Session?.Data.GetString(BrandWorkspaceScreen.BrandNameSessionKey) ?? "бренд";
+        var metricName = ctx.Session?.Data.GetString(IssueMetricSessionKeys.MetricName) ?? "метрика";
+        await customerNotificationService.NotifyMetricIssuedAsync(
+            issueResult.Value,
+            brandName,
+            metricName,
+            ctx.CancellationToken);
 
         ClearIssueSession(ctx);
 

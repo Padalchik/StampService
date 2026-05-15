@@ -46,9 +46,12 @@ public class RedeemMetricValidationService : IRedeemMetricValidationService
         if (metric is null)
             return Result.Fail(MetricErrors.NotFound());
 
-        var brandExists = await _brandRepository.ExistsAsync(metric.BrandId, cancellationToken);
-        if (!brandExists)
+        var brand = await _brandRepository.GetByIdAsync(metric.BrandId, cancellationToken);
+        if (brand is null)
             return Result.Fail(BrandErrors.NotFound());
+
+        if (!brand.IsMetricsEnabled)
+            return Result.Fail(BrandErrors.MetricsDisabled());
 
         var canRedeem = await _brandAccessService.CanAsync(
             redeemerUserId,

@@ -29,6 +29,19 @@ public class BrandRepository : IBrandRepository
             .AnyAsync(brand => brand.Id == brandId, cancellationToken);
     }
 
+    public async Task<Brand?> GetByIdAsync(Guid brandId, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Brands
+            .AsNoTracking()
+            .FirstOrDefaultAsync(brand => brand.Id == brandId, cancellationToken);
+    }
+
+    public async Task<Brand?> GetByIdForUpdateAsync(Guid brandId, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Brands
+            .FirstOrDefaultAsync(brand => brand.Id == brandId, cancellationToken);
+    }
+
     public async Task<IReadOnlyCollection<AdminBrandReadModel>> GetAdminBrandsAsync(CancellationToken cancellationToken)
     {
         return await _dbContext.Brands
@@ -37,6 +50,10 @@ public class BrandRepository : IBrandRepository
             .Select(brand => new AdminBrandReadModel(
                 brand.Id,
                 brand.Name,
+                brand.IsMetricsEnabled,
+                brand.IsCoinsEnabled,
+                brand.IsCoinProductRedemptionEnabled,
+                brand.IsManualCoinRedemptionEnabled,
                 _dbContext.BrandMemberships
                     .Where(membership => membership.BrandId == brand.Id
                         && membership.Role.SystemName == SystemRoles.Owner)
@@ -53,5 +70,10 @@ public class BrandRepository : IBrandRepository
                     .Select(membership => membership.User.CustomerCode)
                     .FirstOrDefault()))
             .ToArrayAsync(cancellationToken);
+    }
+
+    public Task SaveAsync(CancellationToken cancellationToken)
+    {
+        return _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

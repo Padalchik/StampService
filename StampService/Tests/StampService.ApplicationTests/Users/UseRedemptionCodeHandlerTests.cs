@@ -15,7 +15,7 @@ public class UseRedemptionCodeHandlerTests
         var code = RedemptionCode.Create(
             userId,
             "1234",
-            now.UtcDateTime.AddMinutes(3),
+            now.UtcDateTime.AddMinutes(5),
             now.UtcDateTime).Value;
         var repository = new FakeRedemptionCodeRepository();
         repository.Add(code);

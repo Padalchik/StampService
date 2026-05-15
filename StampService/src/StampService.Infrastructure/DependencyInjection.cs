@@ -6,6 +6,7 @@ using StampService.Application.Auth;
 using StampService.Application.Brands;
 using StampService.Application.CoinProducts;
 using StampService.Application.Coins;
+using StampService.Application.CustomerNotifications;
 using StampService.Application.Metrics;
 using StampService.Application.Users;
 using StampService.Infrastructure;
@@ -35,6 +36,9 @@ public static class DependencyInjection
         services.AddScoped<ICoinTransactionRepository, CoinTransactionRepository>();
         services.AddScoped<ICoinProductRepository, CoinProductRepository>();
         services.AddScoped<IRedemptionCodeRepository, RedemptionCodeRepository>();
+        services.AddScoped<ICustomerDigestStateRepository, CustomerDigestStateRepository>();
+        services.AddScoped<ICustomerRewardDigestRepository, CustomerRewardDigestRepository>();
+        services.AddScoped<IRewardDigestSettingsRepository, RewardDigestSettingsRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
 
         return services;
