@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using StampService.Infrastructure;
@@ -12,9 +13,11 @@ using StampService.Infrastructure;
 namespace StampService.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260515081945_NotifyUsersForPresent")]
+    partial class NotifyUsersForPresent
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -360,54 +363,6 @@ namespace StampService.Infrastructure.Migrations
                     b.ToTable("coin_wallets", null, t =>
                         {
                             t.HasCheckConstraint("ck_coin_wallets_value_non_negative", "value >= 0");
-                        });
-                });
-
-            modelBuilder.Entity("StampService.Domain.CustomerNotifications.RewardDigestSettings", b =>
-                {
-                    b.Property<int>("Id")
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    b.Property<int>("BatchSize")
-                        .HasColumnType("integer")
-                        .HasColumnName("batch_size");
-
-                    b.Property<bool>("Enabled")
-                        .HasColumnType("boolean")
-                        .HasColumnName("enabled");
-
-                    b.Property<int>("MaxBrandsPerMessage")
-                        .HasColumnType("integer")
-                        .HasColumnName("max_brands_per_message");
-
-                    b.Property<int>("MaxRewardsPerBrand")
-                        .HasColumnType("integer")
-                        .HasColumnName("max_rewards_per_brand");
-
-                    b.Property<int>("MessageToUserIntervalMinutes")
-                        .HasColumnType("integer")
-                        .HasColumnName("message_to_user_interval_minutes");
-
-                    b.Property<int>("ScanIntervalMinutes")
-                        .HasColumnType("integer")
-                        .HasColumnName("scan_interval_minutes");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("reward_digest_settings", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_reward_digest_settings_batch_size_positive", "batch_size > 0");
-
-                            t.HasCheckConstraint("ck_reward_digest_settings_max_brands_positive", "max_brands_per_message > 0");
-
-                            t.HasCheckConstraint("ck_reward_digest_settings_max_rewards_positive", "max_rewards_per_brand > 0");
-
-                            t.HasCheckConstraint("ck_reward_digest_settings_message_interval_positive", "message_to_user_interval_minutes > 0");
-
-                            t.HasCheckConstraint("ck_reward_digest_settings_scan_interval_positive", "scan_interval_minutes > 0");
-
-                            t.HasCheckConstraint("ck_reward_digest_settings_singleton", "id = 1");
                         });
                 });
 

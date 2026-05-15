@@ -14,4 +14,7 @@ public static class AdminSessionKeys
     public const string CreateOwnerCustomerCode = "admin.create_brand.owner_customer_code";
 
     public const string ReassignOwnerCustomerCode = "admin.reassign_owner.customer_code";
+
+    public const string RewardDigestEditSettingKey = "admin.reward_digest.edit_setting_key";
+    public const string RewardDigestEditSettingLabel = "admin.reward_digest.edit_setting_label";
 }

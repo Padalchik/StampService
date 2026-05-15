@@ -55,6 +55,8 @@ public sealed class AdminPanelScreen : IScreen
         return view.Row()
             .Button<StartCreateBrandAction>("Создать бренд")
             .Row()
+            .NavigateButton<AdminRewardDigestSettingsScreen>("Дайджест наград")
+            .Row()
             .MenuButton("Главное меню")
             .BackButton();
     }

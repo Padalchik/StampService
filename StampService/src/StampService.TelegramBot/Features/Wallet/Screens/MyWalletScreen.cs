@@ -1,8 +1,10 @@
 using System.Net;
 using StampService.Application.Abstractions;
+using StampService.Application.CustomerNotifications.Commands.MarkWalletOpened;
 using StampService.Application.Users.Commands.CreateRedemptionCode;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Application.Wallet.Queries.GetUserWalletOverview;
+using StampService.Contracts.DTOs.CustomerNotifications;
 using StampService.Contracts.DTOs.Users;
 using StampService.Contracts.DTOs.Wallet;
 using StampService.TelegramBot.Features.Wallet.Actions;
@@ -16,15 +18,18 @@ public sealed class MyWalletScreen : IScreen
     public const string ForceRefreshCodeSessionKey = "wallet.force_refresh_code";
 
     private readonly ICommandHandler<CreateRedemptionCodeResponse, CreateRedemptionCodeCommand> _createCodeHandler;
+    private readonly ICommandHandler<MarkWalletOpenedResponse, MarkWalletOpenedCommand> _markWalletOpenedHandler;
     private readonly ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> _ensureUserHandler;
     private readonly IQueryHandler<UserWalletOverviewResponse, GetUserWalletOverviewQuery> _overviewHandler;
 
     public MyWalletScreen(
         ICommandHandler<CreateRedemptionCodeResponse, CreateRedemptionCodeCommand> createCodeHandler,
+        ICommandHandler<MarkWalletOpenedResponse, MarkWalletOpenedCommand> markWalletOpenedHandler,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
         IQueryHandler<UserWalletOverviewResponse, GetUserWalletOverviewQuery> overviewHandler)
     {
         _createCodeHandler = createCodeHandler;
+        _markWalletOpenedHandler = markWalletOpenedHandler;
         _ensureUserHandler = ensureUserHandler;
         _overviewHandler = overviewHandler;
     }
@@ -42,6 +47,10 @@ public sealed class MyWalletScreen : IScreen
 
         if (userResult.IsFailed)
             return new ScreenView("Не удалось определить пользователя.").BackButton();
+
+        await _markWalletOpenedHandler.Handle(
+            new MarkWalletOpenedCommand(userResult.Value.UserId),
+            ctx.CancellationToken);
 
         var forceRefreshCode = ctx.Session?.Data.Get<bool>(ForceRefreshCodeSessionKey) ?? false;
         ctx.Session?.Data.Remove(ForceRefreshCodeSessionKey);

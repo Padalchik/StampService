@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using StampService.Application;
 using StampService.Application.Administration;
+using StampService.Application.CustomerNotifications;
 using StampService.Infrastructure;
 using StampService.Infrastructure.Seeding;
 using StampService.TelegramBot.Common.Notifications;
@@ -34,7 +35,10 @@ if (string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("Default
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("Admin"));
+builder.Services.Configure<RewardDigestOptions>(builder.Configuration.GetSection(RewardDigestOptions.SectionName));
 builder.Services.AddScoped<ICustomerNotificationService, CustomerNotificationService>();
+builder.Services.AddScoped<CustomerRewardDigestSender>();
+builder.Services.AddHostedService<CustomerRewardDigestHostedService>();
 builder.Services.AddBotEndpoints(typeof(Program).Assembly);
 builder.Services.AddScreens(typeof(Program).Assembly);
 
