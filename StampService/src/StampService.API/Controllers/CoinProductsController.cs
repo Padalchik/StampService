@@ -1,5 +1,3 @@
-using System.Security.Claims;
-using FluentResults;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StampService.API.EndpointResults;
@@ -11,7 +9,6 @@ using StampService.Application.CoinProducts.Commands.UpdateCoinProduct;
 using StampService.Application.CoinProducts.Queries.GetBrandCoinProducts;
 using StampService.Application.CoinProducts.Queries.GetCoinProductDetails;
 using StampService.Application.CoinProducts.Queries.GetCoinProductPurchaseOptions;
-using StampService.Application.Errors;
 using StampService.Contracts.DTOs.CoinProducts;
 using StampService.Contracts.DTOs.Coins;
 
@@ -20,7 +17,7 @@ namespace StampService.API.Controllers;
 [ApiController]
 [Authorize]
 [Route("api")]
-public class CoinProductsController : ControllerBase
+public class CoinProductsController : ApiControllerBase
 {
     [HttpPost("brands/{brandId:guid}/coin-products")]
     public async Task<EndpointResult<CoinProductResponse>> Create(
@@ -137,14 +134,4 @@ public class CoinProductsController : ControllerBase
             cancellationToken);
     }
 
-    private Result<Guid> GetUserId()
-    {
-        var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrWhiteSpace(userIdValue))
-            return Result.Fail(AuthErrors.UserIdClaimMissing());
-
-        return Guid.TryParse(userIdValue, out var userId)
-            ? Result.Ok(userId)
-            : Result.Fail(AuthErrors.UserIdClaimInvalid());
-    }
 }

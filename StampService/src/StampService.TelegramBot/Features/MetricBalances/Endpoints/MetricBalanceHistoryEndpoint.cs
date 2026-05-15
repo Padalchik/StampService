@@ -4,6 +4,7 @@ using StampService.Application.Abstractions;
 using StampService.Application.Metrics.Queries.GetUserMetricTransactions;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Metrics;
+using StampService.TelegramBot.Common.Routing;
 using StampService.TelegramBot.Features.MetricBalances.Actions;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Endpoints;
@@ -26,14 +27,7 @@ public sealed class MetricBalanceHistoryEndpoint : IBotEndpoint
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
         IQueryHandler<MetricTransactionsResponse, GetUserMetricTransactionsQuery> transactionsHandler)
     {
-        var from = ctx.Update.CallbackQuery?.From ?? ctx.Update.Message?.From;
-        var userResult = await ensureUserHandler.Handle(
-            new EnsureTelegramUserCommand(
-                ctx.UserId,
-                from?.FirstName,
-                from?.LastName,
-                from?.Username),
-            ctx.CancellationToken);
+        var userResult = await BotEndpointHelpers.EnsureUserAsync(ctx, ensureUserHandler);
 
         if (userResult.IsFailed)
             return BotResults.ShowView(new ScreenView("Не удалось определить пользователя.").BackButton());

@@ -61,14 +61,7 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
                 .BackButton()));
         }
 
-        var from = ctx.Update.Message?.From ?? ctx.Update.CallbackQuery?.From;
-        var redeemerResult = await ensureUserHandler.Handle(
-            new EnsureTelegramUserCommand(
-                ctx.UserId,
-                from?.FirstName,
-                from?.LastName,
-                from?.Username),
-            ctx.CancellationToken);
+        var redeemerResult = await BotEndpointHelpers.EnsureUserAsync(ctx, ensureUserHandler);
 
         if (redeemerResult.IsFailed)
         {
@@ -119,14 +112,7 @@ public sealed class RedeemMetricEndpoint : IBotEndpoint
             return BotResults.ShowView(new ScreenView("Сценарий списания устарел. Начните заново.").BackButton());
         }
 
-        var from = ctx.Update.Message?.From ?? ctx.Update.CallbackQuery?.From;
-        var redeemerResult = await ensureUserHandler.Handle(
-            new EnsureTelegramUserCommand(
-                ctx.UserId,
-                from?.FirstName,
-                from?.LastName,
-                from?.Username),
-            ctx.CancellationToken);
+        var redeemerResult = await BotEndpointHelpers.EnsureUserAsync(ctx, ensureUserHandler);
 
         if (redeemerResult.IsFailed)
         {

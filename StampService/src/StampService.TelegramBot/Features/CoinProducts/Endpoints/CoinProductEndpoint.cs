@@ -323,24 +323,19 @@ public sealed class CoinProductEndpoint : IBotEndpoint
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler)
     {
-        var from = ctx.Update.Message?.From ?? ctx.Update.CallbackQuery?.From;
-        return await ensureUserHandler.Handle(
-            new EnsureTelegramUserCommand(ctx.UserId, from?.FirstName, from?.LastName, from?.Username),
-            ctx.CancellationToken);
+        return await BotEndpointHelpers.EnsureUserAsync(ctx, ensureUserHandler);
     }
 
     private static Task<IEndpointResult> Retry<TScreen, TAction>(string message)
         where TScreen : IScreen
         where TAction : IBotAction
     {
-        return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(message)
-            .AwaitInput<TAction>()
-            .BackButton())));
+        return BotEndpointHelpers.RetryInput<TScreen, TAction>(message);
     }
 
     private static IEndpointResult ErrorView(string message)
     {
-        return BotResults.ShowView(new ScreenView(message).BackButton());
+        return BotEndpointHelpers.ErrorView(message);
     }
 
     private static Guid GetBrandId(UpdateContext ctx)

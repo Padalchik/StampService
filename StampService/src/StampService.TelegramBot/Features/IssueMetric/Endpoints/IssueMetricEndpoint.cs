@@ -93,14 +93,7 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
             return BotResults.ShowView(new ScreenView("Сценарий выдачи устарел. Начните заново.").BackButton());
         }
 
-        var from = ctx.Update.Message?.From ?? ctx.Update.CallbackQuery?.From;
-        var issuerResult = await ensureUserHandler.Handle(
-            new EnsureTelegramUserCommand(
-                ctx.UserId,
-                from?.FirstName,
-                from?.LastName,
-                from?.Username),
-            ctx.CancellationToken);
+        var issuerResult = await BotEndpointHelpers.EnsureUserAsync(ctx, ensureUserHandler);
 
         if (issuerResult.IsFailed)
         {

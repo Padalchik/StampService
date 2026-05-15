@@ -232,23 +232,14 @@ public sealed class CoinEndpoint : IBotEndpoint
         where TScreen : IScreen
         where TAction : IBotAction
     {
-        return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(message)
-            .AwaitInput<TAction>()
-            .BackButton())));
+        return BotEndpointHelpers.RetryInput<TScreen, TAction>(message);
     }
 
     private static async Task<Guid?> GetActorUserIdAsync(
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler)
     {
-        var from = ctx.Update.Message?.From ?? ctx.Update.CallbackQuery?.From;
-        var result = await ensureUserHandler.Handle(
-            new EnsureTelegramUserCommand(
-                ctx.UserId,
-                from?.FirstName,
-                from?.LastName,
-                from?.Username),
-            ctx.CancellationToken);
+        var result = await BotEndpointHelpers.EnsureUserAsync(ctx, ensureUserHandler);
 
         return result.IsSuccess ? result.Value.UserId : null;
     }

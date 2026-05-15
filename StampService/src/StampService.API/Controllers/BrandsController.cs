@@ -1,5 +1,3 @@
-using System.Security.Claims;
-using FluentResults;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StampService.API.EndpointResults;
@@ -7,7 +5,6 @@ using StampService.Application.Abstractions;
 using StampService.Application.Brands.Commands.AddBrandStaff;
 using StampService.Application.Brands.Commands.AssignBrandOwner;
 using StampService.Application.Brands.Commands.CreateBrand;
-using StampService.Application.Errors;
 using StampService.Contracts.DTOs.Brands;
 
 namespace StampService.API.Controllers;
@@ -15,7 +12,7 @@ namespace StampService.API.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/[controller]")]
-public class BrandsController : ControllerBase
+public class BrandsController : ApiControllerBase
 {
     [HttpPost]
     public async Task<EndpointResult<CreateBrandResponse>> Create(
@@ -57,14 +54,4 @@ public class BrandsController : ControllerBase
         return await handler.Handle(command, cancellationToken);
     }
 
-    private Result<Guid> GetUserId()
-    {
-        var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrWhiteSpace(userIdValue))
-            return Result.Fail(AuthErrors.UserIdClaimMissing());
-
-        return Guid.TryParse(userIdValue, out var userId)
-            ? Result.Ok(userId)
-            : Result.Fail(AuthErrors.UserIdClaimInvalid());
-    }
 }
