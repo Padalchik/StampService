@@ -52,14 +52,7 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
                 .BackButton()));
         }
 
-        var from = ctx.Update.Message?.From ?? ctx.Update.CallbackQuery?.From;
-        var userResult = await ensureUserHandler.Handle(
-            new EnsureTelegramUserCommand(
-                ctx.UserId,
-                from?.FirstName,
-                from?.LastName,
-                from?.Username),
-            ctx.CancellationToken);
+        var userResult = await BotEndpointHelpers.EnsureUserAsync(ctx, ensureUserHandler);
 
         if (userResult.IsFailed)
         {
@@ -93,14 +86,7 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
         IQueryHandler<MetricTransactionsResponse, GetMetricTransactionsQuery> transactionsHandler)
     {
-        var from = ctx.Update.Message?.From ?? ctx.Update.CallbackQuery?.From;
-        var userResult = await ensureUserHandler.Handle(
-            new EnsureTelegramUserCommand(
-                ctx.UserId,
-                from?.FirstName,
-                from?.LastName,
-                from?.Username),
-            ctx.CancellationToken);
+        var userResult = await BotEndpointHelpers.EnsureUserAsync(ctx, ensureUserHandler);
 
         if (userResult.IsFailed)
             return BotResults.ShowView(new ScreenView("Не удалось определить пользователя.").BackButton());

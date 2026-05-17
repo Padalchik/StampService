@@ -6,6 +6,7 @@ using StampService.Application.Wallet.Queries.GetUserBrandWalletHistory;
 using StampService.Application.Wallet.Queries.GetUserBrandRewards;
 using StampService.Contracts.DTOs.Users;
 using StampService.Contracts.DTOs.Wallet;
+using StampService.TelegramBot.Common.Routing;
 using StampService.TelegramBot.Features.Wallet.Actions;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Endpoints;
@@ -29,14 +30,7 @@ public sealed class WalletBrandHistoryEndpoint : IBotEndpoint
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
         IQueryHandler<UserBrandRewardsResponse, GetUserBrandRewardsQuery> rewardsHandler)
     {
-        var from = ctx.Update.CallbackQuery?.From ?? ctx.Update.Message?.From;
-        var userResult = await ensureUserHandler.Handle(
-            new EnsureTelegramUserCommand(
-                ctx.UserId,
-                from?.FirstName,
-                from?.LastName,
-                from?.Username),
-            ctx.CancellationToken);
+        var userResult = await BotEndpointHelpers.EnsureUserAsync(ctx, ensureUserHandler);
 
         if (userResult.IsFailed)
             return BotResults.ShowView(new ScreenView("Не удалось определить пользователя.").BackButton());
@@ -65,14 +59,7 @@ public sealed class WalletBrandHistoryEndpoint : IBotEndpoint
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
         IQueryHandler<UserBrandWalletHistoryResponse, GetUserBrandWalletHistoryQuery> historyHandler)
     {
-        var from = ctx.Update.CallbackQuery?.From ?? ctx.Update.Message?.From;
-        var userResult = await ensureUserHandler.Handle(
-            new EnsureTelegramUserCommand(
-                ctx.UserId,
-                from?.FirstName,
-                from?.LastName,
-                from?.Username),
-            ctx.CancellationToken);
+        var userResult = await BotEndpointHelpers.EnsureUserAsync(ctx, ensureUserHandler);
 
         if (userResult.IsFailed)
             return BotResults.ShowView(new ScreenView("Не удалось определить пользователя.").BackButton());

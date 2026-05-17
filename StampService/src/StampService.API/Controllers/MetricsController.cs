@@ -1,10 +1,7 @@
-using System.Security.Claims;
-using FluentResults;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StampService.API.EndpointResults;
 using StampService.Application.Abstractions;
-using StampService.Application.Errors;
 using StampService.Application.Metrics.Commands.CreateMetric;
 using StampService.Application.Metrics.Commands.IssueMetric;
 using StampService.Application.Metrics.Commands.RedeemMetric;
@@ -20,7 +17,7 @@ namespace StampService.API.Controllers;
 [ApiController]
 [Authorize]
 [Route("api")]
-public class MetricsController : ControllerBase
+public class MetricsController : ApiControllerBase
 {
     [HttpPost("brands/{brandId:guid}/metrics")]
     public async Task<EndpointResult<MetricResponse>> Create(
@@ -165,14 +162,4 @@ public class MetricsController : ControllerBase
         return await handler.Handle(query, cancellationToken);
     }
 
-    private Result<Guid> GetUserId()
-    {
-        var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrWhiteSpace(userIdValue))
-            return Result.Fail(AuthErrors.UserIdClaimMissing());
-
-        return Guid.TryParse(userIdValue, out var userId)
-            ? Result.Ok(userId)
-            : Result.Fail(AuthErrors.UserIdClaimInvalid());
-    }
 }

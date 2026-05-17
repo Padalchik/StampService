@@ -61,8 +61,7 @@ public sealed class AdminRewardDigestSettingsScreen : IScreen
             new StartEditRewardDigestSettingPayload("max_rewards", "Максимум наград на бренд"));
 
         return view.Row()
-            .NavigateButton<AdminPanelScreen>("К админке")
-            .BackButton();
+            .MenuButton("В главное меню");
     }
 
     private static string FormatEnabled(bool value) => value ? "да" : "нет";

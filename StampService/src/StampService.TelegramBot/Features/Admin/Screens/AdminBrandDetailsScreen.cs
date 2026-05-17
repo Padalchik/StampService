@@ -26,8 +26,7 @@ public sealed class AdminBrandDetailsScreen : IScreen
             $"Монетки: {FormatEnabled(isCoinsEnabled)}")
             .Button<StartReassignOwnerAction>("Назначить владельца")
             .Row()
-            .NavigateButton<AdminPanelScreen>("К брендам")
-            .BackButton());
+            .MenuButton("В главное меню"));
     }
 
     private static string Html(string value)

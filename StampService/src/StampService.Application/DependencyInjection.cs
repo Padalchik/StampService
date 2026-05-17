@@ -17,7 +17,7 @@ public static class DependencyInjection
     {
         var assembly = typeof(DependencyInjection).Assembly;
 
-        // DirectoryService uses a different Scrutor chain here; keep each selector explicit.
+        // Keep command and query selectors explicit so Scrutor does not mix registrations.
         services.Scan(scan => scan
             .FromAssemblies(assembly)
             .AddClasses(c => c.AssignableTo(typeof(ICommandHandler<,>)))
