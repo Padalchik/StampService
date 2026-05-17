@@ -119,6 +119,20 @@ Wizards/
  WizardStep.cs
 
 [metadataReferences]
+../../../../.dotnet-cli/.nuget/packages/
+ microsoft.extensions.ambientmetadata.application/10.0.0/lib/net10.0/Microsoft.Extensions.AmbientMetadata.Application.dll
+ microsoft.extensions.compliance.abstractions/10.0.0/lib/net10.0/Microsoft.Extensions.Compliance.Abstractions.dll
+ microsoft.extensions.dependencyinjection.autoactivation/10.0.0/lib/net10.0/Microsoft.Extensions.DependencyInjection.AutoActivation.dll
+ microsoft.extensions.diagnostics.exceptionsummarization/10.0.0/lib/net10.0/Microsoft.Extensions.Diagnostics.ExceptionSummarization.dll
+ microsoft.extensions.http.diagnostics/10.0.0/lib/net10.0/Microsoft.Extensions.Http.Diagnostics.dll
+ microsoft.extensions.http.resilience/10.0.0/lib/net10.0/Microsoft.Extensions.Http.Resilience.dll
+ microsoft.extensions.resilience/10.0.0/lib/net10.0/Microsoft.Extensions.Resilience.dll
+ microsoft.extensions.telemetry.abstractions/10.0.0/lib/net10.0/Microsoft.Extensions.Telemetry.Abstractions.dll
+ microsoft.extensions.telemetry/10.0.0/lib/net10.0/Microsoft.Extensions.Telemetry.dll
+ polly.core/8.4.2/lib/net8.0/Polly.Core.dll
+ polly.extensions/8.4.2/lib/net8.0/Polly.Extensions.dll
+ polly.ratelimiting/8.4.2/lib/net8.0/Polly.RateLimiting.dll
+ telegram.bot/22.9.0/lib/net6.0/Telegram.Bot.dll
 ../TelegramBotFlow.Core.Abstractions/obj/Debug/net10.0/ref/TelegramBotFlow.Core.Abstractions.dll
 <DOTNET>/packs/Microsoft.AspNetCore.App.Ref/10.0.3/ref/net10.0/
  Microsoft.AspNetCore.Antiforgery.dll
@@ -429,22 +443,11 @@ Wizards/
  System.Xml.XPath.dll
  System.Xml.XPath.XDocument.dll
  WindowsBase.dll
-<NUGET>/
- microsoft.extensions.ambientmetadata.application/10.0.0/lib/net10.0/Microsoft.Extensions.AmbientMetadata.Application.dll
- microsoft.extensions.compliance.abstractions/10.0.0/lib/net10.0/Microsoft.Extensions.Compliance.Abstractions.dll
- microsoft.extensions.dependencyinjection.autoactivation/10.0.0/lib/net10.0/Microsoft.Extensions.DependencyInjection.AutoActivation.dll
- microsoft.extensions.diagnostics.exceptionsummarization/10.0.0/lib/net10.0/Microsoft.Extensions.Diagnostics.ExceptionSummarization.dll
- microsoft.extensions.http.diagnostics/10.0.0/lib/net10.0/Microsoft.Extensions.Http.Diagnostics.dll
- microsoft.extensions.http.resilience/10.0.0/lib/net10.0/Microsoft.Extensions.Http.Resilience.dll
- microsoft.extensions.resilience/10.0.0/lib/net10.0/Microsoft.Extensions.Resilience.dll
- microsoft.extensions.telemetry.abstractions/10.0.0/lib/net10.0/Microsoft.Extensions.Telemetry.Abstractions.dll
- microsoft.extensions.telemetry/10.0.0/lib/net10.0/Microsoft.Extensions.Telemetry.dll
- polly.core/8.4.2/lib/net8.0/Polly.Core.dll
- polly.extensions/8.4.2/lib/net8.0/Polly.Extensions.dll
- polly.ratelimiting/8.4.2/lib/net8.0/Polly.RateLimiting.dll
- telegram.bot/22.9.0/lib/net6.0/Telegram.Bot.dll
 
 [analyzerReferences]
+../../../../.dotnet-cli/.nuget/packages/microsoft.extensions.telemetry.abstractions/10.0.0/analyzers/dotnet/cs/
+ Microsoft.Gen.Logging.dll
+ Microsoft.Gen.Metrics.dll
 <DOTNET>/packs/Microsoft.AspNetCore.App.Ref/10.0.3/analyzers/dotnet/cs/
  Microsoft.AspNetCore.App.Analyzers.dll
  Microsoft.AspNetCore.App.CodeFixes.dll
@@ -462,9 +465,6 @@ Wizards/
 <DOTNET>/sdk/10.0.103/Sdks/Microsoft.NET.Sdk/analyzers/
  Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll
  Microsoft.CodeAnalysis.NetAnalyzers.dll
-<NUGET>/microsoft.extensions.telemetry.abstractions/10.0.0/analyzers/dotnet/cs/
- Microsoft.Gen.Logging.dll
- Microsoft.Gen.Metrics.dll
 
 [analyzerConfigFiles]
 ../../

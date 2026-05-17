@@ -80,8 +80,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGet("/phone-auth-test", () => Results.Redirect("/phone-auth-test.html"));
 app.MapControllers();
 
 app.Run();

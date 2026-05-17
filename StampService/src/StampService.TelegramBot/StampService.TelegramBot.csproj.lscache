@@ -309,6 +309,33 @@ obj/Debug/net10.0/
 Program.cs
 
 [metadataReferences]
+../../.dotnet-cli/.nuget/packages/
+ fluentresults/4.0.0/lib/net9.0/FluentResults.dll
+ microsoft.entityframeworkcore.abstractions/10.0.5/lib/net10.0/Microsoft.EntityFrameworkCore.Abstractions.dll
+ microsoft.entityframeworkcore.relational/10.0.4/lib/net10.0/Microsoft.EntityFrameworkCore.Relational.dll
+ microsoft.entityframeworkcore/10.0.5/lib/net10.0/Microsoft.EntityFrameworkCore.dll
+ microsoft.extensions.ambientmetadata.application/10.0.0/lib/net10.0/Microsoft.Extensions.AmbientMetadata.Application.dll
+ microsoft.extensions.compliance.abstractions/10.0.0/lib/net10.0/Microsoft.Extensions.Compliance.Abstractions.dll
+ microsoft.extensions.dependencyinjection.autoactivation/10.0.0/lib/net10.0/Microsoft.Extensions.DependencyInjection.AutoActivation.dll
+ microsoft.extensions.dependencymodel/8.0.2/lib/net8.0/Microsoft.Extensions.DependencyModel.dll
+ microsoft.extensions.diagnostics.exceptionsummarization/10.0.0/lib/net10.0/Microsoft.Extensions.Diagnostics.ExceptionSummarization.dll
+ microsoft.extensions.http.diagnostics/10.0.0/lib/net10.0/Microsoft.Extensions.Http.Diagnostics.dll
+ microsoft.extensions.http.resilience/10.0.0/lib/net10.0/Microsoft.Extensions.Http.Resilience.dll
+ microsoft.extensions.resilience/10.0.0/lib/net10.0/Microsoft.Extensions.Resilience.dll
+ microsoft.extensions.telemetry.abstractions/10.0.0/lib/net10.0/Microsoft.Extensions.Telemetry.Abstractions.dll
+ microsoft.extensions.telemetry/10.0.0/lib/net10.0/Microsoft.Extensions.Telemetry.dll
+ microsoft.identitymodel.abstractions/8.0.1/lib/net9.0/Microsoft.IdentityModel.Abstractions.dll
+ microsoft.identitymodel.jsonwebtokens/8.0.1/lib/net9.0/Microsoft.IdentityModel.JsonWebTokens.dll
+ microsoft.identitymodel.logging/8.0.1/lib/net9.0/Microsoft.IdentityModel.Logging.dll
+ microsoft.identitymodel.tokens/8.0.1/lib/net9.0/Microsoft.IdentityModel.Tokens.dll
+ npgsql.entityframeworkcore.postgresql/10.0.1/lib/net10.0/Npgsql.EntityFrameworkCore.PostgreSQL.dll
+ npgsql/10.0.2/lib/net10.0/Npgsql.dll
+ polly.core/8.4.2/lib/net8.0/Polly.Core.dll
+ polly.extensions/8.4.2/lib/net8.0/Polly.Extensions.dll
+ polly.ratelimiting/8.4.2/lib/net8.0/Polly.RateLimiting.dll
+ scrutor/6.1.0/lib/net8.0/Scrutor.dll
+ system.identitymodel.tokens.jwt/8.0.1/lib/net9.0/System.IdentityModel.Tokens.Jwt.dll
+ telegram.bot/22.9.0/lib/net6.0/Telegram.Bot.dll
 ../../external/telegram-bot-flow/src/
  TelegramBotFlow.Core.Abstractions/obj/Debug/net10.0/ref/TelegramBotFlow.Core.Abstractions.dll
  TelegramBotFlow.Core/obj/Debug/net10.0/ref/TelegramBotFlow.Core.dll
@@ -626,35 +653,13 @@ Program.cs
  System.Xml.XPath.dll
  System.Xml.XPath.XDocument.dll
  WindowsBase.dll
-<NUGET>/
- fluentresults/4.0.0/lib/net9.0/FluentResults.dll
- microsoft.entityframeworkcore.abstractions/10.0.5/lib/net10.0/Microsoft.EntityFrameworkCore.Abstractions.dll
- microsoft.entityframeworkcore.relational/10.0.4/lib/net10.0/Microsoft.EntityFrameworkCore.Relational.dll
- microsoft.entityframeworkcore/10.0.5/lib/net10.0/Microsoft.EntityFrameworkCore.dll
- microsoft.extensions.ambientmetadata.application/10.0.0/lib/net10.0/Microsoft.Extensions.AmbientMetadata.Application.dll
- microsoft.extensions.compliance.abstractions/10.0.0/lib/net10.0/Microsoft.Extensions.Compliance.Abstractions.dll
- microsoft.extensions.dependencyinjection.autoactivation/10.0.0/lib/net10.0/Microsoft.Extensions.DependencyInjection.AutoActivation.dll
- microsoft.extensions.dependencymodel/8.0.2/lib/net8.0/Microsoft.Extensions.DependencyModel.dll
- microsoft.extensions.diagnostics.exceptionsummarization/10.0.0/lib/net10.0/Microsoft.Extensions.Diagnostics.ExceptionSummarization.dll
- microsoft.extensions.http.diagnostics/10.0.0/lib/net10.0/Microsoft.Extensions.Http.Diagnostics.dll
- microsoft.extensions.http.resilience/10.0.0/lib/net10.0/Microsoft.Extensions.Http.Resilience.dll
- microsoft.extensions.resilience/10.0.0/lib/net10.0/Microsoft.Extensions.Resilience.dll
- microsoft.extensions.telemetry.abstractions/10.0.0/lib/net10.0/Microsoft.Extensions.Telemetry.Abstractions.dll
- microsoft.extensions.telemetry/10.0.0/lib/net10.0/Microsoft.Extensions.Telemetry.dll
- microsoft.identitymodel.abstractions/8.0.1/lib/net9.0/Microsoft.IdentityModel.Abstractions.dll
- microsoft.identitymodel.jsonwebtokens/8.0.1/lib/net9.0/Microsoft.IdentityModel.JsonWebTokens.dll
- microsoft.identitymodel.logging/8.0.1/lib/net9.0/Microsoft.IdentityModel.Logging.dll
- microsoft.identitymodel.tokens/8.0.1/lib/net9.0/Microsoft.IdentityModel.Tokens.dll
- npgsql.entityframeworkcore.postgresql/10.0.1/lib/net10.0/Npgsql.EntityFrameworkCore.PostgreSQL.dll
- npgsql/10.0.2/lib/net10.0/Npgsql.dll
- polly.core/8.4.2/lib/net8.0/Polly.Core.dll
- polly.extensions/8.4.2/lib/net8.0/Polly.Extensions.dll
- polly.ratelimiting/8.4.2/lib/net8.0/Polly.RateLimiting.dll
- scrutor/6.1.0/lib/net8.0/Scrutor.dll
- system.identitymodel.tokens.jwt/8.0.1/lib/net9.0/System.IdentityModel.Tokens.Jwt.dll
- telegram.bot/22.9.0/lib/net6.0/Telegram.Bot.dll
 
 [analyzerReferences]
+../../.dotnet-cli/.nuget/packages/
+ microsoft.entityframeworkcore.analyzers/10.0.5/analyzers/dotnet/cs/Microsoft.EntityFrameworkCore.Analyzers.dll
+ microsoft.extensions.telemetry.abstractions/10.0.0/analyzers/dotnet/cs/
+  Microsoft.Gen.Logging.dll
+  Microsoft.Gen.Metrics.dll
 <DOTNET>/packs/Microsoft.AspNetCore.App.Ref/10.0.3/analyzers/dotnet/cs/
  Microsoft.AspNetCore.App.Analyzers.dll
  Microsoft.AspNetCore.App.CodeFixes.dll
@@ -679,11 +684,6 @@ Program.cs
 <DOTNET>/sdk/10.0.103/Sdks/Microsoft.NET.Sdk/analyzers/
  Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll
  Microsoft.CodeAnalysis.NetAnalyzers.dll
-<NUGET>/
- microsoft.entityframeworkcore.analyzers/10.0.5/analyzers/dotnet/cs/Microsoft.EntityFrameworkCore.Analyzers.dll
- microsoft.extensions.telemetry.abstractions/10.0.0/analyzers/dotnet/cs/
-  Microsoft.Gen.Logging.dll
-  Microsoft.Gen.Metrics.dll
 
 [analyzerConfigFiles]
 ../../.editorconfig
