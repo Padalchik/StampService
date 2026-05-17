@@ -172,6 +172,18 @@ CustomerNotifications/
   GetRewardDigestSettingsQuery.cs
  RewardDigestOptions.cs
  RewardDigestSettingsMapping.cs
+Demo/Commands/CreateDemoBrands/
+ CreateDemoBrandsCommand.cs
+ CreateDemoBrandsHandler.cs
+Demo/Commands/CreateUserDemoData/
+ CreateUserDemoDataCommand.cs
+ CreateUserDemoDataHandler.cs
+Demo/Commands/ResetDemoDatabase/
+ ResetDemoDatabaseCommand.cs
+ ResetDemoDatabaseHandler.cs
+Demo/
+ DemoDataCatalog.cs
+ IDemoDatabaseResetService.cs
 DependencyInjection.cs
 Errors/
  AccessErrors.cs

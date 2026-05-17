@@ -69,16 +69,24 @@ Common/Routing/
  DeleteIncomingMessageResult.cs
 Features/Admin/Actions/
  CancelCreateBrandAction.cs
+ CancelDemoResetAction.cs
  CancelReassignOwnerAction.cs
  ConfirmCreateBrandAction.cs
+ ConfirmDemoResetAction.cs
  ConfirmReassignOwnerAction.cs
+ CreateDemoBrandsAction.cs
  EnterCreateBrandNameAction.cs
  EnterCreateBrandOwnerCodeAction.cs
+ EnterDemoCustomerCodeAction.cs
  EnterReassignOwnerCodeAction.cs
  EnterRewardDigestSettingValueAction.cs
  OpenAdminBrandAction.cs
  OpenAdminBrandPayload.cs
+ SelectDemoBrandAction.cs
+ SelectDemoBrandPayload.cs
  StartCreateBrandAction.cs
+ StartCreateUserDemoDataAction.cs
+ StartDemoResetAction.cs
  StartEditRewardDigestSettingAction.cs
  StartReassignOwnerAction.cs
  ToggleRewardDigestEnabledAction.cs
@@ -86,15 +94,20 @@ Features/Admin/
  AdminSessionKeys.cs
  Endpoints/
   AdminBrandEndpoint.cs
+  AdminDemoEndpoint.cs
   AdminRewardDigestEndpoint.cs
  Screens/
   AdminBrandDetailsScreen.cs
+  AdminDemoScreen.cs
   AdminPanelScreen.cs
   AdminRewardDigestEditValueScreen.cs
   AdminRewardDigestSettingsScreen.cs
   CreateBrandConfirmScreen.cs
   CreateBrandNameScreen.cs
   CreateBrandOwnerCodeScreen.cs
+  DemoBrandSelectScreen.cs
+  DemoCustomerCodeScreen.cs
+  DemoResetConfirmScreen.cs
   ReassignOwnerCodeScreen.cs
   ReassignOwnerConfirmScreen.cs
 Features/Brands/Actions/

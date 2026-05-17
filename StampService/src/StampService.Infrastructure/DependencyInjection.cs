@@ -7,10 +7,12 @@ using StampService.Application.Brands;
 using StampService.Application.CoinProducts;
 using StampService.Application.Coins;
 using StampService.Application.CustomerNotifications;
+using StampService.Application.Demo;
 using StampService.Application.Metrics;
 using StampService.Application.Users;
 using StampService.Infrastructure;
 using StampService.Infrastructure.Repositories;
+using StampService.Infrastructure.Seeding;
 using StampService.Infrastructure.Services;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -39,6 +41,7 @@ public static class DependencyInjection
         services.AddScoped<ICustomerDigestStateRepository, CustomerDigestStateRepository>();
         services.AddScoped<ICustomerRewardDigestRepository, CustomerRewardDigestRepository>();
         services.AddScoped<IRewardDigestSettingsRepository, RewardDigestSettingsRepository>();
+        services.AddScoped<IDemoDatabaseResetService, DemoDatabaseResetService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
 
         return services;

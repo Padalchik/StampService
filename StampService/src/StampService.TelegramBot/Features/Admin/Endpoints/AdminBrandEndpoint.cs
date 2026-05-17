@@ -110,9 +110,7 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
             "<b>Бренд создан</b>\n\n" +
             $"{Html(result.Value.BrandName)}\n" +
             $"Владелец: {Html(result.Value.OwnerName)} · <code>{Html(result.Value.OwnerCustomerCode)}</code>")
-            .NavigateButton<AdminBrandDetailsScreen>("Открыть бренд")
-            .Row()
-            .NavigateButton<AdminPanelScreen>("К админке"));
+            .MenuButton("В главное меню"));
     }
 
     private static Task<IEndpointResult> CancelCreateBrandAsync(UpdateContext ctx)
@@ -178,9 +176,7 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
             "<b>Владелец обновлён</b>\n\n" +
             $"Новый владелец: {Html(result.Value.NewOwnerName)} · <code>{Html(result.Value.NewOwnerCustomerCode)}</code>" +
             removedOwnerText)
-            .NavigateButton<AdminBrandDetailsScreen>("Открыть бренд")
-            .Row()
-            .NavigateButton<AdminPanelScreen>("К админке"));
+            .MenuButton("В главное меню"));
     }
 
     private static Task<IEndpointResult> CancelReassignOwnerAsync(UpdateContext ctx)

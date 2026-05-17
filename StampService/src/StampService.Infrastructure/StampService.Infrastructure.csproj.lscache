@@ -126,6 +126,7 @@ Repositories/
  StampTransactionRepository.cs
  UserRepository.cs
 Seeding/
+ DemoDatabaseResetService.cs
  DemoDataSeeder.cs
  RoleSeeder.cs
 Services/JwtTokenService.cs

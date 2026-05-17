@@ -47,7 +47,10 @@ await using (var scope = app.Services.CreateAsyncScope())
     {
         var adminTelegramUserIds = app.Configuration
             .GetSection("Admin:TelegramUserIds")
-            .Get<long[]>() ?? [];
+            .GetChildren()
+            .Select(item => long.TryParse(item.Value, out var value) ? value : 0)
+            .Where(value => value > 0)
+            .ToArray();
         if (adminTelegramUserIds.Length != 1)
         {
             throw new InvalidOperationException(

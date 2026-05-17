@@ -24,13 +24,13 @@ public static class DemoDataSeeder
         if (hasBusinessData)
         {
             throw new InvalidOperationException(
-                "Заполнение демо-данными ожидает пустую базу. Пользователи или бренды уже существуют. Данные не изменены.");
+                "Заполнение начальными данными ожидает пустую базу. Пользователи или бренды уже существуют. Данные не изменены.");
         }
 
         await RoleSeeder.SeedSystemRolesAsync(dbContext, cancellationToken);
 
         var ownerRoleId = await GetRoleIdAsync(dbContext, SystemRoles.Owner, cancellationToken);
-        var owner = CreateUser("Владелец демо-брендов", "1001", adminTelegramUserId);
+        var owner = CreateUser("Владелец брендов", "1001", adminTelegramUserId);
 
         var allRewardsBrand = CreateBrand(
             "Кофейная лаборатория",
@@ -71,8 +71,8 @@ public static class DemoDataSeeder
             CreateCoinProduct(coinsOnlyBrand.Id, "Подарочный напиток", price: 10),
             CreateCoinProduct(coinsOnlyBrand.Id, "Фирменная кружка", price: 25));
 
-        AddCoinScenario(dbContext, owner.Id, allRewardsBrand.Id, owner.Id, 18, "Стартовые монетки");
-        AddCoinScenario(dbContext, owner.Id, coinsOnlyBrand.Id, owner.Id, 12, "Демо-начисление");
+        AddCoinScenario(dbContext, owner.Id, allRewardsBrand.Id, owner.Id, 18, "Приветственный бонус");
+        AddCoinScenario(dbContext, owner.Id, coinsOnlyBrand.Id, owner.Id, 12, "Начисление за покупку");
 
         AddMetricScenario(dbContext, owner.Id, allRewardsBrand.Id, coffeeMetric.Id, owner.Id, 7, "Визиты за кофе");
         AddMetricScenario(dbContext, owner.Id, allRewardsBrand.Id, dessertMetric.Id, owner.Id, 3, "Заказы десертов");
@@ -144,7 +144,7 @@ public static class DemoDataSeeder
     {
         return Require(
             CoinProduct.Create(brandId, name, price),
-            $"Не удалось создать товар за монетки '{name}'.");
+            $"Не удалось создать товар '{name}'.");
     }
 
     private static void AddCoinScenario(
@@ -156,7 +156,7 @@ public static class DemoDataSeeder
         string comment)
     {
         var wallet = Require(CoinWallet.Create(userId, brandId), "Не удалось создать кошелёк монеток.");
-        Require(wallet.Add(amount), "Не удалось начислить монетки в кошелёк.");
+        Require(wallet.Add(amount), "Не удалось начислить бонусы в кошелёк.");
 
         var transaction = Require(
             CoinTransaction.CreateIssue(wallet.Id, amount, comment, actorUserId),

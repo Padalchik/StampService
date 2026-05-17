@@ -57,7 +57,8 @@ public sealed class AdminPanelScreen : IScreen
             .Row()
             .NavigateButton<AdminRewardDigestSettingsScreen>("Дайджест наград")
             .Row()
-            .MenuButton("Главное меню")
-            .BackButton();
+            .NavigateButton<AdminDemoScreen>("Работа с демо")
+            .Row()
+            .MenuButton("В главное меню");
     }
 }
