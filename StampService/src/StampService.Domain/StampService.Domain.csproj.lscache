@@ -91,6 +91,7 @@ User/
  Constants.cs
  CustomerDigestState.cs
  IdentityType.cs
+ PhoneAuthCode.cs
  RedemptionCode.cs
  User.cs
  UserIdentity.cs

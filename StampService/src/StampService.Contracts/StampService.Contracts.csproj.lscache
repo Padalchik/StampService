@@ -56,7 +56,10 @@ TemporaryDependencyNodeTargetIdentifier=net10.0
 [sourceFiles]
 DTOs/Auth/
  AuthResponse.cs
+ RequestPhoneAuthCodeRequest.cs
+ RequestPhoneAuthCodeResponse.cs
  TelegramLoginRequest.cs
+ VerifyPhoneAuthCodeRequest.cs
 DTOs/Brands/
  AddBrandStaffByCustomerCodeResponse.cs
  AddBrandStaffRequest.cs

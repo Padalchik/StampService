@@ -65,6 +65,7 @@ Configurations/
  LocationConfiguration.cs
  LoyaltyMetricDefinitionConfiguration.cs
  MetricBalanceConfiguration.cs
+ PhoneAuthCodeConfiguration.cs
  RedemptionCodeConfiguration.cs
  RewardDigestSettingsConfiguration.cs
  RoleConfiguration.cs
@@ -106,6 +107,8 @@ Migrations/
  20260515081945_NotifyUsersForPresent.Designer.cs
  20260515091020_RewardNotifySettings.cs
  20260515091020_RewardNotifySettings.Designer.cs
+ 20260517134618_AddPhoneAuthCodes.cs
+ 20260517134618_AddPhoneAuthCodes.Designer.cs
  AppDbContextModelSnapshot.cs
 obj/Debug/net10.0/
  .NETCoreApp,Version=v10.0.AssemblyAttributes.cs
@@ -121,6 +124,7 @@ Repositories/
  CustomerRewardDigestRepository.cs
  LoyaltyMetricRepository.cs
  MetricBalanceRepository.cs
+ PhoneAuthCodeRepository.cs
  RedemptionCodeRepository.cs
  RewardDigestSettingsRepository.cs
  StampTransactionRepository.cs
@@ -129,7 +133,9 @@ Seeding/
  DemoDatabaseResetService.cs
  DemoDataSeeder.cs
  RoleSeeder.cs
-Services/JwtTokenService.cs
+Services/
+ JwtTokenService.cs
+ TelegramAdminPhoneAuthCodeSender.cs
 
 [metadataReferences]
 ../

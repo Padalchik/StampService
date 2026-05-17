@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IRedeemMetricValidationService, RedeemMetricValidationService>();
         services.AddScoped<ITelegramValidationService, TelegramValidationService>();
         services.AddScoped<ICustomerCodeGenerator, CustomerCodeGenerator>();
+        services.AddScoped<IPhoneAuthCodeGenerator, PhoneAuthCodeGenerator>();
         services.AddScoped<IRedemptionCodeGenerator, RedemptionCodeGenerator>();
         services.AddScoped<IRecipientResolver, RecipientResolver>();
         services.AddSingleton(TimeProvider.System);

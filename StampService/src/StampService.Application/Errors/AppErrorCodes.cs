@@ -10,6 +10,9 @@ public static class AppErrorCodes
 
     public static class Auth
     {
+        public const string PhoneCodeInvalid = "auth.phone_code_invalid";
+        public const string PhoneCodeSendFailed = "auth.phone_code_send_failed";
+        public const string PhoneInvalid = "auth.phone_invalid";
         public const string TelegramLoginDataInvalid = "auth.telegram_login_data_invalid";
         public const string UserIdClaimMissing = "auth.user_id_claim_missing";
         public const string UserIdClaimInvalid = "auth.user_id_claim_invalid";

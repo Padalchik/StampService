@@ -73,7 +73,12 @@ Auth/
  AuthService.cs
  IAuthService.cs
  IJwtTokenService.cs
+ IPhoneAuthCodeGenerator.cs
+ IPhoneAuthCodeRepository.cs
+ IPhoneAuthCodeSender.cs
  JwtToken.cs
+ PhoneAuthCodeGenerator.cs
+ PhoneNumberNormalizer.cs
 Brands/
  AdminBrandReadModel.cs
  BrandStaffAuthorization.cs

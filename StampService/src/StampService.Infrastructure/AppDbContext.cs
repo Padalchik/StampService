@@ -41,6 +41,7 @@ public class AppDbContext : DbContext
     public DbSet<StampService.Domain.User.User> Users => Set<StampService.Domain.User.User>();
     public DbSet<StampService.Domain.User.UserIdentity> UserIdentities => Set<StampService.Domain.User.UserIdentity>();
     public DbSet<StampService.Domain.User.RedemptionCode> RedemptionCodes => Set<StampService.Domain.User.RedemptionCode>();
+    public DbSet<StampService.Domain.User.PhoneAuthCode> PhoneAuthCodes => Set<StampService.Domain.User.PhoneAuthCode>();
     public DbSet<StampService.Domain.User.CustomerDigestState> CustomerDigestStates => Set<StampService.Domain.User.CustomerDigestState>();
 
     // Brand
