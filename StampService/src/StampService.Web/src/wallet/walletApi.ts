@@ -42,9 +42,57 @@ export type UserWalletResponse = {
   brands: UserWalletBrandOverviewResponse[];
 };
 
+export type UserBrandRewardsResponse = {
+  userId: string;
+  brandId: string;
+  brandName: string;
+  isMetricsEnabled: boolean;
+  isCoinsEnabled: boolean;
+  isCoinProductRedemptionEnabled: boolean;
+  isManualCoinRedemptionEnabled: boolean;
+  coinBalance: number;
+  coinProducts: UserBrandCoinProductRewardResponse[];
+  metrics: UserBrandMetricRewardResponse[];
+};
+
+export type UserBrandWalletHistoryItemResponse = {
+  sourceType: 'Coin' | 'Metric' | string;
+  sourceName: string;
+  transactionType: 'Issue' | 'Redeem' | string;
+  amount: number;
+  comment?: string | null;
+  actorUserId: string;
+  createdAt: string;
+};
+
+export type UserBrandWalletHistoryResponse = {
+  userId: string;
+  brandId: string;
+  brandName: string;
+  isMetricsEnabled: boolean;
+  isCoinsEnabled: boolean;
+  skip: number;
+  take: number;
+  items: UserBrandWalletHistoryItemResponse[];
+};
+
 export function openUserWallet(forceRefreshCode = false): Promise<UserWalletResponse> {
   const query = forceRefreshCode ? '?forceRefreshCode=true' : '';
   return apiRequest<UserWalletResponse>(`/api/wallet/open${query}`, {
     method: 'POST'
   });
+}
+
+export function getBrandRewards(brandId: string): Promise<UserBrandRewardsResponse> {
+  return apiRequest<UserBrandRewardsResponse>(`/api/wallet/brands/${brandId}/rewards`);
+}
+
+export function getBrandHistory(
+  brandId: string,
+  skip = 0,
+  take = 10
+): Promise<UserBrandWalletHistoryResponse> {
+  return apiRequest<UserBrandWalletHistoryResponse>(
+    `/api/wallet/brands/${brandId}/history?skip=${skip}&take=${take}`
+  );
 }
