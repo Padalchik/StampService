@@ -54,14 +54,34 @@ public class FakeUserRepository : IUserRepository
     public Task SaveAsync(CancellationToken cancellationToken)
     {
         SaveCount++;
+        RebuildIndexes();
+
+        return Task.CompletedTask;
+    }
+
+    public Task SaveIdentityAsync(
+        User user,
+        UserIdentity identity,
+        CancellationToken cancellationToken)
+    {
+        if (!Users.Contains(user))
+            Users.Add(user);
+
+        SaveCount++;
+        RebuildIndexes();
+
+        return Task.CompletedTask;
+    }
+
+    private void RebuildIndexes()
+    {
         _usersByIdentity.Clear();
+        _usersByCustomerCode.Clear();
         foreach (var user in Users)
         {
             _usersByCustomerCode[user.CustomerCode] = user;
-            foreach (var identity in user.Identities)
+            foreach (var identity in user.Identities.Where(identity => identity.DeletedAt is null))
                 _usersByIdentity[(identity.Type, identity.Key)] = user;
         }
-
-        return Task.CompletedTask;
     }
 }

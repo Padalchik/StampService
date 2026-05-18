@@ -2,6 +2,73 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Infra: start postgres",
+      "type": "shell",
+      "command": "docker compose up -d; while (-not (Test-NetConnection localhost -Port 5440).TcpTestSucceeded) { Start-Sleep -Seconds 1 }",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "group": "infra"
+      }
+    },
+    {
+      "label": "API: start backend",
+      "type": "shell",
+      "command": "dotnet run --project src\\StampService.API\\StampService.API.csproj --launch-profile https",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "dotnet-api",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "Now listening on: https://localhost:7247"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "group": "api"
+      }
+    },
+    {
+      "label": "TelegramBot: start bot",
+      "type": "shell",
+      "command": "dotnet run --project src\\StampService.TelegramBot\\StampService.TelegramBot.csproj --launch-profile StampService.TelegramBot",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "dotnet-bot",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "Now listening on: http://localhost:5061"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "group": "bot"
+      }
+    },
+    {
       "label": "Web: start frontend",
       "type": "shell",
       "command": "if (-not (Test-Path node_modules)) { npm.cmd install }; npm.cmd run dev -- --host localhost",
@@ -23,8 +90,27 @@
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
-        "clear": true
+        "clear": true,
+        "group": "frontend"
       }
+    },
+    {
+      "label": "App: start runtime",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "API: start backend",
+        "TelegramBot: start bot",
+        "Web: start frontend"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "App: start full dev stack",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "App: start runtime"
+      ],
+      "problemMatcher": []
     }
   ]
 }

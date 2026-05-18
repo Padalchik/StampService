@@ -2,6 +2,14 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "App: полный запуск в браузере",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost:5173/login",
+      "webRoot": "${workspaceFolder}/src/StampService.Web/src",
+      "preLaunchTask": "App: start full dev stack"
+    },
+    {
       "name": "Web: открыть в браузере",
       "type": "pwa-chrome",
       "request": "launch",

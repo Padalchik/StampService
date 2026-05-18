@@ -52,11 +52,20 @@ export async function apiRequest<T>(
     }
   }
 
-  const response = await fetch(path, {
-    method: options.method ?? 'GET',
-    headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined
-  });
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      method: options.method ?? 'GET',
+      headers,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined
+    });
+  } catch {
+    throw new ApiRequestError(
+      0,
+      [],
+      'Нет связи с backend API. Проверьте, что StampService.API запущен.'
+    );
+  }
 
   const envelope = await readEnvelope<T>(response);
 

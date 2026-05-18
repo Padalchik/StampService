@@ -36,9 +36,13 @@ public class ConfirmPhoneLinkCodeHandler
         if (command.UserId == Guid.Empty)
             return Result.Fail(UserErrors.IdIsEmpty());
 
-        var phoneNumber = PhoneNumberNormalizer.Normalize(command.PhoneNumber);
-        if (!PhoneAuthCode.IsValidPhoneNumber(phoneNumber))
-            return Result.Fail(AuthErrors.PhoneInvalid(nameof(command.PhoneNumber)));
+        var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(
+            command.PhoneNumber,
+            nameof(command.PhoneNumber));
+        if (phoneNumberResult.IsFailed)
+            return Result.Fail(phoneNumberResult.Errors);
+
+        var phoneNumber = phoneNumberResult.Value;
 
         var code = PhoneAuthCode.NormalizeCode(command.Code);
         if (!PhoneAuthCode.IsValidCode(code))

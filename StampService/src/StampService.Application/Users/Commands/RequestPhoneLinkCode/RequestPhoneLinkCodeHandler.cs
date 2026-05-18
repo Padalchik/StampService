@@ -41,9 +41,13 @@ public class RequestPhoneLinkCodeHandler
         if (command.UserId == Guid.Empty)
             return Result.Fail(UserErrors.IdIsEmpty());
 
-        var phoneNumber = PhoneNumberNormalizer.Normalize(command.PhoneNumber);
-        if (!PhoneAuthCode.IsValidPhoneNumber(phoneNumber))
-            return Result.Fail(AuthErrors.PhoneInvalid(nameof(command.PhoneNumber)));
+        var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(
+            command.PhoneNumber,
+            nameof(command.PhoneNumber));
+        if (phoneNumberResult.IsFailed)
+            return Result.Fail(phoneNumberResult.Errors);
+
+        var phoneNumber = phoneNumberResult.Value;
 
         var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
         if (user is null)

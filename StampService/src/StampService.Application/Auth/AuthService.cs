@@ -87,9 +87,13 @@ public class AuthService : IAuthService
         RequestPhoneAuthCodeRequest request,
         CancellationToken cancellationToken)
     {
-        var phoneNumber = PhoneNumberNormalizer.Normalize(request.PhoneNumber);
-        if (!PhoneAuthCode.IsValidPhoneNumber(phoneNumber))
-            return Result.Fail(AuthErrors.PhoneInvalid(nameof(request.PhoneNumber)));
+        var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(
+            request.PhoneNumber,
+            nameof(request.PhoneNumber));
+        if (phoneNumberResult.IsFailed)
+            return Result.Fail(phoneNumberResult.Errors);
+
+        var phoneNumber = phoneNumberResult.Value;
 
         var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
         var activeCodes = await _phoneAuthCodeRepository.GetActiveByPhoneAsync(
@@ -119,9 +123,13 @@ public class AuthService : IAuthService
         VerifyPhoneAuthCodeRequest request,
         CancellationToken cancellationToken)
     {
-        var phoneNumber = PhoneNumberNormalizer.Normalize(request.PhoneNumber);
-        if (!PhoneAuthCode.IsValidPhoneNumber(phoneNumber))
-            return Result.Fail(AuthErrors.PhoneInvalid(nameof(request.PhoneNumber)));
+        var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(
+            request.PhoneNumber,
+            nameof(request.PhoneNumber));
+        if (phoneNumberResult.IsFailed)
+            return Result.Fail(phoneNumberResult.Errors);
+
+        var phoneNumber = phoneNumberResult.Value;
 
         var code = PhoneAuthCode.NormalizeCode(request.Code);
         if (!PhoneAuthCode.IsValidCode(code))

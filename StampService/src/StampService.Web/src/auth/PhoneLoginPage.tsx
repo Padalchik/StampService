@@ -3,6 +3,7 @@ import { CheckCircle2, LogIn, MessageSquareText, ShieldCheck } from 'lucide-reac
 import { ApiRequestError } from '../api/apiClient';
 import { useAuth } from './AuthContext';
 import { requestPhoneAuthCode, verifyPhoneAuthCode } from './authApi';
+import { normalizePhoneNumber } from '../validation/phoneNumber';
 
 type LoginStep = 'phone' | 'code';
 
@@ -35,7 +36,14 @@ export function PhoneLoginPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await requestPhoneAuthCode(phoneNumber.trim());
+      const normalizedPhone = normalizePhoneNumber(phoneNumber);
+      if (!normalizedPhone.ok) {
+        setError(normalizedPhone.message);
+        return;
+      }
+
+      const response = await requestPhoneAuthCode(normalizedPhone.value);
+      setPhoneNumber(normalizedPhone.value);
       setExpiresAt(response.expiresAt);
       setStep('code');
       setStatus('Код подтверждения отправлен.');
@@ -53,7 +61,13 @@ export function PhoneLoginPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await verifyPhoneAuthCode(phoneNumber.trim(), code.trim());
+      const normalizedPhone = normalizePhoneNumber(phoneNumber);
+      if (!normalizedPhone.ok) {
+        setError(normalizedPhone.message);
+        return;
+      }
+
+      const response = await verifyPhoneAuthCode(normalizedPhone.value, code.trim());
       signIn(response.token, response.expiresAt);
     } catch (requestError) {
       setError(getUserMessage(requestError));
@@ -149,6 +163,14 @@ export function PhoneLoginPage() {
 
 function getUserMessage(error: unknown): string {
   if (error instanceof ApiRequestError) {
+    if (error.errors.some((item) => item.code === 'auth.phone_invalid')) {
+      return 'Введите телефон в международном формате, например +7 999 123-45-67.';
+    }
+
+    if (error.errors.some((item) => item.code === 'auth.phone_code_invalid')) {
+      return 'Код неверен или устарел.';
+    }
+
     return error.message;
   }
 

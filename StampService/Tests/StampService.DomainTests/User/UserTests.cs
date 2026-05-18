@@ -46,4 +46,19 @@ public class UserTests
         Assert.True(result.IsSuccess);
         Assert.Matches("^[0-9]{4}$", result.Value.CustomerCode);
     }
+
+    [Fact]
+    public void AddIdentity_WithInvalidPhoneKey_ShouldFail()
+    {
+        var user = DomainUser.Create("Ivan").Value;
+
+        var result = user.AddIdentity(
+            StampService.Domain.User.IdentityType.Phone,
+            "79991234567",
+            "{}");
+
+        Assert.True(result.IsFailed);
+        var error = Assert.IsType<DomainError>(result.Errors.Single());
+        Assert.Equal("user_identity.phone_key_invalid", error.Code);
+    }
 }

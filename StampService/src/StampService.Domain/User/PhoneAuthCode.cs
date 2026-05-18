@@ -6,7 +6,7 @@ namespace StampService.Domain.User;
 public class PhoneAuthCode : BaseEntity
 {
     public const int CodeLength = 6;
-    public const int MaxPhoneLength = 32;
+    public const int MaxPhoneLength = global::StampService.Domain.User.PhoneNumber.MaxInputLength;
     public const int MaxAttempts = 5;
 
     public string PhoneNumber { get; private set; }
@@ -35,11 +35,9 @@ public class PhoneAuthCode : BaseEntity
         DateTime expiresAtUtc,
         DateTime nowUtc)
     {
-        if (!IsValidPhoneNumber(phoneNumber))
-            return Result.Fail(DomainError.Validation(
-                "phone_auth_code.phone_invalid",
-                "Phone number is invalid",
-                nameof(phoneNumber)));
+        var phoneNumberResult = global::StampService.Domain.User.PhoneNumber.Create(phoneNumber);
+        if (phoneNumberResult.IsFailed)
+            return Result.Fail(phoneNumberResult.Errors);
 
         var normalizedCode = NormalizeCode(code);
         if (!IsValidCode(normalizedCode))
@@ -54,7 +52,7 @@ public class PhoneAuthCode : BaseEntity
                 "Phone auth code expiration date must be in the future",
                 nameof(expiresAtUtc)));
 
-        return Result.Ok(new PhoneAuthCode(phoneNumber, normalizedCode, expiresAtUtc));
+        return Result.Ok(new PhoneAuthCode(phoneNumberResult.Value.Value, normalizedCode, expiresAtUtc));
     }
 
     public Result Use(DateTime nowUtc)
@@ -125,12 +123,6 @@ public class PhoneAuthCode : BaseEntity
 
     public static bool IsValidPhoneNumber(string? phoneNumber)
     {
-        if (string.IsNullOrWhiteSpace(phoneNumber))
-            return false;
-
-        return phoneNumber.Length <= MaxPhoneLength
-            && phoneNumber[0] == '+'
-            && phoneNumber.Skip(1).All(char.IsDigit)
-            && phoneNumber.Length is >= 11 and <= 16;
+        return global::StampService.Domain.User.PhoneNumber.IsValidNormalized(phoneNumber);
     }
 }

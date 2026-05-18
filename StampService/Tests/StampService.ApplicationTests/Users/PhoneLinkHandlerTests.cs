@@ -1,4 +1,5 @@
 using FluentResults;
+using Microsoft.Extensions.Logging.Abstractions;
 using StampService.Application.Auth;
 using StampService.Application.Users.Commands.ConfirmPhoneLinkCode;
 using StampService.Application.Users.Commands.RequestPhoneLinkCode;
@@ -47,6 +48,25 @@ public class PhoneLinkHandlerTests
         Assert.Empty(fixture.Sender.SentCodes);
     }
 
+    [Theory]
+    [InlineData("79991234567")]
+    [InlineData("+7abc9991234567")]
+    [InlineData("++79991234567")]
+    public async Task RequestPhoneLink_WhenPhoneIsInvalid_ShouldFail(string phoneNumber)
+    {
+        var fixture = CreateFixture();
+        var user = User.Create("telegram-user").Value;
+        fixture.Users.Add(user);
+
+        var result = await fixture.RequestHandler.Handle(
+            new RequestPhoneLinkCodeCommand(user.Id, phoneNumber),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Empty(fixture.PhoneCodes.Codes);
+        Assert.Empty(fixture.Sender.SentCodes);
+    }
+
     [Fact]
     public async Task ConfirmPhoneLink_WhenCodeIsInvalid_ShouldRegisterFailedAttempt()
     {
@@ -82,8 +102,13 @@ public class PhoneLinkHandlerTests
                 phoneCodes,
                 new FixedPhoneAuthCodeGenerator(),
                 sender,
-                timeProvider),
-            new ConfirmPhoneLinkCodeHandler(users, phoneCodes, timeProvider));
+                timeProvider,
+                NullLogger<RequestPhoneLinkCodeHandler>.Instance),
+            new ConfirmPhoneLinkCodeHandler(
+                users,
+                phoneCodes,
+                timeProvider,
+                NullLogger<ConfirmPhoneLinkCodeHandler>.Instance));
     }
 
     private sealed record Fixture(

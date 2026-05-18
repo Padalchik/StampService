@@ -28,6 +28,23 @@ public class PhoneAuthServiceTests
         Assert.Equal(("+79991234567", "123456"), Assert.Single(fixture.Sender.SentCodes));
     }
 
+    [Theory]
+    [InlineData("79991234567")]
+    [InlineData("+7abc9991234567")]
+    [InlineData("++79991234567")]
+    public async Task RequestPhoneCode_WhenPhoneIsInvalid_ShouldFail(string phoneNumber)
+    {
+        var fixture = CreateFixture();
+
+        var result = await fixture.Service.RequestPhoneCodeAsync(
+            new RequestPhoneAuthCodeRequest(phoneNumber),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Empty(fixture.PhoneCodes.Codes);
+        Assert.Empty(fixture.Sender.SentCodes);
+    }
+
     [Fact]
     public async Task VerifyPhoneCode_WhenCodeIsValidAndUserDoesNotExist_ShouldCreatePhoneUser()
     {

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using StampService.Application.Abstractions;
+using StampService.Application.Auth;
 using StampService.Application.Users.Commands.ConfirmPhoneLinkCode;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Application.Users.Commands.RequestPhoneLinkCode;
@@ -58,7 +59,7 @@ public sealed class ProfileEndpoint : IBotEndpoint
                 $"Не удалось отправить код: {BotErrorFormatter.Format(result.Errors)}");
         }
 
-        ctx.Session?.Data.Set(ProfileSessionKeys.PhoneNumber, phoneNumber);
+        ctx.Session?.Data.Set(ProfileSessionKeys.PhoneNumber, PhoneNumberNormalizer.Normalize(phoneNumber));
         ctx.Session?.Data.Set(ProfileSessionKeys.PhoneAuthCodeId, result.Value.AuthCodeId);
 
         return BotInputResults.DeleteInputThen(BotResults.NavigateTo<ProfilePhoneCodeScreen>());

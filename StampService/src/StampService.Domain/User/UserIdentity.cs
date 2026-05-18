@@ -67,6 +67,12 @@ public class UserIdentity : BaseEntity
                 $"Key must not exceed {Constants.MAX_IDENTITY_KEY_LENGTH} characters",
                 nameof(key)));
 
+        if (type == IdentityType.Phone && !PhoneNumber.IsValidNormalized(key))
+            return Result.Fail(DomainError.Validation(
+                "user_identity.phone_key_invalid",
+                "Phone identity key is invalid",
+                nameof(key)));
+
         if (string.IsNullOrWhiteSpace(metadata))
             return Result.Fail(DomainError.Validation(
                 "user_identity.metadata_required",
