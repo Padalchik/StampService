@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Web: открыть в браузере",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost:5173/login",
+      "webRoot": "${workspaceFolder}/src/StampService.Web/src",
+      "preLaunchTask": "Web: start frontend"
+    }
+  ]
+}

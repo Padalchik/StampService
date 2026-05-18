@@ -1,0 +1,156 @@
+import { FormEvent, useMemo, useState } from 'react';
+import { CheckCircle2, LogIn, MessageSquareText, ShieldCheck } from 'lucide-react';
+import { ApiRequestError } from '../api/apiClient';
+import { useAuth } from './AuthContext';
+import { requestPhoneAuthCode, verifyPhoneAuthCode } from './authApi';
+
+type LoginStep = 'phone' | 'code';
+
+export function PhoneLoginPage() {
+  const { signIn } = useAuth();
+  const [step, setStep] = useState<LoginStep>('phone');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [code, setCode] = useState('');
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [status, setStatus] = useState<string>('');
+  const [error, setError] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const formattedExpiresAt = useMemo(() => {
+    if (!expiresAt) {
+      return null;
+    }
+
+    return new Intl.DateTimeFormat('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }).format(new Date(expiresAt));
+  }, [expiresAt]);
+
+  async function handleRequestCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+    setStatus('');
+    setIsSubmitting(true);
+
+    try {
+      const response = await requestPhoneAuthCode(phoneNumber.trim());
+      setExpiresAt(response.expiresAt);
+      setStep('code');
+      setStatus('Код подтверждения отправлен.');
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+    setStatus('');
+    setIsSubmitting(true);
+
+    try {
+      const response = await verifyPhoneAuthCode(phoneNumber.trim(), code.trim());
+      signIn(response.token, response.expiresAt);
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <main className="auth-page">
+      <section className="auth-panel" aria-labelledby="login-title">
+        <div className="auth-panel__header">
+          <div className="auth-panel__icon" aria-hidden="true">
+            <ShieldCheck size={28} />
+          </div>
+          <div>
+            <h1 id="login-title">Вход в StampService</h1>
+            <p>Введите телефон и код подтверждения.</p>
+          </div>
+        </div>
+
+        {step === 'phone' ? (
+          <form className="auth-form" onSubmit={handleRequestCode}>
+            <label htmlFor="phoneNumber">Телефон</label>
+            <input
+              id="phoneNumber"
+              name="phoneNumber"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="+7 999 123-45-67"
+              value={phoneNumber}
+              onChange={(event) => setPhoneNumber(event.target.value)}
+              required
+            />
+
+            <button type="submit" disabled={isSubmitting || !phoneNumber.trim()}>
+              <MessageSquareText size={18} />
+              Получить код
+            </button>
+          </form>
+        ) : (
+          <form className="auth-form" onSubmit={handleVerifyCode}>
+            <div className="auth-summary">
+              <CheckCircle2 size={18} />
+              <span>
+                Код отправлен для номера <strong>{phoneNumber}</strong>
+                {formattedExpiresAt ? `, действует до ${formattedExpiresAt}` : ''}.
+              </span>
+            </div>
+
+            <label htmlFor="authCode">Код подтверждения</label>
+            <input
+              id="authCode"
+              name="authCode"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={8}
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              required
+            />
+
+            <div className="auth-actions">
+              <button type="submit" disabled={isSubmitting || !code.trim()}>
+                <LogIn size={18} />
+                Войти
+              </button>
+              <button
+                className="button-secondary"
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => {
+                  setStep('phone');
+                  setCode('');
+                  setStatus('');
+                  setError('');
+                }}
+              >
+                Изменить телефон
+              </button>
+            </div>
+          </form>
+        )}
+
+        {status ? <p className="form-status form-status--ok">{status}</p> : null}
+        {error ? <p className="form-status form-status--error">{error}</p> : null}
+      </section>
+    </main>
+  );
+}
+
+function getUserMessage(error: unknown): string {
+  if (error instanceof ApiRequestError) {
+    return error.message;
+  }
+
+  return 'Не удалось выполнить запрос. Попробуйте ещё раз.';
+}
