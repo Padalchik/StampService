@@ -145,10 +145,25 @@ Web UI должен быть полноценным frontend-проектом н
 
 1. Скелет web app: React-проект, роутинг, auth guard, API client, layout, обработка ошибок.
 2. Телефонный вход.
-3. Профиль и смена телефона.
+3. Профиль, смена телефона и привязка Telegram.
 4. Кошелёк клиента с кодом списания, наградами и историей.
 5. Brand workspace для сотрудника/owner.
 6. Управление метриками, товарами, сотрудниками и настройками бренда.
+
+## Web: личный кабинет
+
+Экран `Личный кабинет` в web должен соответствовать данным профиля Telegram-бота и использовать общие Application-сценарии.
+
+Текущая реализация:
+
+- frontend загружает профиль через `GET /api/users/me`;
+- смена/привязка телефона использует существующие тонкие endpoints `POST /api/users/me/phone/code` и `POST /api/users/me/phone/verify`;
+- привязка Telegram в web идёт через deep link, а не через ввод Telegram id или username;
+- frontend запрашивает ссылку через `POST /api/users/me/telegram/link`;
+- API возвращает ссылку вида `https://t.me/<bot_username>?start=<token>`;
+- пользователь открывает Telegram по ссылке, TelegramBot получает `/start <token>` и привязывает реальный Telegram user id к текущему web-пользователю через Application-сценарий;
+- для генерации ссылки API должен иметь `Telegram:BotUsername`, а для обработки deep link должен быть запущен `StampService.TelegramBot`;
+- username Telegram может показываться как display value, но не используется как устойчивый ключ привязки.
 
 ## Web: мой кошелёк
 

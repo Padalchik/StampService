@@ -1,8 +1,9 @@
 import { LogOut, UserRound, WalletCards, Workflow } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../auth/AuthContext';
 import { PhoneLoginPage } from '../auth/PhoneLoginPage';
+import { ProfilePage } from '../profile/ProfilePage';
 import { WalletPage } from '../wallet/WalletPage';
 
 export function App() {
@@ -47,17 +48,30 @@ function RequireAuth({ children }: { children: ReactNode }) {
 
 function AppShell() {
   const auth = useAuth();
+  const [activeSection, setActiveSection] = useState<'profile' | 'wallet'>('wallet');
+  const pageTitle = activeSection === 'profile' ? 'Личный кабинет' : 'Мой кошелёк';
+  const pageDescription = activeSection === 'profile'
+    ? 'Профиль, способы входа и привязка контактов.'
+    : 'Балансы, доступные награды и код для списания.';
 
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="Основное меню">
         <div className="sidebar__brand">StampService</div>
         <nav className="sidebar__nav">
-          <button className="sidebar__item" type="button" disabled>
+          <button
+            className={`sidebar__item ${activeSection === 'profile' ? 'sidebar__item--active' : ''}`}
+            type="button"
+            onClick={() => setActiveSection('profile')}
+          >
             <UserRound size={18} />
             Личный кабинет
           </button>
-          <button className="sidebar__item sidebar__item--active" type="button">
+          <button
+            className={`sidebar__item ${activeSection === 'wallet' ? 'sidebar__item--active' : ''}`}
+            type="button"
+            onClick={() => setActiveSection('wallet')}
+          >
             <WalletCards size={18} />
             Мой кошелёк
           </button>
@@ -71,8 +85,8 @@ function AppShell() {
       <main className="workspace">
         <header className="workspace__header">
           <div>
-            <h1>Мой кошелёк</h1>
-            <p>Балансы, доступные награды и код для списания.</p>
+            <h1>{pageTitle}</h1>
+            <p>{pageDescription}</p>
           </div>
           <button className="button-secondary" type="button" onClick={auth.signOut}>
             <LogOut size={18} />
@@ -80,7 +94,7 @@ function AppShell() {
           </button>
         </header>
 
-        <WalletPage />
+        {activeSection === 'profile' ? <ProfilePage /> : <WalletPage />}
       </main>
     </div>
   );

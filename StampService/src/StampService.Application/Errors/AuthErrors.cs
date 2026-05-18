@@ -23,6 +23,16 @@ public static class AuthErrors
             AppErrorCodes.Auth.TelegramLoginDataInvalid,
             "Invalid Telegram login data");
 
+    public static AppError TelegramCodeInvalid() =>
+        AppError.Authentication(
+            AppErrorCodes.Auth.TelegramCodeInvalid,
+            "Telegram link code is invalid or expired");
+
+    public static AppError TelegramCodeSendFailed(string message) =>
+        AppError.Failure(
+            AppErrorCodes.Auth.TelegramCodeSendFailed,
+            message);
+
     public static AppError UserIdClaimMissing() =>
         AppError.Authentication(
             AppErrorCodes.Auth.UserIdClaimMissing,

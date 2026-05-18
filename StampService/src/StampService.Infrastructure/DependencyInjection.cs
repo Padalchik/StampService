@@ -46,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddSingleton<HttpClient>();
         services.AddScoped<IPhoneAuthCodeSender, TelegramAdminPhoneAuthCodeSender>();
+        services.AddScoped<ITelegramLinkSessionProtector, CompactTelegramLinkSessionProtector>();
 
         return services;
     }

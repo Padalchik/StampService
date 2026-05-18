@@ -6,6 +6,7 @@ using StampService.Application.Users.Commands.ConfirmPhoneLinkCode;
 using StampService.Application.Users.Commands.ConfirmTelegramLink;
 using StampService.Application.Users.Commands.CreateRedemptionCode;
 using StampService.Application.Users.Commands.RequestPhoneLinkCode;
+using StampService.Application.Users.Commands.RequestTelegramLink;
 using StampService.Application.Users.Queries.GetMyProfile;
 using StampService.Contracts.DTOs.Auth;
 using StampService.Contracts.DTOs.Profile;
@@ -90,6 +91,20 @@ public class UsersController : ApiControllerBase
 
         return await handler.Handle(
             new ConfirmTelegramLinkCommand(userIdResult.Value, request),
+            cancellationToken);
+    }
+
+    [HttpPost("me/telegram/link")]
+    public async Task<EndpointResult<RequestTelegramLinkResponse>> RequestTelegramLink(
+        [FromServices] ICommandHandler<RequestTelegramLinkResponse, RequestTelegramLinkCommand> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<RequestTelegramLinkResponse>();
+
+        return await handler.Handle(
+            new RequestTelegramLinkCommand(userIdResult.Value),
             cancellationToken);
     }
 }
