@@ -20,6 +20,16 @@ public static class UserErrors
             "User id cannot be empty",
             "userId");
 
+    public static AppError IdentityAlreadyLinked() =>
+        AppError.Conflict(
+            AppErrorCodes.User.IdentityAlreadyLinked,
+            "Identity is already linked to this user");
+
+    public static AppError IdentityLinkedToAnotherUser() =>
+        AppError.Conflict(
+            AppErrorCodes.User.IdentityLinkedToAnotherUser,
+            "Identity is already linked to another user");
+
     public static AppError TelegramUserIdMustBePositive() =>
         AppError.Validation(
             AppErrorCodes.Telegram.UserIdInvalid,

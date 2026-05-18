@@ -60,7 +60,10 @@ public class User : BaseEntity
 
         var identity = identityResult.Value;
 
-        var hasDuplicate = _identities.Any(x => x.Type == identity.Type && x.Key == identity.Key);
+        var hasDuplicate = _identities.Any(x =>
+            x.DeletedAt is null
+            && x.Type == identity.Type
+            && x.Key == identity.Key);
         if (hasDuplicate)
             return Result.Fail(DomainError.Conflict(
                 "user.identity_already_exists",

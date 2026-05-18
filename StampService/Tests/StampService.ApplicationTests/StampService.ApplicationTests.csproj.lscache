@@ -56,6 +56,7 @@ TemporaryDependencyNodeTargetIdentifier=net10.0
 [sourceFiles]
 <NUGET>/microsoft.net.test.sdk/18.0.1/build/net8.0/Microsoft.NET.Test.Sdk.Program.cs
 Access/BrandAccessServiceTests.cs
+Auth/PhoneAuthServiceTests.cs
 Brands/
  AdminBrandOwnerHandlerTests.cs
  BrandStaffHandlerTests.cs
@@ -106,6 +107,7 @@ Services/TelegramValidationServiceTests.cs
 Users/
  CreateRedemptionCodeHandlerTests.cs
  EnsureTelegramUserHandlerTests.cs
+ PhoneLinkHandlerTests.cs
  RecipientResolverTests.cs
  RedemptionCodeGeneratorTests.cs
  UseRedemptionCodeHandlerTests.cs
@@ -292,7 +294,7 @@ Wallet/
  microsoft.codecoverage/18.0.1/lib/net8.0/Microsoft.VisualStudio.CodeCoverage.Shim.dll
  microsoft.extensions.dependencyinjection.abstractions/10.0.0/lib/net10.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll
  microsoft.extensions.dependencymodel/8.0.2/lib/net8.0/Microsoft.Extensions.DependencyModel.dll
- microsoft.extensions.logging.abstractions/2.1.1/lib/netstandard2.0/Microsoft.Extensions.Logging.Abstractions.dll
+ microsoft.extensions.logging.abstractions/10.0.0/lib/net10.0/Microsoft.Extensions.Logging.Abstractions.dll
  microsoft.extensions.options/10.0.0/lib/net10.0/Microsoft.Extensions.Options.dll
  microsoft.extensions.primitives/10.0.0/lib/net10.0/Microsoft.Extensions.Primitives.dll
  microsoft.testplatform.testhost/18.0.1/lib/net8.0/
@@ -323,6 +325,7 @@ Wallet/
  Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll
  Microsoft.CodeAnalysis.NetAnalyzers.dll
 <NUGET>/
+ microsoft.extensions.logging.abstractions/10.0.0/analyzers/dotnet/roslyn4.4/cs/Microsoft.Extensions.Logging.Generators.dll
  microsoft.extensions.options/10.0.0/analyzers/dotnet/roslyn4.4/cs/Microsoft.Extensions.Options.SourceGeneration.dll
  xunit.analyzers/1.18.0/analyzers/dotnet/cs/
   xunit.analyzers.dll

@@ -33,6 +33,9 @@ public static class BotErrorFormatter
                 : context == BotErrorContext.RedeemMetric
                     ? "нет прав на списание метрики"
                     : "нет прав на действие",
+            AppErrorCodes.Auth.PhoneInvalid => "номер телефона некорректен",
+            AppErrorCodes.Auth.PhoneCodeInvalid => "код неверен или устарел",
+            AppErrorCodes.Auth.PhoneCodeSendFailed => "не удалось отправить код",
             AppErrorCodes.Auth.TelegramLoginDataInvalid => "не удалось подтвердить Telegram-авторизацию",
             AppErrorCodes.Auth.UserIdClaimMissing => "не удалось определить пользователя",
             AppErrorCodes.Auth.UserIdClaimInvalid => "не удалось определить пользователя",
@@ -51,6 +54,8 @@ public static class BotErrorFormatter
             AppErrorCodes.RedemptionCode.NotFoundOrExpired => "код списания не найден или истёк",
             AppErrorCodes.RedemptionCode.AlreadyUsed => "код списания уже использован",
             AppErrorCodes.RedemptionCode.PoolExhausted => "сейчас нет свободных кодов списания, попробуйте позже",
+            AppErrorCodes.User.IdentityAlreadyLinked => "уже привязано к вашему профилю",
+            AppErrorCodes.User.IdentityLinkedToAnotherUser => "уже привязано к другому пользователю",
             AppErrorCodes.User.NotFound => context == BotErrorContext.IssueMetric
                 ? "получатель не найден"
                 : "пользователь не найден",

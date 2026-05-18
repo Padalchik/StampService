@@ -19,5 +19,10 @@ public interface IUserRepository
 
     void Add(User user);
 
+    Task SaveIdentityAsync(
+        User user,
+        UserIdentity identity,
+        CancellationToken cancellationToken);
+
     Task SaveAsync(CancellationToken cancellationToken);
 }

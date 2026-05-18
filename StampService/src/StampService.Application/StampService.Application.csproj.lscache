@@ -73,7 +73,12 @@ Auth/
  AuthService.cs
  IAuthService.cs
  IJwtTokenService.cs
+ IPhoneAuthCodeGenerator.cs
+ IPhoneAuthCodeRepository.cs
+ IPhoneAuthCodeSender.cs
  JwtToken.cs
+ PhoneAuthCodeGenerator.cs
+ PhoneNumberNormalizer.cs
 Brands/
  AdminBrandReadModel.cs
  BrandStaffAuthorization.cs
@@ -194,6 +199,7 @@ Errors/
  BrandErrors.cs
  CoinErrors.cs
  CoinProductErrors.cs
+ ConcurrencyConflictException.cs
  GeneralErrors.cs
  MetricErrors.cs
  PagingErrors.cs
@@ -261,6 +267,12 @@ Services/
  TelegramAuthHashCalculator.cs
  TelegramOptions.cs
  TelegramValidationService.cs
+Users/Commands/ConfirmPhoneLinkCode/
+ ConfirmPhoneLinkCodeCommand.cs
+ ConfirmPhoneLinkCodeHandler.cs
+Users/Commands/ConfirmTelegramLink/
+ ConfirmTelegramLinkCommand.cs
+ ConfirmTelegramLinkHandler.cs
 Users/Commands/CreateRedemptionCode/
  CreateRedemptionCodeCommand.cs
  CreateRedemptionCodeHandler.cs
@@ -268,6 +280,9 @@ Users/Commands/EnsureTelegramUser/
  EnsureTelegramUserCommand.cs
  EnsureTelegramUserHandler.cs
  EnsureTelegramUserResponse.cs
+Users/Commands/RequestPhoneLinkCode/
+ RequestPhoneLinkCodeCommand.cs
+ RequestPhoneLinkCodeHandler.cs
 Users/Commands/UseRedemptionCode/
  UseRedemptionCodeCommand.cs
  UseRedemptionCodeHandler.cs
@@ -279,9 +294,13 @@ Users/
  IRedemptionCodeGenerator.cs
  IRedemptionCodeRepository.cs
  IUserRepository.cs
+ Queries/GetMyProfile/
+  GetMyProfileHandler.cs
+  GetMyProfileQuery.cs
  RecipientResolutionResult.cs
  RecipientResolver.cs
  RedemptionCodeGenerator.cs
+ UserIdentityFormatter.cs
 Wallet/Queries/GetUserBrandRewards/
  GetUserBrandRewardsHandler.cs
  GetUserBrandRewardsQuery.cs
@@ -468,7 +487,7 @@ Wallet/Queries/GetUserWalletOverview/
  fluentresults/4.0.0/lib/net9.0/FluentResults.dll
  microsoft.extensions.dependencyinjection.abstractions/10.0.0/lib/net10.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll
  microsoft.extensions.dependencymodel/8.0.2/lib/net8.0/Microsoft.Extensions.DependencyModel.dll
- microsoft.extensions.logging.abstractions/2.1.1/lib/netstandard2.0/Microsoft.Extensions.Logging.Abstractions.dll
+ microsoft.extensions.logging.abstractions/10.0.0/lib/net10.0/Microsoft.Extensions.Logging.Abstractions.dll
  microsoft.extensions.options/10.0.0/lib/net10.0/Microsoft.Extensions.Options.dll
  microsoft.extensions.primitives/10.0.0/lib/net10.0/Microsoft.Extensions.Primitives.dll
  scrutor/6.1.0/lib/net8.0/Scrutor.dll
@@ -484,7 +503,9 @@ Wallet/Queries/GetUserWalletOverview/
 <DOTNET>/sdk/10.0.103/Sdks/Microsoft.NET.Sdk/analyzers/
  Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll
  Microsoft.CodeAnalysis.NetAnalyzers.dll
-<NUGET>/microsoft.extensions.options/10.0.0/analyzers/dotnet/roslyn4.4/cs/Microsoft.Extensions.Options.SourceGeneration.dll
+<NUGET>/
+ microsoft.extensions.logging.abstractions/10.0.0/analyzers/dotnet/roslyn4.4/cs/Microsoft.Extensions.Logging.Generators.dll
+ microsoft.extensions.options/10.0.0/analyzers/dotnet/roslyn4.4/cs/Microsoft.Extensions.Options.SourceGeneration.dll
 
 [analyzerConfigFiles]
 ../../.editorconfig

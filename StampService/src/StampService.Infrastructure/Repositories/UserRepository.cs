@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Domain.User;
 
@@ -20,6 +22,7 @@ public class UserRepository : IUserRepository
     {
         var identity = await _dbContext.UserIdentities
             .Include(item => item.User)
+            .ThenInclude(user => user.Identities)
             .FirstOrDefaultAsync(
                 item => item.Type == identityType && item.Key == identityKey,
                 cancellationToken);
@@ -36,6 +39,7 @@ public class UserRepository : IUserRepository
     public async Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken)
     {
         return await _dbContext.Users
+            .Include(user => user.Identities)
             .FirstOrDefaultAsync(user => user.Id == userId, cancellationToken);
     }
 
@@ -56,8 +60,48 @@ public class UserRepository : IUserRepository
         _dbContext.Users.Add(user);
     }
 
+    public async Task SaveIdentityAsync(
+        User user,
+        UserIdentity identity,
+        CancellationToken cancellationToken)
+    {
+        var identityEntry = _dbContext.Entry(identity);
+        if (identityEntry.State == EntityState.Detached)
+            _dbContext.UserIdentities.Add(identity);
+
+        _dbContext.Entry(user).State = EntityState.Unchanged;
+
+        try
+        {
+            await SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation
+        })
+        {
+            throw new ConcurrencyConflictException(
+                "User identity changes conflicted with another operation.",
+                ex);
+        }
+    }
+
     public Task SaveAsync(CancellationToken cancellationToken)
     {
-        return _dbContext.SaveChangesAsync(cancellationToken);
+        return SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task SaveChangesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw new ConcurrencyConflictException(
+                "User changes were modified by another operation.",
+                ex);
+        }
     }
 }

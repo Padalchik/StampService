@@ -587,6 +587,57 @@ namespace StampService.Infrastructure.Migrations
                     b.ToTable("customer_digest_states", (string)null);
                 });
 
+            modelBuilder.Entity("StampService.Domain.User.PhoneAuthCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at_utc");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_attempts");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("phone_number");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateTime?>("UsedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at_utc");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PhoneNumber", "UsedAtUtc", "ExpiresAtUtc")
+                        .HasDatabaseName("ix_phone_auth_codes_phone_used_expires");
+
+                    b.ToTable("phone_auth_codes", (string)null);
+                });
+
             modelBuilder.Entity("StampService.Domain.User.RedemptionCode", b =>
                 {
                     b.Property<Guid>("Id")

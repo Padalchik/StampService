@@ -253,6 +253,17 @@ Features/
    EditMetricRedemptionAmountScreen.cs
    MetricDetailsScreen.cs
    MetricsListScreen.cs
+ Profile/Actions/
+  EnterProfilePhoneAction.cs
+  EnterProfilePhoneCodeAction.cs
+  StartLinkPhoneAction.cs
+ Profile/
+  Endpoints/ProfileEndpoint.cs
+  ProfileSessionKeys.cs
+  Screens/
+   ProfilePhoneCodeScreen.cs
+   ProfilePhoneNumberScreen.cs
+   ProfileScreen.cs
  RedeemMetric/Actions/
   CancelRedeemMetricAction.cs
   ConfirmRedeemMetricAction.cs

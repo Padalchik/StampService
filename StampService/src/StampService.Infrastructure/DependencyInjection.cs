@@ -42,7 +42,10 @@ public static class DependencyInjection
         services.AddScoped<ICustomerRewardDigestRepository, CustomerRewardDigestRepository>();
         services.AddScoped<IRewardDigestSettingsRepository, RewardDigestSettingsRepository>();
         services.AddScoped<IDemoDatabaseResetService, DemoDatabaseResetService>();
+        services.AddScoped<IPhoneAuthCodeRepository, PhoneAuthCodeRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddSingleton<HttpClient>();
+        services.AddScoped<IPhoneAuthCodeSender, TelegramAdminPhoneAuthCodeSender>();
 
         return services;
     }

@@ -56,7 +56,10 @@ TemporaryDependencyNodeTargetIdentifier=net10.0
 [sourceFiles]
 DTOs/Auth/
  AuthResponse.cs
+ RequestPhoneAuthCodeRequest.cs
+ RequestPhoneAuthCodeResponse.cs
  TelegramLoginRequest.cs
+ VerifyPhoneAuthCodeRequest.cs
 DTOs/Brands/
  AddBrandStaffByCustomerCodeResponse.cs
  AddBrandStaffRequest.cs
@@ -103,6 +106,14 @@ DTOs/Metrics/
  UpdateMetricRequest.cs
  UserMetricBalanceResponse.cs
  UserMetricBalancesResponse.cs
+DTOs/Profile/
+ ConfirmPhoneLinkCodeRequest.cs
+ ConfirmPhoneLinkCodeResponse.cs
+ ConfirmTelegramLinkResponse.cs
+ IdentityStatusResponse.cs
+ MyProfileResponse.cs
+ RequestPhoneLinkCodeRequest.cs
+ RequestPhoneLinkCodeResponse.cs
 DTOs/
  Users/CreateRedemptionCodeResponse.cs
  Wallet/

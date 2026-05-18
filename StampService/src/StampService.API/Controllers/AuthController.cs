@@ -17,4 +17,22 @@ public class AuthController : ControllerBase
     {
         return await authService.LoginAsync(request, cancellationToken);
     }
+
+    [HttpPost("phone/code")]
+    public async Task<EndpointResult<RequestPhoneAuthCodeResponse>> RequestPhoneCode(
+        RequestPhoneAuthCodeRequest request,
+        [FromServices] IAuthService authService,
+        CancellationToken cancellationToken)
+    {
+        return await authService.RequestPhoneCodeAsync(request, cancellationToken);
+    }
+
+    [HttpPost("phone/verify")]
+    public async Task<EndpointResult<AuthResponse>> VerifyPhoneCode(
+        VerifyPhoneAuthCodeRequest request,
+        [FromServices] IAuthService authService,
+        CancellationToken cancellationToken)
+    {
+        return await authService.VerifyPhoneCodeAsync(request, cancellationToken);
+    }
 }
