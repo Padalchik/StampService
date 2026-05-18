@@ -106,6 +106,11 @@ p {
   line-height: 1.5;
 }
 
+.muted-text {
+  margin-bottom: 0;
+  color: #5f6f80;
+}
+
 .auth-form {
   display: grid;
   gap: 12px;
@@ -225,6 +230,166 @@ p {
   font-weight: 700;
 }
 
+.wallet-page {
+  display: grid;
+  gap: 18px;
+}
+
+.surface-panel,
+.wallet-code-panel {
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  padding: 22px;
+  background: #fff;
+}
+
+.wallet-code-panel {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.wallet-code-panel__main {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.wallet-code-panel__icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  background: #e9f3fb;
+  color: #1769aa;
+}
+
+.wallet-code-panel h2 {
+  margin-bottom: 6px;
+}
+
+.wallet-code-panel p {
+  margin-bottom: 12px;
+}
+
+.wallet-code-panel__expires {
+  margin-top: 8px;
+  color: #526171;
+  font-weight: 700;
+}
+
+.redemption-code {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  border: 1px solid #c8d2dc;
+  border-radius: 8px;
+  padding: 0 18px;
+  background: #f7fafc;
+  color: #1f2933;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.customer-code {
+  margin-bottom: 10px;
+  color: #526171;
+  font-weight: 700;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  color: #1f2933;
+}
+
+.section-heading h2 {
+  margin-bottom: 0;
+}
+
+.wallet-brand-list {
+  display: grid;
+  gap: 14px;
+}
+
+.wallet-brand-card {
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  padding: 18px;
+  background: #fbfcfd;
+}
+
+.wallet-brand-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.wallet-brand-card h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.wallet-brand-card__toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wallet-brand-card__toggles span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 0 10px;
+  background: #eef3f7;
+  color: #526171;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.reward-block {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.reward-block h4 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.reward-block ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reward-block li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #dce6ef;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.reward-block strong {
+  white-space: nowrap;
+}
+
 @media (max-width: 760px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -241,7 +406,9 @@ p {
   }
 
   .workspace__header,
-  .auth-panel__header {
+  .auth-panel__header,
+  .wallet-code-panel,
+  .wallet-code-panel__main {
     flex-direction: column;
   }
 

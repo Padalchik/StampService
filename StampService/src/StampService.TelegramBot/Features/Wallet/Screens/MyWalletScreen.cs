@@ -1,12 +1,9 @@
 using System.Net;
 using StampService.Application.Abstractions;
-using StampService.Application.CustomerNotifications.Commands.MarkWalletOpened;
-using StampService.Application.Users.Commands.CreateRedemptionCode;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
-using StampService.Application.Wallet.Queries.GetUserWalletOverview;
-using StampService.Contracts.DTOs.CustomerNotifications;
 using StampService.Contracts.DTOs.Users;
 using StampService.Contracts.DTOs.Wallet;
+using StampService.Application.Wallet.Commands.OpenUserWallet;
 using StampService.TelegramBot.Features.Wallet.Actions;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
@@ -17,21 +14,15 @@ public sealed class MyWalletScreen : IScreen
 {
     public const string ForceRefreshCodeSessionKey = "wallet.force_refresh_code";
 
-    private readonly ICommandHandler<CreateRedemptionCodeResponse, CreateRedemptionCodeCommand> _createCodeHandler;
-    private readonly ICommandHandler<MarkWalletOpenedResponse, MarkWalletOpenedCommand> _markWalletOpenedHandler;
     private readonly ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> _ensureUserHandler;
-    private readonly IQueryHandler<UserWalletOverviewResponse, GetUserWalletOverviewQuery> _overviewHandler;
+    private readonly ICommandHandler<UserWalletResponse, OpenUserWalletCommand> _openWalletHandler;
 
     public MyWalletScreen(
-        ICommandHandler<CreateRedemptionCodeResponse, CreateRedemptionCodeCommand> createCodeHandler,
-        ICommandHandler<MarkWalletOpenedResponse, MarkWalletOpenedCommand> markWalletOpenedHandler,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        IQueryHandler<UserWalletOverviewResponse, GetUserWalletOverviewQuery> overviewHandler)
+        ICommandHandler<UserWalletResponse, OpenUserWalletCommand> openWalletHandler)
     {
-        _createCodeHandler = createCodeHandler;
-        _markWalletOpenedHandler = markWalletOpenedHandler;
         _ensureUserHandler = ensureUserHandler;
-        _overviewHandler = overviewHandler;
+        _openWalletHandler = openWalletHandler;
     }
 
     public async ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
@@ -48,37 +39,26 @@ public sealed class MyWalletScreen : IScreen
         if (userResult.IsFailed)
             return new ScreenView("Не удалось определить пользователя.").BackButton();
 
-        await _markWalletOpenedHandler.Handle(
-            new MarkWalletOpenedCommand(userResult.Value.UserId),
-            ctx.CancellationToken);
-
         var forceRefreshCode = ctx.Session?.Data.Get<bool>(ForceRefreshCodeSessionKey) ?? false;
         ctx.Session?.Data.Remove(ForceRefreshCodeSessionKey);
 
-        var codeResult = await _createCodeHandler.Handle(
-            new CreateRedemptionCodeCommand(userResult.Value.UserId, ForceRefresh: forceRefreshCode),
+        var walletResult = await _openWalletHandler.Handle(
+            new OpenUserWalletCommand(userResult.Value.UserId, forceRefreshCode),
             ctx.CancellationToken);
-
-        if (codeResult.IsFailed)
-            return new ScreenView("Не удалось создать код для списания.").BackButton();
-
-        var overviewResult = await _overviewHandler.Handle(
-            new GetUserWalletOverviewQuery(userResult.Value.UserId),
-            ctx.CancellationToken);
-
-        if (overviewResult.IsFailed)
+        if (walletResult.IsFailed)
             return new ScreenView("Не удалось загрузить кошелёк.").BackButton();
 
+        var wallet = walletResult.Value;
         var view = new ScreenView(
             "<b>Мой кошелёк</b>\n\n" +
-            $"Код пользователя: <code>{Html(userResult.Value.CustomerCode)}</code>\n" +
-            $"Код для списания: <code>{Html(codeResult.Value.Code)}</code>\n" +
-            $"Действует до: {FormatLocalTime(codeResult.Value.ExpiresAtUtc)}\n\n" +
-            BuildOverviewText(overviewResult.Value));
+            $"Код пользователя: <code>{Html(wallet.CustomerCode)}</code>\n" +
+            $"Код для списания: <code>{Html(wallet.RedemptionCode.Code)}</code>\n" +
+            $"Действует до: {FormatLocalTime(wallet.RedemptionCode.ExpiresAtUtc)}\n\n" +
+            BuildOverviewText(wallet));
 
         view.Row().Button<RefreshMyWalletAction>("🔄 Обновить данные");
 
-        foreach (var brand in overviewResult.Value.Brands)
+        foreach (var brand in wallet.Brands)
         {
             view.Row().Button<ViewWalletBrandRewardsAction, ViewWalletBrandRewardsPayload>(
                 $"▶️ {brand.BrandName}",
@@ -88,7 +68,7 @@ public sealed class MyWalletScreen : IScreen
         return view.BackButton();
     }
 
-    private static string BuildOverviewText(UserWalletOverviewResponse response)
+    private static string BuildOverviewText(UserWalletResponse response)
     {
         if (response.Brands.Count == 0)
             return "<b>Балансы</b>\n\nУ вас пока нет балансов.";

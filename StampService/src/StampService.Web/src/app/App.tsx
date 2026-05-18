@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../auth/AuthContext';
 import { PhoneLoginPage } from '../auth/PhoneLoginPage';
+import { WalletPage } from '../wallet/WalletPage';
 
 export function App() {
   return (
@@ -52,11 +53,11 @@ function AppShell() {
       <aside className="sidebar" aria-label="Основное меню">
         <div className="sidebar__brand">StampService</div>
         <nav className="sidebar__nav">
-          <button className="sidebar__item sidebar__item--active" type="button">
+          <button className="sidebar__item" type="button" disabled>
             <UserRound size={18} />
             Личный кабинет
           </button>
-          <button className="sidebar__item" type="button" disabled>
+          <button className="sidebar__item sidebar__item--active" type="button">
             <WalletCards size={18} />
             Мой кошелёк
           </button>
@@ -70,8 +71,8 @@ function AppShell() {
       <main className="workspace">
         <header className="workspace__header">
           <div>
-            <h1>Личный кабинет</h1>
-            <p>Вход по телефону выполнен. Следующий этап - профиль и смена телефона.</p>
+            <h1>Мой кошелёк</h1>
+            <p>Балансы, доступные награды и код для списания.</p>
           </div>
           <button className="button-secondary" type="button" onClick={auth.signOut}>
             <LogOut size={18} />
@@ -79,21 +80,7 @@ function AppShell() {
           </button>
         </header>
 
-        <section className="empty-state">
-          <h2>Авторизация работает через JWT</h2>
-          <p>
-            Токен сохранён в auth-слое frontend. Разделы кошелька и рабочих брендов будут
-            подключаться следующими этапами по существующим Application-сценариям.
-          </p>
-          {auth.expiresAt ? (
-            <p className="empty-state__meta">
-              Сессия действует до {new Intl.DateTimeFormat('ru-RU', {
-                dateStyle: 'short',
-                timeStyle: 'medium'
-              }).format(new Date(auth.expiresAt))}
-            </p>
-          ) : null}
-        </section>
+        <WalletPage />
       </main>
     </div>
   );
