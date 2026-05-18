@@ -50,8 +50,8 @@ public sealed class ProfileScreen : IScreen
             $"Telegram: {telegramText}\n" +
             $"Телефон: {phoneText}");
 
-        if (!profile.Phone.Linked)
-            view.Row().Button<StartLinkPhoneAction>("Привязать телефон");
+        view.Row().Button<StartLinkPhoneAction>(
+            profile.Phone.Linked ? "Изменить телефон" : "Привязать телефон");
 
         return view.BackButton();
     }

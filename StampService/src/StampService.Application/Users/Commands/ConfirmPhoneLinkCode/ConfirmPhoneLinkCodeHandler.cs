@@ -48,12 +48,16 @@ public class ConfirmPhoneLinkCodeHandler
         if (user is null)
             return Result.Fail(UserErrors.NotFound());
 
-        if (user.Identities.Any(identity => identity.Type == IdentityType.Phone && identity.Key == phoneNumber))
+        var samePhoneIdentity = user.Identities.FirstOrDefault(identity =>
+            identity.Type == IdentityType.Phone && identity.Key == phoneNumber);
+        if (samePhoneIdentity is not null)
         {
             return Result.Ok(new ConfirmPhoneLinkCodeResponse(
                 phoneNumber,
                 UserIdentityFormatter.MaskPhone(phoneNumber)));
         }
+
+        var currentPhoneIdentity = user.Identities.FirstOrDefault(identity => identity.Type == IdentityType.Phone);
 
         var phoneOwner = await _userRepository.GetByIdentityAsync(
             IdentityType.Phone,
@@ -111,7 +115,16 @@ public class ConfirmPhoneLinkCodeHandler
             PhoneNumber = phoneNumber,
             LinkedAtUtc = nowUtc
         });
-        var identityResult = user.AddIdentity(IdentityType.Phone, phoneNumber, metadata);
+        Result<UserIdentity> identityResult;
+        if (currentPhoneIdentity is null)
+        {
+            identityResult = user.AddIdentity(IdentityType.Phone, phoneNumber, metadata);
+        }
+        else
+        {
+            currentPhoneIdentity.Deactivate(nowUtc);
+            identityResult = user.AddIdentity(IdentityType.Phone, phoneNumber, metadata);
+        }
         if (identityResult.IsFailed)
             return Result.Fail(identityResult.Errors);
 

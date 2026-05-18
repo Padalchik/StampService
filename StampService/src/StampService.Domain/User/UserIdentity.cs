@@ -30,6 +30,25 @@ public class UserIdentity : BaseEntity
 
     public static Result<UserIdentity> Create(User user, IdentityType type, string key, string metadata)
     {
+        var validationResult = Validate(type, key, metadata);
+        if (validationResult.IsFailed)
+            return Result.Fail(validationResult.Errors);
+
+        var userIdentity = new UserIdentity(user, type, key, metadata);
+        return Result.Ok(userIdentity);
+    }
+
+    public void Deactivate(DateTime deactivatedAtUtc)
+    {
+        if (DeletedAt is not null)
+            return;
+
+        ((ISoftDelete)this).DeletedAt = deactivatedAtUtc;
+        Touch();
+    }
+
+    private static Result Validate(IdentityType type, string key, string metadata)
+    {
         if (type == IdentityType.None)
             return Result.Fail(DomainError.Validation(
                 "user_identity.type_invalid",
@@ -60,7 +79,6 @@ public class UserIdentity : BaseEntity
                 $"Metadata must not exceed {Constants.MAX_IDENTITY_METADATA_LENGTH} characters",
                 nameof(metadata)));
 
-        var userIdentity = new UserIdentity(user, type, key, metadata);
-        return Result.Ok(userIdentity);
+        return Result.Ok();
     }
 }

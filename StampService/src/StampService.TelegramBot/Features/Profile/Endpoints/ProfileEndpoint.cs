@@ -102,8 +102,8 @@ public sealed class ProfileEndpoint : IBotEndpoint
         return BotInputResults.DeleteInputThen(BotResults.ShowView(
             new ScreenView(
                 "<b>Телефон привязан</b>\n\n" +
-                $"Теперь к вашему профилю привязан номер {result.Value.MaskedPhoneNumber}.")
-                .NavigateButton<ProfileScreen>("Открыть личный кабинет")));
+                $"К вашему профилю привязан номер {result.Value.MaskedPhoneNumber}.")
+                .BackButton()));
     }
 
     private static void ClearLinkSession(UpdateContext ctx)
