@@ -5,6 +5,7 @@ using StampService.Application.Abstractions;
 using StampService.Application.Wallet.Commands.OpenUserWallet;
 using StampService.Application.Wallet.Queries.GetUserBrandRewards;
 using StampService.Application.Wallet.Queries.GetUserBrandWalletHistory;
+using StampService.Application.Wallet.Queries.GetUserWalletBrandDetails;
 using StampService.Contracts.DTOs.Wallet;
 
 namespace StampService.API.Controllers;
@@ -41,6 +42,21 @@ public class WalletController : ApiControllerBase
 
         return await handler.Handle(
             new GetUserBrandRewardsQuery(userIdResult.Value, brandId),
+            cancellationToken);
+    }
+
+    [HttpGet("brands/{brandId:guid}/details")]
+    public async Task<EndpointResult<UserWalletBrandDetailsResponse>> GetBrandDetails(
+        Guid brandId,
+        [FromServices] IQueryHandler<UserWalletBrandDetailsResponse, GetUserWalletBrandDetailsQuery> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<UserWalletBrandDetailsResponse>();
+
+        return await handler.Handle(
+            new GetUserWalletBrandDetailsQuery(userIdResult.Value, brandId),
             cancellationToken);
     }
 

@@ -2,13 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, BarChart3, ChevronRight, Gift, History, RefreshCw, Ticket, WalletCards } from 'lucide-react';
 import { ApiRequestError } from '../api/apiClient';
 import {
-  getBrandHistory,
-  getBrandRewards,
+  getBrandDetails,
   openUserWallet,
-  type UserBrandRewardsResponse,
-  type UserBrandWalletHistoryItemResponse,
-  type UserBrandWalletHistoryResponse,
+  type UserWalletBrandDetailsResponse,
+  type UserWalletBrandHistoryGroupResponse,
   type UserWalletBrandOverviewResponse,
+  type UserWalletBrandRewardSectionResponse,
   type UserWalletResponse
 } from './walletApi';
 
@@ -18,8 +17,7 @@ export function WalletPage() {
   const [isRefreshingCode, setIsRefreshingCode] = useState(false);
   const [error, setError] = useState('');
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
-  const [brandRewards, setBrandRewards] = useState<UserBrandRewardsResponse | null>(null);
-  const [brandHistory, setBrandHistory] = useState<UserBrandWalletHistoryResponse | null>(null);
+  const [brandDetails, setBrandDetails] = useState<UserWalletBrandDetailsResponse | null>(null);
   const [isBrandLoading, setIsBrandLoading] = useState(false);
   const [brandError, setBrandError] = useState('');
   const hasRequestedInitialWallet = useRef(false);
@@ -63,14 +61,12 @@ export function WalletPage() {
   if (selectedBrandId) {
     return (
       <BrandDetailsScreen
-        rewards={brandRewards}
-        history={brandHistory}
+        details={brandDetails}
         isLoading={isBrandLoading}
         error={brandError}
         onBack={() => {
           setSelectedBrandId(null);
-          setBrandRewards(null);
-          setBrandHistory(null);
+          setBrandDetails(null);
           setBrandError('');
         }}
       />
@@ -138,18 +134,13 @@ export function WalletPage() {
 
   async function loadBrandDetails(brandId: string) {
     setSelectedBrandId(brandId);
-    setBrandRewards(null);
-    setBrandHistory(null);
+    setBrandDetails(null);
     setBrandError('');
     setIsBrandLoading(true);
 
     try {
-      const [rewardsResponse, historyResponse] = await Promise.all([
-        getBrandRewards(brandId),
-        getBrandHistory(brandId)
-      ]);
-      setBrandRewards(rewardsResponse);
-      setBrandHistory(historyResponse);
+      const response = await getBrandDetails(brandId);
+      setBrandDetails(response);
     } catch (requestError) {
       setBrandError(getUserMessage(requestError));
     } finally {
@@ -223,19 +214,17 @@ function WalletBrandCard({
 }
 
 function BrandDetailsScreen({
-  rewards,
-  history,
+  details,
   isLoading,
   error,
   onBack
 }: {
-  rewards: UserBrandRewardsResponse | null;
-  history: UserBrandWalletHistoryResponse | null;
+  details: UserWalletBrandDetailsResponse | null;
   isLoading: boolean;
   error: string;
   onBack: () => void;
 }) {
-  const brandName = rewards?.brandName || history?.brandName || 'Бренд';
+  const brandName = details?.brandName || 'Бренд';
 
   return (
     <div className="brand-detail-page">
@@ -254,142 +243,96 @@ function BrandDetailsScreen({
         {isLoading ? <p className="muted-text">Загружаем бренд...</p> : null}
         {error ? <p className="form-status form-status--error">{error}</p> : null}
 
-        {!isLoading && rewards ? <BrandRewards rewards={rewards} /> : null}
-        {!isLoading && history ? <BrandHistory history={history} /> : null}
+        {!isLoading && details ? <BrandRewards details={details} /> : null}
+        {!isLoading && details ? <BrandHistory history={details.history} /> : null}
       </section>
     </div>
   );
 }
 
-function BrandRewards({ rewards }: { rewards: UserBrandRewardsResponse }) {
+function BrandRewards({ details }: { details: UserWalletBrandDetailsResponse }) {
   return (
     <div className="brand-details__grid">
-      {rewards.isCoinsEnabled ? (
-        <section className="detail-block">
-          <div className="detail-block__heading">
-            <Gift size={19} />
-            <h3>Товары за монетки</h3>
-          </div>
-          <p className="detail-block__balance">Монетки: {rewards.coinBalance}</p>
-          {rewards.isCoinProductRedemptionEnabled && rewards.coinProducts.length > 0 ? (
-            <RewardList
-              items={rewards.coinProducts.map((product) => ({
-                id: product.productId,
-                name: product.productName,
-                progress: `${product.currentBalance}/${product.price}`,
-                status: product.isAvailable ? 'доступно' : `не хватает ${product.missingAmount}`,
-                available: product.isAvailable
-              }))}
-            />
-          ) : (
-            <p className="muted-text">Пока нет активных товаров.</p>
-          )}
-        </section>
-      ) : null}
+      {details.rewardSections.map((section) => (
+        <RewardSection key={section.kind} section={section} />
+      ))}
 
-      {rewards.isMetricsEnabled ? (
-        <section className="detail-block">
-          <div className="detail-block__heading">
-            <BarChart3 size={19} />
-            <h3>Метрики</h3>
-          </div>
-          {rewards.metrics.length > 0 ? (
-            <RewardList
-              items={rewards.metrics.map((metric) => ({
-                id: metric.metricDefinitionId,
-                name: metric.metricName,
-                progress: `${metric.currentBalance}/${metric.requiredAmount}`,
-                status: metric.isAvailable ? 'доступно' : `не хватает ${metric.missingAmount}`,
-                available: metric.isAvailable
-              }))}
-            />
-          ) : (
-            <p className="muted-text">Пока нет балансов по метрикам.</p>
-          )}
-        </section>
-      ) : null}
-
-      <p className="brand-details__hint">
-        Чтобы получить награду, покажите код для списания сотруднику.
-      </p>
+      <p className="brand-details__hint">{details.hintText}</p>
     </div>
   );
 }
 
-function RewardList({
-  items
-}: {
-  items: Array<{ id: string; name: string; progress: string; status: string; available: boolean }>;
-}) {
+function RewardSection({ section }: { section: UserWalletBrandRewardSectionResponse }) {
+  const Icon = section.kind === 'Metrics' ? BarChart3 : Gift;
+
   return (
-    <ul className="detail-list">
-      {items.map((item) => (
-        <li key={item.id}>
-          <span className={item.available ? 'reward-marker reward-marker--available' : 'reward-marker'} />
-          <span>{item.name}</span>
-          <strong>{item.progress}</strong>
-          <em>{item.status}</em>
-        </li>
-      ))}
-    </ul>
+    <section className="detail-block">
+      <div className="detail-block__heading">
+        <Icon size={19} />
+        <h3>{section.title}</h3>
+      </div>
+      {section.balanceText ? <p className="detail-block__balance">{section.balanceText}</p> : null}
+      {section.items.length > 0 ? (
+        <ul className="detail-list">
+          {section.items.map((item) => (
+            <li key={item.itemId}>
+              <span className={item.isAvailable ? 'reward-marker reward-marker--available' : 'reward-marker'} />
+              <span>{item.name}</span>
+              <strong>{item.progressText}</strong>
+              <em>{item.statusText}</em>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted-text">{section.emptyText}</p>
+      )}
+    </section>
   );
 }
 
-function BrandHistory({ history }: { history: UserBrandWalletHistoryResponse }) {
-  const coinItems = history.items.filter((item) => item.sourceType === 'Coin');
-  const metricItems = history.items.filter((item) => item.sourceType === 'Metric');
+function BrandHistory({ history }: { history: UserWalletBrandDetailsResponse['history'] }) {
+  const hasItems = history.groups.some((group) => group.items.length > 0);
 
   return (
     <section className="detail-block detail-block--wide">
       <div className="detail-block__heading">
         <History size={19} />
-        <h3>Последние операции</h3>
+        <h3>{history.title}</h3>
       </div>
 
-      {history.items.length === 0 ? (
-        <p className="muted-text">Истории операций пока нет.</p>
+      {!hasItems ? (
+        <p className="muted-text">{history.emptyText}</p>
       ) : (
         <div className="history-sections">
-          {history.isCoinsEnabled ? <HistorySection title="Монеты" items={coinItems} /> : null}
-          {history.isMetricsEnabled ? <HistorySection title="Метрики" items={metricItems} /> : null}
+          {history.groups.map((group) => (
+            <HistorySection key={group.kind} group={group} />
+          ))}
         </div>
       )}
     </section>
   );
 }
 
-function HistorySection({
-  title,
-  items
-}: {
-  title: string;
-  items: UserBrandWalletHistoryItemResponse[];
-}) {
+function HistorySection({ group }: { group: UserWalletBrandHistoryGroupResponse }) {
   return (
     <div className="history-section">
-      <h4>{title}</h4>
-      {items.length === 0 ? (
-        <p className="muted-text">Операций пока нет.</p>
+      <h4>{group.title}</h4>
+      {group.items.length === 0 ? (
+        <p className="muted-text">{group.emptyText}</p>
       ) : (
         <ul className="history-list">
-          {items
-            .slice()
-            .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
-            .map((item) => (
-              <li key={`${item.sourceType}-${item.sourceName}-${item.createdAt}-${item.amount}`}>
-                <span className={item.transactionType === 'Issue' ? 'history-sign history-sign--issue' : 'history-sign'} />
-                <div>
-                  <strong>
-                    {item.transactionType === 'Issue' ? '+' : '-'}
-                    {item.amount} {item.sourceName}
-                  </strong>
-                  <p>
-                    {formatDateTime(item.createdAt)}
-                    {item.comment && !isAutoComment(item.comment) ? ` - ${item.comment}` : ''}
-                  </p>
-                </div>
-              </li>
-            ))}
+          {group.items.map((item) => (
+            <li key={`${item.sourceType}-${item.sourceName}-${item.createdAt}-${item.amount}`}>
+              <span className={item.transactionType === 'Issue' ? 'history-sign history-sign--issue' : 'history-sign'} />
+              <div>
+                <strong>{item.amountText}</strong>
+                <p>
+                  {formatDateTime(item.createdAt)}
+                  {item.hasVisibleComment && item.comment ? ` - ${item.comment}` : ''}
+                </p>
+              </div>
+            </li>
+          ))}
         </ul>
       )}
     </div>
@@ -412,10 +355,6 @@ function formatDateTime(value: string): string {
     hour: '2-digit',
     minute: '2-digit'
   }).format(new Date(value));
-}
-
-function isAutoComment(value: string): boolean {
-  return ['Issue metric', 'Redeem metric', 'Issue coins', 'Redeem coins'].includes(value);
 }
 
 function getUserMessage(error: unknown): string {

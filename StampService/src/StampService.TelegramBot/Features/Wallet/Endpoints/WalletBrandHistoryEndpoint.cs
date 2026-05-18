@@ -2,8 +2,7 @@ using System.Globalization;
 using System.Net;
 using StampService.Application.Abstractions;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
-using StampService.Application.Wallet.Queries.GetUserBrandWalletHistory;
-using StampService.Application.Wallet.Queries.GetUserBrandRewards;
+using StampService.Application.Wallet.Queries.GetUserWalletBrandDetails;
 using StampService.Contracts.DTOs.Users;
 using StampService.Contracts.DTOs.Wallet;
 using StampService.TelegramBot.Common.Routing;
@@ -28,25 +27,25 @@ public sealed class WalletBrandHistoryEndpoint : IBotEndpoint
         UpdateContext ctx,
         ViewWalletBrandRewardsPayload payload,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        IQueryHandler<UserBrandRewardsResponse, GetUserBrandRewardsQuery> rewardsHandler)
+        IQueryHandler<UserWalletBrandDetailsResponse, GetUserWalletBrandDetailsQuery> detailsHandler)
     {
         var userResult = await BotEndpointHelpers.EnsureUserAsync(ctx, ensureUserHandler);
 
         if (userResult.IsFailed)
             return BotResults.ShowView(new ScreenView("Не удалось определить пользователя.").BackButton());
 
-        var rewardsResult = await rewardsHandler.Handle(
-            new GetUserBrandRewardsQuery(userResult.Value.UserId, payload.BrandId),
+        var detailsResult = await detailsHandler.Handle(
+            new GetUserWalletBrandDetailsQuery(userResult.Value.UserId, payload.BrandId),
             ctx.CancellationToken);
 
-        if (rewardsResult.IsFailed)
+        if (detailsResult.IsFailed)
             return BotResults.ShowView(new ScreenView("Не удалось загрузить бренд.").BackButton());
 
-        var brandName = string.IsNullOrWhiteSpace(rewardsResult.Value.BrandName)
+        var brandName = string.IsNullOrWhiteSpace(detailsResult.Value.BrandName)
             ? payload.BrandName
-            : rewardsResult.Value.BrandName;
+            : detailsResult.Value.BrandName;
 
-        return BotResults.ShowView(new ScreenView(BuildRewardsText(rewardsResult.Value, brandName))
+        return BotResults.ShowView(new ScreenView(BuildRewardsText(detailsResult.Value, brandName))
             .Button<ViewWalletBrandHistoryAction, ViewWalletBrandHistoryPayload>(
                 "📈 История",
                 new ViewWalletBrandHistoryPayload(payload.BrandId, brandName))
@@ -57,144 +56,108 @@ public sealed class WalletBrandHistoryEndpoint : IBotEndpoint
         UpdateContext ctx,
         ViewWalletBrandHistoryPayload payload,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        IQueryHandler<UserBrandWalletHistoryResponse, GetUserBrandWalletHistoryQuery> historyHandler)
+        IQueryHandler<UserWalletBrandDetailsResponse, GetUserWalletBrandDetailsQuery> detailsHandler)
     {
         var userResult = await BotEndpointHelpers.EnsureUserAsync(ctx, ensureUserHandler);
 
         if (userResult.IsFailed)
             return BotResults.ShowView(new ScreenView("Не удалось определить пользователя.").BackButton());
 
-        var historyResult = await historyHandler.Handle(
-            new GetUserBrandWalletHistoryQuery(
+        var detailsResult = await detailsHandler.Handle(
+            new GetUserWalletBrandDetailsQuery(
                 userResult.Value.UserId,
-                payload.BrandId,
-                Skip: 0,
-                Take: 10),
+                payload.BrandId),
             ctx.CancellationToken);
 
-        if (historyResult.IsFailed)
+        if (detailsResult.IsFailed)
             return BotResults.ShowView(new ScreenView("Не удалось загрузить историю.").BackButton());
 
-        var brandName = string.IsNullOrWhiteSpace(historyResult.Value.BrandName)
+        var brandName = string.IsNullOrWhiteSpace(detailsResult.Value.BrandName)
             ? payload.BrandName
-            : historyResult.Value.BrandName;
+            : detailsResult.Value.BrandName;
         var title = $"<b>{Html(brandName)}</b>\nИстория кошелька";
 
-        if (historyResult.Value.Items.Count == 0)
+        var history = detailsResult.Value.History;
+        var hasItems = history.Groups.Any(group => group.Items.Count > 0);
+        if (!hasItems)
         {
             return BotResults.ShowView(new ScreenView(
-                $"{title}\n\nИстории операций пока нет.")
+                $"{title}\n\n{Html(history.EmptyText)}")
                 .BackButton());
         }
 
-        var sections = BuildHistorySections(historyResult.Value);
+        var sections = BuildHistorySections(history);
 
         return BotResults.ShowView(new ScreenView(
             $"{title}\n\n" +
-            "<b>Последние операции</b>\n" +
+            $"<b>{Html(history.Title)}</b>\n" +
             string.Join("\n\n", sections))
             .BackButton());
     }
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);
 
-    private static IReadOnlyCollection<string> BuildHistorySections(UserBrandWalletHistoryResponse response)
+    private static IReadOnlyCollection<string> BuildHistorySections(UserWalletBrandHistorySectionResponse response)
     {
-        var sections = new List<string>();
-
-        if (response.IsCoinsEnabled)
-            sections.Add(BuildHistorySection("Монеты", response.Items.Where(item => item.SourceType == "Coin")));
-
-        if (response.IsMetricsEnabled)
-            sections.Add(BuildHistorySection("Метрики", response.Items.Where(item => item.SourceType == "Metric")));
-
-        return sections;
+        return response.Groups
+            .Select(BuildHistorySection)
+            .ToArray();
     }
 
-    private static string BuildHistorySection(
-        string title,
-        IEnumerable<UserBrandWalletHistoryItemResponse> items)
+    private static string BuildHistorySection(UserWalletBrandHistoryGroupResponse group)
     {
-        var lines = items
-            .OrderByDescending(item => item.CreatedAt)
+        var lines = group.Items
             .Select(FormatHistoryItem)
             .ToArray();
 
         return lines.Length == 0
-            ? $"<b>{title}</b>\nОпераций пока нет."
-            : $"<b>{title}</b>\n" + string.Join("\n", lines);
+            ? $"<b>{Html(group.Title)}</b>\n{Html(group.EmptyText)}"
+            : $"<b>{Html(group.Title)}</b>\n" + string.Join("\n", lines);
     }
 
-    private static string FormatHistoryItem(UserBrandWalletHistoryItemResponse item)
+    private static string FormatHistoryItem(UserWalletBrandHistoryItemDetailsResponse item)
     {
         var isIssue = item.TransactionType == "Issue";
         var marker = isIssue ? "🟢" : "🟡";
-        var sign = isIssue ? "+" : "-";
         var date = item.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
-        var comment = string.IsNullOrWhiteSpace(item.Comment) || IsAutoComment(item.Comment)
-            ? string.Empty
-            : $" - {Html(item.Comment)}";
+        var comment = item.HasVisibleComment && !string.IsNullOrWhiteSpace(item.Comment)
+            ? $" - {Html(item.Comment!)}"
+            : string.Empty;
 
-        return $"{marker} {date}: {sign}{item.Amount} {Html(item.SourceName)}{comment}";
+        return $"{marker} {date}: {Html(item.AmountText)}{comment}";
     }
 
-    private static string BuildRewardsText(UserBrandRewardsResponse response, string brandName)
+    private static string BuildRewardsText(UserWalletBrandDetailsResponse response, string brandName)
     {
         var sections = new List<string> { $"<b>{Html(brandName)}</b>" };
 
-        if (response.IsCoinsEnabled)
-        {
-            sections.Add($"Монетки: {response.CoinBalance}");
-            if (response.IsCoinProductRedemptionEnabled)
-                sections.Add(BuildProductsText(response));
-        }
+        foreach (var rewardSection in response.RewardSections)
+            sections.Add(BuildRewardSectionText(rewardSection));
 
-        if (response.IsMetricsEnabled)
-            sections.Add(BuildMetricsText(response));
-
-        sections.Add("Чтобы получить награду, покажите код для списания сотруднику.");
+        sections.Add(response.HintText);
 
         return string.Join("\n\n", sections);
     }
 
-    private static string BuildProductsText(UserBrandRewardsResponse response)
+    private static string BuildRewardSectionText(UserWalletBrandRewardSectionResponse section)
     {
-        if (response.CoinProducts.Count == 0)
-            return "<b>Товары за монетки</b>\nПока нет активных товаров.";
+        var lines = new List<string> { $"<b>{Html(section.Title)}</b>" };
 
-        var lines = response.CoinProducts.Select(product =>
+        if (!string.IsNullOrWhiteSpace(section.BalanceText))
+            lines.Add(Html(section.BalanceText));
+
+        if (section.Items.Count == 0)
         {
-            var status = product.IsAvailable
-                ? "доступно"
-                : $"не хватает {product.MissingAmount}";
+            lines.Add(Html(section.EmptyText));
+            return string.Join("\n", lines);
+        }
 
-            var marker = product.IsAvailable ? "✅" : "▫️";
-            return $"{marker} {Html(product.ProductName)} · {product.CurrentBalance}/{product.Price} · {status}";
-        });
-
-        return "<b>Товары за монетки</b>\n" + string.Join("\n", lines);
-    }
-
-    private static string BuildMetricsText(UserBrandRewardsResponse response)
-    {
-        if (response.Metrics.Count == 0)
-            return "<b>Метрики</b>\nПока нет балансов по метрикам.";
-
-        var lines = response.Metrics.Select(metric =>
+        lines.AddRange(section.Items.Select(item =>
         {
-            var status = metric.IsAvailable
-                ? "доступно"
-                : $"не хватает {metric.MissingAmount}";
+            var marker = item.IsAvailable ? "✅" : "▫️";
+            return $"{marker} {Html(item.Name)} · {Html(item.ProgressText)} · {Html(item.StatusText)}";
+        }));
 
-            var marker = metric.IsAvailable ? "✅" : "▫️";
-            return $"{marker} {Html(metric.MetricName)} · {metric.CurrentBalance}/{metric.RequiredAmount} · {status}";
-        });
-
-        return "<b>Метрики</b>\n" + string.Join("\n", lines);
-    }
-
-    private static bool IsAutoComment(string value)
-    {
-        return value is "Issue metric" or "Redeem metric" or "Issue coins" or "Redeem coins";
+        return string.Join("\n", lines);
     }
 }
