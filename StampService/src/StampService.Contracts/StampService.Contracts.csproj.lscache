@@ -106,6 +106,14 @@ DTOs/Metrics/
  UpdateMetricRequest.cs
  UserMetricBalanceResponse.cs
  UserMetricBalancesResponse.cs
+DTOs/Profile/
+ ConfirmPhoneLinkCodeRequest.cs
+ ConfirmPhoneLinkCodeResponse.cs
+ ConfirmTelegramLinkResponse.cs
+ IdentityStatusResponse.cs
+ MyProfileResponse.cs
+ RequestPhoneLinkCodeRequest.cs
+ RequestPhoneLinkCodeResponse.cs
 DTOs/
  Users/CreateRedemptionCodeResponse.cs
  Wallet/

@@ -14,6 +14,11 @@ public interface IPhoneAuthCodeRepository
         DateTime nowUtc,
         CancellationToken cancellationToken);
 
+    Task<PhoneAuthCode?> GetActiveByIdAsync(
+        Guid id,
+        DateTime nowUtc,
+        CancellationToken cancellationToken);
+
     void Add(PhoneAuthCode code);
 
     Task SaveAsync(CancellationToken cancellationToken);

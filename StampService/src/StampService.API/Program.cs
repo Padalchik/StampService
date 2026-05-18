@@ -83,6 +83,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGet("/app", () => Results.Redirect("/app.html"));
 app.MapGet("/phone-auth-test", () => Results.Redirect("/phone-auth-test.html"));
 app.MapControllers();
 

@@ -104,6 +104,8 @@ public static class AppErrorCodes
     public static class User
     {
         public const string IdEmpty = "user.id_empty";
+        public const string IdentityAlreadyLinked = "user.identity_already_linked";
+        public const string IdentityLinkedToAnotherUser = "user.identity_linked_to_another_user";
         public const string NotFound = "user.not_found";
     }
 

@@ -41,7 +41,8 @@ public class PhoneAuthCode : BaseEntity
                 "Phone number is invalid",
                 nameof(phoneNumber)));
 
-        if (!IsValidCode(code))
+        var normalizedCode = NormalizeCode(code);
+        if (!IsValidCode(normalizedCode))
             return Result.Fail(DomainError.Validation(
                 "phone_auth_code.code_invalid",
                 $"Phone auth code must contain exactly {CodeLength} digits",
@@ -53,7 +54,7 @@ public class PhoneAuthCode : BaseEntity
                 "Phone auth code expiration date must be in the future",
                 nameof(expiresAtUtc)));
 
-        return Result.Ok(new PhoneAuthCode(phoneNumber, code, expiresAtUtc));
+        return Result.Ok(new PhoneAuthCode(phoneNumber, normalizedCode, expiresAtUtc));
     }
 
     public Result Use(DateTime nowUtc)
@@ -108,9 +109,18 @@ public class PhoneAuthCode : BaseEntity
 
     public static bool IsValidCode(string? code)
     {
-        return code is not null
-            && code.Length == CodeLength
-            && code.All(char.IsDigit);
+        var normalizedCode = NormalizeCode(code);
+
+        return normalizedCode.Length == CodeLength
+            && normalizedCode.All(char.IsDigit);
+    }
+
+    public static string NormalizeCode(string? code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            return string.Empty;
+
+        return new string(code.Where(c => c is >= '0' and <= '9').ToArray());
     }
 
     public static bool IsValidPhoneNumber(string? phoneNumber)

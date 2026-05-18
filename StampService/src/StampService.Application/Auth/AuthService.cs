@@ -123,7 +123,8 @@ public class AuthService : IAuthService
         if (!PhoneAuthCode.IsValidPhoneNumber(phoneNumber))
             return Result.Fail(AuthErrors.PhoneInvalid(nameof(request.PhoneNumber)));
 
-        if (!PhoneAuthCode.IsValidCode(request.Code))
+        var code = PhoneAuthCode.NormalizeCode(request.Code);
+        if (!PhoneAuthCode.IsValidCode(code))
             return Result.Fail(AuthErrors.PhoneCodeInvalid());
 
         var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
@@ -134,13 +135,21 @@ public class AuthService : IAuthService
         if (authCode is null)
             return Result.Fail(AuthErrors.PhoneCodeInvalid());
 
-        if (authCode.Code != request.Code)
+        if (authCode.Code != code)
         {
             var failedAttemptResult = authCode.RegisterFailedAttempt(nowUtc);
             if (failedAttemptResult.IsFailed)
                 return Result.Fail(AuthErrors.PhoneCodeInvalid());
 
-            await _phoneAuthCodeRepository.SaveAsync(cancellationToken);
+            try
+            {
+                await _phoneAuthCodeRepository.SaveAsync(cancellationToken);
+            }
+            catch (ConcurrencyConflictException)
+            {
+                return Result.Fail(AuthErrors.PhoneCodeInvalid());
+            }
+
             return Result.Fail(AuthErrors.PhoneCodeInvalid());
         }
 
@@ -174,7 +183,14 @@ public class AuthService : IAuthService
             _userRepository.Add(user);
         }
 
-        await _userRepository.SaveAsync(cancellationToken);
+        try
+        {
+            await _userRepository.SaveAsync(cancellationToken);
+        }
+        catch (ConcurrencyConflictException)
+        {
+            return Result.Fail(AuthErrors.PhoneCodeInvalid());
+        }
 
         var token = _jwtTokenService.CreateToken(user);
 

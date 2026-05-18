@@ -31,8 +31,7 @@ public class PhoneAuthCodeConfiguration : IEntityTypeConfiguration<PhoneAuthCode
             .HasColumnName("expires_at_utc");
 
         builder.Property(code => code.UsedAtUtc)
-            .HasColumnName("used_at_utc")
-            .IsConcurrencyToken();
+            .HasColumnName("used_at_utc");
 
         builder.Property(code => code.FailedAttempts)
             .IsRequired()

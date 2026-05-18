@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>StampService</title>
+    <style>
+        :root {
+            --bg: #f4f6f8;
+            --surface: #ffffff;
+            --surface-soft: #eef2f6;
+            --text: #17202a;
+            --muted: #617080;
+            --line: #d7dee7;
+            --accent: #1769aa;
+            --accent-strong: #0f4c81;
+            --danger: #b42318;
+            --success: #0f7b4f;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .app {
+            display: grid;
+            grid-template-columns: 240px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+
+        aside {
+            border-right: 1px solid var(--line);
+            background: var(--surface);
+            padding: 20px 14px;
+        }
+
+        .brand {
+            margin: 0 0 22px;
+            padding: 0 8px;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        nav {
+            display: grid;
+            gap: 6px;
+        }
+
+        .nav-btn {
+            width: 100%;
+            justify-content: flex-start;
+            border-color: transparent;
+            background: transparent;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .nav-btn.active {
+            background: var(--surface-soft);
+            border-color: var(--line);
+        }
+
+        main {
+            padding: 24px;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 26px;
+            line-height: 1.2;
+        }
+
+        h2 {
+            margin: 0 0 14px;
+            font-size: 18px;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        section {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 18px;
+        }
+
+        label {
+            display: block;
+            margin: 12px 0 6px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        input, textarea {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #fff;
+            color: var(--text);
+            font-size: 15px;
+        }
+
+        input {
+            height: 40px;
+            padding: 0 11px;
+        }
+
+        textarea {
+            min-height: 120px;
+            padding: 10px;
+            resize: vertical;
+            font: 13px/1.45 Consolas, "Courier New", monospace;
+        }
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 40px;
+            padding: 0 14px;
+            border: 1px solid var(--accent);
+            border-radius: 6px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        button.secondary {
+            background: #fff;
+            color: var(--accent);
+        }
+
+        button.danger {
+            border-color: var(--danger);
+            background: var(--danger);
+        }
+
+        button:disabled {
+            opacity: 0.65;
+            cursor: wait;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .status {
+            min-height: 22px;
+            margin-top: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .status.ok {
+            color: var(--success);
+        }
+
+        .status.bad {
+            color: var(--danger);
+        }
+
+        .kv {
+            display: grid;
+            gap: 10px;
+        }
+
+        .kv div {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .kv div:last-child {
+            border-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            min-height: 26px;
+            padding: 0 9px;
+            border-radius: 999px;
+            background: var(--surface-soft);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        pre {
+            margin: 0;
+            max-height: 300px;
+            overflow: auto;
+            padding: 12px;
+            border-radius: 6px;
+            background: #111827;
+            color: #e5e7eb;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        @media (max-width: 820px) {
+            .app {
+                grid-template-columns: 1fr;
+            }
+
+            aside {
+                border-right: 0;
+                border-bottom: 1px solid var(--line);
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            main {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside>
+        <div class="brand">StampService</div>
+        <nav>
+            <button class="nav-btn active" data-view="profile" type="button">Личный кабинет</button>
+            <button class="nav-btn" data-view="wallet" type="button">Кошелек</button>
+            <button class="nav-btn" data-view="debug" type="button">Ответы API</button>
+        </nav>
+    </aside>
+
+    <main>
+        <header>
+            <div>
+                <h1 id="title">Личный кабинет</h1>
+                <div id="subtitle" class="muted">Вход и привязанные способы авторизации</div>
+            </div>
+            <button id="logout" class="secondary hidden" type="button">Выйти</button>
+        </header>
+
+        <section id="loginPanel">
+            <h2>Вход по телефону</h2>
+            <label for="loginPhone">Телефон</label>
+            <input id="loginPhone" autocomplete="tel" inputmode="tel" value="+79991234567">
+            <div class="row">
+                <button id="requestLoginCode" type="button">Запросить код</button>
+            </div>
+            <label for="loginCode">Код</label>
+            <input id="loginCode" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
+            <div class="row">
+                <button id="verifyLoginCode" type="button">Войти</button>
+            </div>
+            <div id="loginStatus" class="status"></div>
+        </section>
+
+        <div id="content" class="hidden">
+            <div id="profileView" class="grid">
+                <section>
+                    <h2>Профиль</h2>
+                    <div class="kv">
+                        <div><span>Имя</span><strong id="profileName">-</strong></div>
+                        <div><span>Код пользователя</span><strong id="customerCode">-</strong></div>
+                        <div><span>Telegram</span><span id="telegramStatus" class="badge">-</span></div>
+                        <div><span>Телефон</span><span id="phoneStatus" class="badge">-</span></div>
+                    </div>
+                </section>
+
+                <section id="linkPhonePanel">
+                    <h2>Привязать телефон</h2>
+                    <label for="linkPhone">Телефон</label>
+                    <input id="linkPhone" autocomplete="tel" inputmode="tel" value="+79991234567">
+                    <div class="row">
+                        <button id="requestLinkCode" type="button">Запросить код</button>
+                    </div>
+                    <label for="linkCode">Код</label>
+                    <input id="linkCode" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
+                    <div class="row">
+                        <button id="confirmLinkCode" type="button">Привязать</button>
+                    </div>
+                    <div id="linkPhoneStatus" class="status"></div>
+                </section>
+
+                <section id="linkTelegramPanel">
+                    <h2>Привязать Telegram</h2>
+                    <p class="muted">Вставь JSON, который возвращает Telegram Login Widget. Позже сюда можно встроить сам widget.</p>
+                    <label for="telegramPayload">Telegram login payload</label>
+                    <textarea id="telegramPayload" placeholder='{"id":278225388,"first_name":"Andrey","username":"...","auth_date":...,"hash":"..."}'></textarea>
+                    <div class="row">
+                        <button id="confirmTelegramLink" type="button">Привязать Telegram</button>
+                    </div>
+                    <div id="linkTelegramStatus" class="status"></div>
+                </section>
+            </div>
+
+            <div id="walletView" class="hidden">
+                <section>
+                    <h2>Кошелек</h2>
+                    <p class="muted">Следующий шаг web-интерфейса: вывести балансы, награды и историю через отдельные API endpoints для кошелька.</p>
+                </section>
+            </div>
+
+            <div id="debugView" class="hidden">
+                <section>
+                    <h2>Последний ответ API</h2>
+                    <pre id="debugOutput">{}</pre>
+                </section>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    const tokenKey = 'stampservice.jwt';
+    let token = localStorage.getItem(tokenKey) || '';
+    let profile = null;
+    let linkPhoneAuthCodeId = null;
+
+    const els = {
+        loginPanel: document.getElementById('loginPanel'),
+        content: document.getElementById('content'),
+        logout: document.getElementById('logout'),
+        title: document.getElementById('title'),
+        subtitle: document.getElementById('subtitle'),
+        loginPhone: document.getElementById('loginPhone'),
+        loginCode: document.getElementById('loginCode'),
+        loginStatus: document.getElementById('loginStatus'),
+        linkPhone: document.getElementById('linkPhone'),
+        linkCode: document.getElementById('linkCode'),
+        linkPhoneStatus: document.getElementById('linkPhoneStatus'),
+        telegramPayload: document.getElementById('telegramPayload'),
+        linkTelegramStatus: document.getElementById('linkTelegramStatus'),
+        profileName: document.getElementById('profileName'),
+        customerCode: document.getElementById('customerCode'),
+        telegramStatus: document.getElementById('telegramStatus'),
+        phoneStatus: document.getElementById('phoneStatus'),
+        linkPhonePanel: document.getElementById('linkPhonePanel'),
+        linkTelegramPanel: document.getElementById('linkTelegramPanel'),
+        debugOutput: document.getElementById('debugOutput')
+    };
+
+    document.getElementById('requestLoginCode').addEventListener('click', () => requestLoginCode());
+    document.getElementById('verifyLoginCode').addEventListener('click', () => verifyLoginCode());
+    document.getElementById('requestLinkCode').addEventListener('click', () => requestLinkCode());
+    document.getElementById('confirmLinkCode').addEventListener('click', () => confirmLinkCode());
+    document.getElementById('confirmTelegramLink').addEventListener('click', () => confirmTelegramLink());
+    els.logout.addEventListener('click', logout);
+
+    document.querySelectorAll('.nav-btn').forEach(button => {
+        button.addEventListener('click', () => showView(button.dataset.view));
+    });
+
+    init();
+
+    async function init() {
+        if (!token) {
+            renderLoggedOut();
+            return;
+        }
+
+        await loadProfile();
+    }
+
+    async function requestLoginCode() {
+        const result = await api('/api/auth/phone/code', {
+            method: 'POST',
+            body: { phoneNumber: els.loginPhone.value }
+        });
+
+        setStatus(els.loginStatus, result.ok ? 'Код отправлен' : result.error, result.ok);
+        if (result.ok) {
+            els.loginCode.focus();
+        }
+    }
+
+    async function verifyLoginCode() {
+        const result = await api('/api/auth/phone/verify', {
+            method: 'POST',
+            body: { phoneNumber: els.loginPhone.value, code: els.loginCode.value }
+        });
+
+        if (!result.ok) {
+            setStatus(els.loginStatus, result.error, false);
+            return;
+        }
+
+        token = result.data.data?.token ?? result.data.token;
+        localStorage.setItem(tokenKey, token);
+        setStatus(els.loginStatus, 'Вход выполнен', true);
+        await loadProfile();
+    }
+
+    async function loadProfile() {
+        const result = await api('/api/users/me');
+        if (!result.ok) {
+            logout();
+            setStatus(els.loginStatus, result.error, false);
+            return;
+        }
+
+        profile = result.data.data ?? result.data;
+        renderLoggedIn();
+    }
+
+    async function requestLinkCode() {
+        const result = await api('/api/users/me/phone/code', {
+            method: 'POST',
+            body: { phoneNumber: els.linkPhone.value }
+        });
+
+        setStatus(els.linkPhoneStatus, result.ok ? 'Код отправлен' : result.error, result.ok);
+        if (result.ok) {
+            linkPhoneAuthCodeId = result.data.data?.authCodeId ?? result.data.authCodeId ?? null;
+            els.linkCode.focus();
+        }
+    }
+
+    async function confirmLinkCode() {
+        const result = await api('/api/users/me/phone/verify', {
+            method: 'POST',
+            body: { phoneNumber: els.linkPhone.value, code: els.linkCode.value, authCodeId: linkPhoneAuthCodeId }
+        });
+
+        setStatus(els.linkPhoneStatus, result.ok ? 'Телефон привязан' : result.error, result.ok);
+        if (result.ok) {
+            await loadProfile();
+        }
+    }
+
+    async function confirmTelegramLink() {
+        let payload;
+        try {
+            payload = JSON.parse(els.telegramPayload.value);
+        } catch {
+            setStatus(els.linkTelegramStatus, 'Некорректный JSON', false);
+            return;
+        }
+
+        const result = await api('/api/users/me/telegram', {
+            method: 'POST',
+            body: {
+                id: Number(payload.id),
+                firstName: payload.first_name ?? payload.firstName ?? '',
+                lastName: payload.last_name ?? payload.lastName ?? null,
+                username: payload.username ?? null,
+                hash: payload.hash ?? '',
+                authDate: Number(payload.auth_date ?? payload.authDate)
+            }
+        });
+
+        setStatus(els.linkTelegramStatus, result.ok ? 'Telegram привязан' : result.error, result.ok);
+        if (result.ok) {
+            await loadProfile();
+        }
+    }
+
+    async function api(url, options = {}) {
+        const headers = { ...(options.headers || {}) };
+        if (options.body) {
+            headers['Content-Type'] = 'application/json';
+        }
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: options.method || 'GET',
+                headers,
+                body: options.body ? JSON.stringify(options.body) : undefined
+            });
+            const data = await readResponse(response);
+            renderDebug(response.status, data);
+            return {
+                ok: response.ok && !hasErrors(data),
+                data,
+                error: getError(data) || `HTTP ${response.status}`
+            };
+        } catch (error) {
+            renderDebug('network', String(error));
+            return { ok: false, data: null, error: 'Не удалось выполнить запрос' };
+        }
+    }
+
+    async function readResponse(response) {
+        const text = await response.text();
+        if (!text) {
+            return null;
+        }
+        try {
+            return JSON.parse(text);
+        } catch {
+            return text;
+        }
+    }
+
+    function renderLoggedIn() {
+        els.loginPanel.classList.add('hidden');
+        els.content.classList.remove('hidden');
+        els.logout.classList.remove('hidden');
+        els.title.textContent = 'Личный кабинет';
+        els.subtitle.textContent = 'Профиль и способы входа';
+
+        els.profileName.textContent = profile.displayName;
+        els.customerCode.textContent = profile.customerCode;
+        els.telegramStatus.textContent = profile.telegram.linked ? (profile.telegram.value || 'привязан') : 'не привязан';
+        els.phoneStatus.textContent = profile.phone.linked ? (profile.phone.value || 'привязан') : 'не привязан';
+        els.linkPhonePanel.classList.toggle('hidden', profile.phone.linked);
+        els.linkTelegramPanel.classList.toggle('hidden', profile.telegram.linked);
+        showView('profile');
+    }
+
+    function renderLoggedOut() {
+        els.loginPanel.classList.remove('hidden');
+        els.content.classList.add('hidden');
+        els.logout.classList.add('hidden');
+        els.title.textContent = 'Вход';
+        els.subtitle.textContent = 'Авторизация по телефону';
+    }
+
+    function showView(viewName) {
+        document.querySelectorAll('.nav-btn').forEach(button => {
+            button.classList.toggle('active', button.dataset.view === viewName);
+        });
+        document.getElementById('profileView').classList.toggle('hidden', viewName !== 'profile');
+        document.getElementById('walletView').classList.toggle('hidden', viewName !== 'wallet');
+        document.getElementById('debugView').classList.toggle('hidden', viewName !== 'debug');
+    }
+
+    function logout() {
+        token = '';
+        profile = null;
+        localStorage.removeItem(tokenKey);
+        renderLoggedOut();
+    }
+
+    function setStatus(element, text, ok) {
+        element.textContent = text || '';
+        element.className = `status ${text ? (ok ? 'ok' : 'bad') : ''}`;
+    }
+
+    function hasErrors(data) {
+        return Array.isArray(data?.errors) && data.errors.length > 0;
+    }
+
+    function getError(data) {
+        const first = Array.isArray(data?.errors) ? data.errors[0] : null;
+        return first?.message ?? first?.code ?? null;
+    }
+
+    function renderDebug(status, data) {
+        els.debugOutput.textContent = JSON.stringify({ status, response: data }, null, 2);
+    }
+</script>
+</body>
+</html>

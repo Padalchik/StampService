@@ -6,6 +6,7 @@ using StampService.Contracts.DTOs.Brands;
 using StampService.TelegramBot.Features.Admin.Screens;
 using StampService.TelegramBot.Features.Brands.Actions;
 using StampService.TelegramBot.Features.Brands.Screens;
+using StampService.TelegramBot.Features.Profile.Screens;
 using StampService.TelegramBot.Features.Wallet.Screens;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
@@ -40,7 +41,9 @@ public sealed class MainMenuScreen : IScreen
             $"{greeting}\n\n" +
             "Выберите действие:")
             .WithoutAutoMenuButton()
-            .NavigateButton<MyWalletScreen>("Мой кошелёк");
+            .NavigateButton<ProfileScreen>("Личный кабинет")
+            .Row()
+            .NavigateButton<MyWalletScreen>("Мой кошелек");
 
         if (_adminAccessService.IsAdmin(ctx.UserId))
         {

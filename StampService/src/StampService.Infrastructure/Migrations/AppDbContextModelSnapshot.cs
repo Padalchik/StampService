@@ -627,7 +627,6 @@ namespace StampService.Infrastructure.Migrations
                         .HasColumnName("updated_at");
 
                     b.Property<DateTime?>("UsedAtUtc")
-                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("used_at_utc");
 

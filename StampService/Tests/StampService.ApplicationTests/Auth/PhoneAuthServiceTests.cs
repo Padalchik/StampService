@@ -121,6 +121,14 @@ public class PhoneAuthServiceTests
             return Task.FromResult(code);
         }
 
+        public Task<PhoneAuthCode?> GetActiveByIdAsync(
+            Guid id,
+            DateTime nowUtc,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(Codes.FirstOrDefault(code => code.Id == id && code.IsActive(nowUtc)));
+        }
+
         public void Add(PhoneAuthCode code)
         {
             Codes.Add(code);

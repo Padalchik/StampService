@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using StampService.Application.Auth;
+using StampService.Application.Errors;
 using StampService.Domain.User;
 
 namespace StampService.Infrastructure.Repositories;
@@ -40,6 +41,19 @@ public class PhoneAuthCodeRepository : IPhoneAuthCodeRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    public async Task<PhoneAuthCode?> GetActiveByIdAsync(
+        Guid id,
+        DateTime nowUtc,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.PhoneAuthCodes
+            .Where(code => code.Id == id
+                && code.UsedAtUtc == null
+                && code.ExpiresAtUtc > nowUtc
+                && code.FailedAttempts < PhoneAuthCode.MaxAttempts)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public void Add(PhoneAuthCode code)
     {
         _dbContext.PhoneAuthCodes.Add(code);
@@ -47,6 +61,20 @@ public class PhoneAuthCodeRepository : IPhoneAuthCodeRepository
 
     public Task SaveAsync(CancellationToken cancellationToken)
     {
-        return _dbContext.SaveChangesAsync(cancellationToken);
+        return SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task SaveChangesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw new ConcurrencyConflictException(
+                "Phone auth code was modified by another operation.",
+                ex);
+        }
     }
 }
