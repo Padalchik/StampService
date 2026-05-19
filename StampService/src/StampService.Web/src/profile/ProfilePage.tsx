@@ -27,8 +27,6 @@ export function ProfilePage() {
   const [phoneError, setPhoneError] = useState('');
   const [isPhoneSubmitting, setIsPhoneSubmitting] = useState(false);
 
-  const [telegramLinkUrl, setTelegramLinkUrl] = useState('');
-  const [telegramExpiresAt, setTelegramExpiresAt] = useState<string | null>(null);
   const [telegramStatus, setTelegramStatus] = useState('');
   const [telegramError, setTelegramError] = useState('');
   const [isTelegramSubmitting, setIsTelegramSubmitting] = useState(false);
@@ -43,7 +41,6 @@ export function ProfilePage() {
   }, []);
 
   const phoneExpiresText = useFormattedTime(phoneExpiresAt);
-  const telegramExpiresText = useFormattedTime(telegramExpiresAt);
 
   async function loadProfile() {
     setLoadError('');
@@ -111,9 +108,8 @@ export function ProfilePage() {
 
     try {
       const response = await requestTelegramLink();
-      setTelegramLinkUrl(response.telegramLinkUrl);
-      setTelegramExpiresAt(response.expiresAtUtc);
-      setTelegramStatus('Ссылка готова. Откройте Telegram и нажмите Start в боте.');
+      setTelegramStatus('Открываем Telegram. Нажмите Start в боте.');
+      window.location.href = response.telegramLinkUrl;
     } catch (requestError) {
       setTelegramError(getUserMessage(requestError));
     } finally {
@@ -240,26 +236,11 @@ export function ProfilePage() {
           </div>
 
           <div className="auth-form">
-            {telegramLinkUrl ? (
-              <CodeSummary
-                text={`Ссылка действует${telegramExpiresText ? ` до ${telegramExpiresText}` : ''}. После привязки вернитесь сюда и обновите профиль.`}
-              />
-            ) : null}
             <div className="auth-actions">
               <button type="button" disabled={isTelegramSubmitting} onClick={() => void handleRequestTelegramLink()}>
-                <MessageSquareText size={18} />
-                Получить ссылку
-              </button>
-              <a
-                className={`button-link ${telegramLinkUrl ? '' : 'button-link--disabled'}`}
-                href={telegramLinkUrl || undefined}
-                target="_blank"
-                rel="noreferrer"
-                aria-disabled={!telegramLinkUrl}
-              >
                 <Send size={18} />
-                Открыть Telegram
-              </a>
+                {profile?.telegram.linked ? 'Изменить Telegram' : 'Привязать Telegram'}
+              </button>
               <button className="button-secondary" type="button" onClick={() => void loadProfile()}>
                 <RefreshCw size={18} />
                 Проверить привязку

@@ -17,6 +17,9 @@ builder.Configuration.AddJsonFile(
     optional: true,
     reloadOnChange: true);
 
+if (string.IsNullOrWhiteSpace(builder.Configuration["Jwt:Key"]))
+    ImportJwtConfigurationFromApiSettings(builder.Configuration, builder.WebAppBuilder.Environment);
+
 var telegramBotToken = builder.Configuration["Telegram:BotToken"];
 if (string.IsNullOrWhiteSpace(builder.Configuration["Bot:Token"])
     && !string.IsNullOrWhiteSpace(telegramBotToken))
@@ -67,5 +70,32 @@ app.UseNavigation<MainMenuScreen>();
 app.MapBotEndpoints();
 
 await app.RunAsync();
+
+static void ImportJwtConfigurationFromApiSettings(
+    ConfigurationManager configuration,
+    IWebHostEnvironment environment)
+{
+    var apiSettingsPath = Path.GetFullPath(Path.Combine(
+        environment.ContentRootPath,
+        "..",
+        "StampService.API",
+        "appsettings.json"));
+    var apiEnvironmentSettingsPath = Path.GetFullPath(Path.Combine(
+        environment.ContentRootPath,
+        "..",
+        "StampService.API",
+        $"appsettings.{environment.EnvironmentName}.json"));
+
+    var apiConfiguration = new ConfigurationBuilder()
+        .AddJsonFile(apiSettingsPath, optional: true, reloadOnChange: false)
+        .AddJsonFile(apiEnvironmentSettingsPath, optional: true, reloadOnChange: false)
+        .Build();
+
+    foreach (var item in apiConfiguration.GetSection("Jwt").GetChildren())
+    {
+        if (!string.IsNullOrWhiteSpace(item.Value))
+            configuration[$"Jwt:{item.Key}"] = item.Value;
+    }
+}
 
 public partial class Program;
