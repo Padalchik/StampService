@@ -41,6 +41,15 @@ public class BrandMembershipRepository : IBrandMembershipRepository
             .ToArrayAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyCollection<BrandMembership>> GetUserMembershipsAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.BrandMemberships
+            .Where(membership => membership.UserId == userId)
+            .ToArrayAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyCollection<BrandStaffReadModel>> GetBrandStaffAsync(
         Guid brandId,
         CancellationToken cancellationToken)

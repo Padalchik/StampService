@@ -75,6 +75,27 @@ public class User : BaseEntity
         return Result.Ok(identity);
     }
 
+    public void Deactivate(DateTime deactivatedAtUtc)
+    {
+        if (DeletedAt is not null)
+            return;
+
+        ((ISoftDelete)this).DeletedAt = deactivatedAtUtc;
+        Touch();
+    }
+
+    internal void AttachIdentity(UserIdentity identity)
+    {
+        _identities.Add(identity);
+        Touch();
+    }
+
+    internal void DetachIdentity(UserIdentity identity)
+    {
+        _identities.Remove(identity);
+        Touch();
+    }
+
     public static bool IsValidCustomerCode(string? customerCode)
     {
         return customerCode is not null

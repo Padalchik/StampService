@@ -53,15 +53,11 @@ public class RequestPhoneLinkCodeHandler
         if (user is null)
             return Result.Fail(UserErrors.NotFound());
 
-        if (user.Identities.Any(identity => identity.Type == IdentityType.Phone && identity.Key == phoneNumber))
+        if (user.Identities.Any(identity =>
+            identity.DeletedAt is null
+            && identity.Type == IdentityType.Phone
+            && identity.Key == phoneNumber))
             return Result.Fail(UserErrors.IdentityAlreadyLinked());
-
-        var phoneOwner = await _userRepository.GetByIdentityAsync(
-            IdentityType.Phone,
-            phoneNumber,
-            cancellationToken);
-        if (phoneOwner is not null && phoneOwner.Id != command.UserId)
-            return Result.Fail(UserErrors.IdentityLinkedToAnotherUser());
 
         var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
         var activeCodes = await _phoneAuthCodeRepository.GetActiveByPhoneAsync(

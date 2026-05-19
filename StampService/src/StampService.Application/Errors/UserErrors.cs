@@ -30,6 +30,21 @@ public static class UserErrors
             AppErrorCodes.User.IdentityLinkedToAnotherUser,
             "Identity is already linked to another user");
 
+    public static AppError IdentityMergeNotAllowed() =>
+        AppError.Conflict(
+            AppErrorCodes.User.IdentityMergeNotAllowed,
+            "Account merge is not allowed for these users");
+
+    public static AppError IdentityMergeSourceHasMultipleIdentities() =>
+        AppError.Conflict(
+            AppErrorCodes.User.IdentityMergeSourceHasMultipleIdentities,
+            "Account merge is not allowed because the source account has more than one login method");
+
+    public static AppError IdentityMergeTargetHasBrandMembership() =>
+        AppError.Conflict(
+            AppErrorCodes.User.IdentityMergeTargetHasBrandMembership,
+            "Account merge is not allowed because both accounts have access to the same brand");
+
     public static AppError TelegramUserIdMustBePositive() =>
         AppError.Validation(
             AppErrorCodes.Telegram.UserIdInvalid,

@@ -26,9 +26,11 @@ public class FakeBrandMembershipRepository : IBrandMembershipRepository
         Guid brandId,
         CancellationToken cancellationToken)
     {
-        var roleSystemName = _memberships.TryGetValue((userId, brandId), out var membership)
-            ? GetRoleSystemName(membership.RoleId)
-            : null;
+        var membership = _memberships.Values.FirstOrDefault(item =>
+            item.UserId == userId && item.BrandId == brandId);
+        var roleSystemName = membership is null
+            ? null
+            : GetRoleSystemName(membership.RoleId);
 
         return Task.FromResult(roleSystemName);
     }
@@ -44,6 +46,17 @@ public class FakeBrandMembershipRepository : IBrandMembershipRepository
                 _brandNames[item.Value.BrandId],
                 GetRoleSystemName(item.Value.RoleId)))
             .OrderBy(item => item.BrandName)
+            .ToArray();
+
+        return Task.FromResult(result);
+    }
+
+    public Task<IReadOnlyCollection<BrandMembership>> GetUserMembershipsAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyCollection<BrandMembership> result = _memberships.Values
+            .Where(membership => membership.UserId == userId)
             .ToArray();
 
         return Task.FromResult(result);
@@ -71,7 +84,8 @@ public class FakeBrandMembershipRepository : IBrandMembershipRepository
         Guid userId,
         CancellationToken cancellationToken)
     {
-        _memberships.TryGetValue((userId, brandId), out var membership);
+        var membership = _memberships.Values.FirstOrDefault(item =>
+            item.UserId == userId && item.BrandId == brandId);
         return Task.FromResult(membership);
     }
 

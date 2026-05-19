@@ -2,6 +2,7 @@ using StampService.Application.Abstractions;
 using StampService.Application.Users.Commands.ConfirmTelegramLinkSession;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Profile;
+using StampService.TelegramBot.Common.Errors;
 using StampService.TelegramBot.Features.MainMenu.Screens;
 using TelegramBotFlow.Core.Constants;
 using TelegramBotFlow.Core.Context;
@@ -34,7 +35,8 @@ public sealed class StartEndpoint : IBotEndpoint
                 ctx.CancellationToken);
 
             if (result.IsFailed)
-                return BotResults.ShowView(new("Не удалось привязать Telegram. Возможно, ссылка устарела."));
+                return BotResults.ShowView(new(
+                    $"Не удалось привязать Telegram: {BotErrorFormatter.Format(result.Errors)}."));
 
             ctx.Session?.Clear();
             return BotResults.ShowView(new(

@@ -13,15 +13,18 @@ public class ConfirmTelegramLinkSessionHandler
     private readonly IUserRepository _userRepository;
     private readonly ITelegramLinkSessionProtector _protector;
     private readonly TimeProvider _timeProvider;
+    private readonly IAutoMergeUserAccountsService _autoMergeUserAccountsService;
 
     public ConfirmTelegramLinkSessionHandler(
         IUserRepository userRepository,
         ITelegramLinkSessionProtector protector,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IAutoMergeUserAccountsService autoMergeUserAccountsService)
     {
         _userRepository = userRepository;
         _protector = protector;
         _timeProvider = timeProvider;
+        _autoMergeUserAccountsService = autoMergeUserAccountsService;
     }
 
     public async Task<Result<ConfirmTelegramLinkResponse>> Handle(
@@ -46,7 +49,9 @@ public class ConfirmTelegramLinkSessionHandler
 
         var providerKey = command.TelegramUserId.ToString();
         var sameTelegramIdentity = user.Identities.FirstOrDefault(identity =>
-            identity.Type == IdentityType.Telegram && identity.Key == providerKey);
+            identity.DeletedAt is null
+            && identity.Type == IdentityType.Telegram
+            && identity.Key == providerKey);
         var displayName = GetDisplayName(command);
         if (sameTelegramIdentity is not null)
             return Result.Ok(new ConfirmTelegramLinkResponse(command.TelegramUserId, displayName));
@@ -56,9 +61,21 @@ public class ConfirmTelegramLinkSessionHandler
             providerKey,
             cancellationToken);
         if (telegramOwner is not null && telegramOwner.Id != session.UserId)
-            return Result.Fail(UserErrors.IdentityLinkedToAnotherUser());
+        {
+            var mergeResult = await _autoMergeUserAccountsService.MergeSingleIdentitySourceIntoTargetAsync(
+                user,
+                telegramOwner,
+                IdentityType.Telegram,
+                providerKey,
+                nowUtc,
+                cancellationToken);
+            return mergeResult.IsFailed
+                ? Result.Fail<ConfirmTelegramLinkResponse>(mergeResult.Errors)
+                : Result.Ok(new ConfirmTelegramLinkResponse(command.TelegramUserId, displayName));
+        }
 
-        var currentTelegramIdentity = user.Identities.FirstOrDefault(identity => identity.Type == IdentityType.Telegram);
+        var currentTelegramIdentity = user.Identities.FirstOrDefault(identity =>
+            identity.DeletedAt is null && identity.Type == IdentityType.Telegram);
         currentTelegramIdentity?.Deactivate(nowUtc);
 
         var metadata = JsonSerializer.Serialize(new
@@ -105,4 +122,3 @@ public class ConfirmTelegramLinkSessionHandler
             : fullName;
     }
 }
-

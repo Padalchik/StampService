@@ -67,4 +67,20 @@ public class BrandMembership : BaseEntity
         Touch();
         return Result.Ok();
     }
+
+    public Result ReassignToUser(Guid userId)
+    {
+        if (userId == Guid.Empty)
+            return Result.Fail(DomainError.Validation(
+                "brand_membership.user_id_empty",
+                "UserId cannot be empty GUID",
+                nameof(userId)));
+
+        if (UserId == userId)
+            return Result.Ok();
+
+        UserId = userId;
+        Touch();
+        return Result.Ok();
+    }
 }

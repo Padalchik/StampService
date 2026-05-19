@@ -47,6 +47,26 @@ public class UserIdentity : BaseEntity
         Touch();
     }
 
+    public Result ReassignTo(User user)
+    {
+        if (user.Id == Guid.Empty)
+            return Result.Fail(DomainError.Validation(
+                "user_identity.user_id_empty",
+                "UserId cannot be empty",
+                nameof(user)));
+
+        if (User.Id == user.Id)
+            return Result.Ok();
+
+        User.DetachIdentity(this);
+        user.AttachIdentity(this);
+        User = user;
+        UserId = user.Id;
+        Touch();
+
+        return Result.Ok();
+    }
+
     private static Result Validate(IdentityType type, string key, string metadata)
     {
         if (type == IdentityType.None)

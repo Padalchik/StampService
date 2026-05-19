@@ -16,17 +16,20 @@ public class ConfirmPhoneLinkCodeHandler
     private readonly IPhoneAuthCodeRepository _phoneAuthCodeRepository;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<ConfirmPhoneLinkCodeHandler> _logger;
+    private readonly IAutoMergeUserAccountsService _autoMergeUserAccountsService;
 
     public ConfirmPhoneLinkCodeHandler(
         IUserRepository userRepository,
         IPhoneAuthCodeRepository phoneAuthCodeRepository,
         TimeProvider timeProvider,
-        ILogger<ConfirmPhoneLinkCodeHandler> logger)
+        ILogger<ConfirmPhoneLinkCodeHandler> logger,
+        IAutoMergeUserAccountsService autoMergeUserAccountsService)
     {
         _userRepository = userRepository;
         _phoneAuthCodeRepository = phoneAuthCodeRepository;
         _timeProvider = timeProvider;
         _logger = logger;
+        _autoMergeUserAccountsService = autoMergeUserAccountsService;
     }
 
     public async Task<Result<ConfirmPhoneLinkCodeResponse>> Handle(
@@ -53,7 +56,9 @@ public class ConfirmPhoneLinkCodeHandler
             return Result.Fail(UserErrors.NotFound());
 
         var samePhoneIdentity = user.Identities.FirstOrDefault(identity =>
-            identity.Type == IdentityType.Phone && identity.Key == phoneNumber);
+            identity.DeletedAt is null
+            && identity.Type == IdentityType.Phone
+            && identity.Key == phoneNumber);
         if (samePhoneIdentity is not null)
         {
             return Result.Ok(new ConfirmPhoneLinkCodeResponse(
@@ -61,14 +66,13 @@ public class ConfirmPhoneLinkCodeHandler
                 UserIdentityFormatter.MaskPhone(phoneNumber)));
         }
 
-        var currentPhoneIdentity = user.Identities.FirstOrDefault(identity => identity.Type == IdentityType.Phone);
+        var currentPhoneIdentity = user.Identities.FirstOrDefault(identity =>
+            identity.DeletedAt is null && identity.Type == IdentityType.Phone);
 
         var phoneOwner = await _userRepository.GetByIdentityAsync(
             IdentityType.Phone,
             phoneNumber,
             cancellationToken);
-        if (phoneOwner is not null && phoneOwner.Id != command.UserId)
-            return Result.Fail(UserErrors.IdentityLinkedToAnotherUser());
 
         var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
         var authCode = await GetActiveAuthCodeAsync(
@@ -113,6 +117,24 @@ public class ConfirmPhoneLinkCodeHandler
         var useResult = authCode.Use(nowUtc);
         if (useResult.IsFailed)
             return Result.Fail(AuthErrors.PhoneCodeInvalid());
+
+        if (phoneOwner is not null && phoneOwner.Id != command.UserId)
+        {
+            var mergeResult = await _autoMergeUserAccountsService.MergeSingleIdentitySourceIntoTargetAsync(
+                user,
+                phoneOwner,
+                IdentityType.Phone,
+                phoneNumber,
+                nowUtc,
+                cancellationToken);
+
+            if (mergeResult.IsFailed)
+                return Result.Fail(mergeResult.Errors);
+
+            return Result.Ok(new ConfirmPhoneLinkCodeResponse(
+                phoneNumber,
+                UserIdentityFormatter.MaskPhone(phoneNumber)));
+        }
 
         var metadata = JsonSerializer.Serialize(new
         {
