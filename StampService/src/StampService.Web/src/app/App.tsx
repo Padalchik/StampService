@@ -3,9 +3,12 @@ import { useState, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../auth/AuthContext';
 import { PhoneLoginPage } from '../auth/PhoneLoginPage';
+import { BrandWorkspacePage } from '../brands/BrandWorkspacePage';
 import { ProfilePage } from '../profile/ProfilePage';
 import { WalletPage } from '../wallet/WalletPage';
 import { navigationLabels } from './navigationLabels';
+
+type ActiveSection = 'profile' | 'wallet' | 'brands';
 
 export function App() {
   return (
@@ -49,13 +52,9 @@ function RequireAuth({ children }: { children: ReactNode }) {
 
 function AppShell() {
   const auth = useAuth();
-  const [activeSection, setActiveSection] = useState<'profile' | 'wallet'>('wallet');
-  const pageTitle = activeSection === 'profile'
-    ? navigationLabels.accountSettings
-    : navigationLabels.myWallet;
-  const pageDescription = activeSection === 'profile'
-    ? 'Профиль, способы входа и привязка контактов.'
-    : 'Балансы, доступные награды и код для списания.';
+  const [activeSection, setActiveSection] = useState<ActiveSection>('wallet');
+  const pageTitle = getPageTitle(activeSection);
+  const pageDescription = getPageDescription(activeSection);
 
   return (
     <div className="app-shell">
@@ -70,9 +69,13 @@ function AppShell() {
             <WalletCards size={18} />
             {navigationLabels.myWallet}
           </button>
-          <button className="sidebar__item" type="button" disabled>
+          <button
+            className={`sidebar__item ${activeSection === 'brands' ? 'sidebar__item--active' : ''}`}
+            type="button"
+            onClick={() => setActiveSection('brands')}
+          >
             <Workflow size={18} />
-            Рабочие бренды
+            {navigationLabels.brandWorkspaces}
           </button>
           <button
             className={`sidebar__item ${activeSection === 'profile' ? 'sidebar__item--active' : ''}`}
@@ -97,8 +100,34 @@ function AppShell() {
           </button>
         </header>
 
-        {activeSection === 'profile' ? <ProfilePage /> : <WalletPage />}
+        {activeSection === 'profile' ? <ProfilePage /> : null}
+        {activeSection === 'wallet' ? <WalletPage /> : null}
+        {activeSection === 'brands' ? <BrandWorkspacePage /> : null}
       </main>
     </div>
   );
+}
+
+function getPageTitle(activeSection: ActiveSection): string {
+  if (activeSection === 'profile') {
+    return navigationLabels.accountSettings;
+  }
+
+  if (activeSection === 'brands') {
+    return navigationLabels.brandWorkspaces;
+  }
+
+  return navigationLabels.myWallet;
+}
+
+function getPageDescription(activeSection: ActiveSection): string {
+  if (activeSection === 'profile') {
+    return 'Профиль, способы входа и привязка контактов.';
+  }
+
+  if (activeSection === 'brands') {
+    return 'Выдача и списание метрик, монеток и товаров.';
+  }
+
+  return 'Балансы, доступные награды и код для списания.';
 }

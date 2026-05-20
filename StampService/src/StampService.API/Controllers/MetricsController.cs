@@ -1,3 +1,4 @@
+using FluentResults;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StampService.API.EndpointResults;
@@ -6,10 +7,13 @@ using StampService.Application.Metrics.Commands.CreateMetric;
 using StampService.Application.Metrics.Commands.IssueMetric;
 using StampService.Application.Metrics.Commands.RedeemMetric;
 using StampService.Application.Metrics.Commands.UpdateMetric;
+using StampService.Application.Metrics.Queries.GetBrandIssueMetrics;
 using StampService.Application.Metrics.Queries.GetBrandManageMetrics;
 using StampService.Application.Metrics.Queries.GetMetricBalance;
 using StampService.Application.Metrics.Queries.GetMetricDetails;
 using StampService.Application.Metrics.Queries.GetMetricTransactions;
+using StampService.Application.Metrics.Queries.GetRedeemMetricOptions;
+using StampService.Application.Users;
 using StampService.Contracts.DTOs.Metrics;
 
 namespace StampService.API.Controllers;
@@ -48,6 +52,37 @@ public class MetricsController : ApiControllerBase
 
         return await handler.Handle(
             new GetBrandManageMetricsQuery(userIdResult.Value, brandId),
+            cancellationToken);
+    }
+
+    [HttpGet("brands/{brandId:guid}/metrics/issue-options")]
+    public async Task<EndpointResult<IReadOnlyCollection<MetricResponse>>> GetIssueOptions(
+        Guid brandId,
+        [FromServices] IQueryHandler<IReadOnlyCollection<MetricResponse>, GetBrandIssueMetricsQuery> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<IReadOnlyCollection<MetricResponse>>();
+
+        return await handler.Handle(
+            new GetBrandIssueMetricsQuery(userIdResult.Value, brandId),
+            cancellationToken);
+    }
+
+    [HttpGet("brands/{brandId:guid}/metrics/redeem-options")]
+    public async Task<EndpointResult<RedeemMetricOptionsResponse>> GetRedeemOptions(
+        Guid brandId,
+        [FromQuery] string redemptionCode,
+        [FromServices] IQueryHandler<RedeemMetricOptionsResponse, GetRedeemMetricOptionsQuery> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<RedeemMetricOptionsResponse>();
+
+        return await handler.Handle(
+            new GetRedeemMetricOptionsQuery(userIdResult.Value, brandId, redemptionCode),
             cancellationToken);
     }
 
@@ -97,6 +132,36 @@ public class MetricsController : ApiControllerBase
             metricDefinitionId,
             userIdResult.Value,
             request);
+
+        return await handler.Handle(command, cancellationToken);
+    }
+
+    [HttpPost("metrics/{metricDefinitionId:guid}/issue-by-customer-code")]
+    public async Task<EndpointResult<IssueMetricResponse>> IssueByCustomerCode(
+        Guid metricDefinitionId,
+        IssueMetricByCustomerCodeRequest request,
+        [FromServices] IRecipientResolver recipientResolver,
+        [FromServices] ICommandHandler<IssueMetricResponse, IssueMetricCommand> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<IssueMetricResponse>();
+
+        var recipientResult = await recipientResolver.ResolveAsync(
+            request.CustomerCode,
+            cancellationToken);
+
+        if (recipientResult.IsFailed)
+            return Result.Fail<IssueMetricResponse>(recipientResult.Errors);
+
+        var command = new IssueMetricCommand(
+            metricDefinitionId,
+            userIdResult.Value,
+            new IssueMetricRequest(
+                recipientResult.Value.UserId,
+                request.Amount,
+                string.IsNullOrWhiteSpace(request.Comment) ? "Issue metric" : request.Comment.Trim()));
 
         return await handler.Handle(command, cancellationToken);
     }
