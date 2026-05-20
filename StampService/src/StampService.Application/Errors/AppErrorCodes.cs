@@ -108,10 +108,8 @@ public static class AppErrorCodes
         public const string IdEmpty = "user.id_empty";
         public const string IdentityAlreadyLinked = "user.identity_already_linked";
         public const string IdentityLinkedToAnotherUser = "user.identity_linked_to_another_user";
-        public const string IdentityMergeNotAllowed = "user.identity_merge_not_allowed";
-        public const string IdentityMergeSourceHasMultipleIdentities = "user.identity_merge_source_has_multiple_identities";
-        public const string IdentityMergeTargetHasBrandMembership = "user.identity_merge_target_has_brand_membership";
         public const string NotFound = "user.not_found";
+        public const string TelegramIdentityNotLinked = "user.telegram_identity_not_linked";
     }
 
     public static class Validation

@@ -58,10 +58,12 @@ public class UserIdentity : BaseEntity
         if (User.Id == user.Id)
             return Result.Ok();
 
-        User.DetachIdentity(this);
-        user.AttachIdentity(this);
+        var previousUser = User;
+
         User = user;
         UserId = user.Id;
+        previousUser.DetachIdentity(this);
+        user.AttachIdentity(this);
         Touch();
 
         return Result.Ok();

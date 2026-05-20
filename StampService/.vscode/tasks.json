@@ -95,6 +95,37 @@
       }
     },
     {
+      "label": "TelegramBot: build debug",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "src\\StampService.TelegramBot\\StampService.TelegramBot.csproj",
+        "--configuration",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "group": "build"
+      }
+    },
+    {
+      "label": "App: start dependencies for bot debug",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "API: start backend",
+        "Web: start frontend",
+        "TelegramBot: build debug"
+      ],
+      "problemMatcher": []
+    },
+    {
       "label": "App: start runtime",
       "dependsOrder": "sequence",
       "dependsOn": [

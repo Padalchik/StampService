@@ -4,6 +4,7 @@ using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Profile;
 using StampService.TelegramBot.Common.Errors;
 using StampService.TelegramBot.Features.MainMenu.Screens;
+using StampService.TelegramBot.Features.Profile.Screens;
 using TelegramBotFlow.Core.Constants;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Endpoints;
@@ -58,7 +59,7 @@ public sealed class StartEndpoint : IBotEndpoint
                 ctx.CancellationToken);
 
             if (result.IsFailed)
-                return BotResults.ShowView(new("Не удалось авторизоваться в StampService."));
+                return BotResults.NavigateTo<ProfilePhoneNumberScreen>();
 
             ctx.Session?.Clear();
             return BotResults.NavigateToRoot<MainMenuScreen>();

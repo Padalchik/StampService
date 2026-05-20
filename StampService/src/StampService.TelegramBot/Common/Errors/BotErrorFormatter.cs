@@ -56,9 +56,7 @@ public static class BotErrorFormatter
             AppErrorCodes.RedemptionCode.PoolExhausted => "сейчас нет свободных кодов списания, попробуйте позже",
             AppErrorCodes.User.IdentityAlreadyLinked => "уже привязано к вашему профилю",
             AppErrorCodes.User.IdentityLinkedToAnotherUser => "уже привязано к другому пользователю",
-            AppErrorCodes.User.IdentityMergeNotAllowed => "автоматически объединить эти аккаунты пока нельзя",
-            AppErrorCodes.User.IdentityMergeSourceHasMultipleIdentities => "у второго аккаунта есть другие способы входа, поэтому автоматическое объединение пока недоступно",
-            AppErrorCodes.User.IdentityMergeTargetHasBrandMembership => "оба аккаунта уже имеют доступ к одному и тому же бренду, поэтому автоматическое объединение пока недоступно",
+            AppErrorCodes.User.TelegramIdentityNotLinked => "сначала подтвердите телефон",
             AppErrorCodes.User.NotFound => context == BotErrorContext.IssueMetric
                 ? "получатель не найден"
                 : "пользователь не найден",

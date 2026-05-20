@@ -1,6 +1,7 @@
 {
   "version": "0.2.0",
   "configurations": [
+
     {
       "name": "App: полный запуск в браузере",
       "type": "pwa-chrome",
@@ -16,6 +17,26 @@
       "url": "http://localhost:5173/login",
       "webRoot": "${workspaceFolder}/src/StampService.Web/src",
       "preLaunchTask": "Web: start frontend"
+    },
+    {
+      "name": "TelegramBot: debug",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "App: start dependencies for bot debug",
+      "program": "${workspaceFolder}\\src\\StampService.TelegramBot\\bin\\Debug\\net10.0\\StampService.TelegramBot.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}\\src\\StampService.TelegramBot",
+      "console": "integratedTerminal",
+      "stopAtEntry": false,
+      "justMyCode": false,
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5061"
+      },
+      "sourceFileMap": {
+        "C:\\Programmer\\StampService\\StampService": "${workspaceFolder}"
+      }
     }
   ]
 }

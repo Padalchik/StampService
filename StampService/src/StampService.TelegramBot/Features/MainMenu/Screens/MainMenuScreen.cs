@@ -6,6 +6,7 @@ using StampService.Contracts.DTOs.Brands;
 using StampService.TelegramBot.Features.Admin.Screens;
 using StampService.TelegramBot.Features.Brands.Actions;
 using StampService.TelegramBot.Features.Brands.Screens;
+using StampService.TelegramBot.Features.Profile.Actions;
 using StampService.TelegramBot.Features.Profile.Screens;
 using StampService.TelegramBot.Features.Wallet.Screens;
 using TelegramBotFlow.Core.Context;
@@ -37,6 +38,23 @@ public sealed class MainMenuScreen : IScreen
             ? "Вы авторизованы в StampService."
             : $"@{username}, вы авторизованы в StampService.";
 
+        var userResult = await _ensureUserHandler.Handle(
+            new EnsureTelegramUserCommand(
+                ctx.UserId,
+                from?.FirstName,
+                from?.LastName,
+                from?.Username),
+            ctx.CancellationToken);
+
+        if (userResult.IsFailed)
+        {
+            return new ScreenView(
+                "<b>Вход по телефону</b>\n\n" +
+                "Чтобы пользоваться StampService в Telegram, подтвердите номер телефона. " +
+                "Введите номер в международном формате, например <code>+79991234567</code>.")
+                .AwaitInput<EnterProfilePhoneAction>();
+        }
+
         var view = new ScreenView(
             $"{greeting}\n\n" +
             "Выберите действие:")
@@ -49,17 +67,6 @@ public sealed class MainMenuScreen : IScreen
         {
             view.Row().NavigateButton<AdminPanelScreen>("Админка");
         }
-
-        var userResult = await _ensureUserHandler.Handle(
-            new EnsureTelegramUserCommand(
-                ctx.UserId,
-                from?.FirstName,
-                from?.LastName,
-                from?.Username),
-            ctx.CancellationToken);
-
-        if (userResult.IsFailed)
-            return view;
 
         var brandsResult = await _myBrandsHandler.Handle(
             new GetMyBrandsQuery(userResult.Value.UserId),

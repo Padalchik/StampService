@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using StampService.Application.Abstractions;
 using StampService.Application.Auth;
 using StampService.Application.Errors;
+using StampService.Application.Users;
 using StampService.Contracts.DTOs.Profile;
 using StampService.Domain.User;
 
@@ -12,25 +13,16 @@ public class RequestPhoneLinkCodeHandler
     : ICommandHandler<RequestPhoneLinkCodeResponse, RequestPhoneLinkCodeCommand>
 {
     private readonly IUserRepository _userRepository;
-    private readonly IPhoneAuthCodeRepository _phoneAuthCodeRepository;
-    private readonly IPhoneAuthCodeGenerator _phoneAuthCodeGenerator;
-    private readonly IPhoneAuthCodeSender _phoneAuthCodeSender;
-    private readonly TimeProvider _timeProvider;
+    private readonly IPhoneAuthCodeService _phoneAuthCodeService;
     private readonly ILogger<RequestPhoneLinkCodeHandler> _logger;
 
     public RequestPhoneLinkCodeHandler(
         IUserRepository userRepository,
-        IPhoneAuthCodeRepository phoneAuthCodeRepository,
-        IPhoneAuthCodeGenerator phoneAuthCodeGenerator,
-        IPhoneAuthCodeSender phoneAuthCodeSender,
-        TimeProvider timeProvider,
+        IPhoneAuthCodeService phoneAuthCodeService,
         ILogger<RequestPhoneLinkCodeHandler> logger)
     {
         _userRepository = userRepository;
-        _phoneAuthCodeRepository = phoneAuthCodeRepository;
-        _phoneAuthCodeGenerator = phoneAuthCodeGenerator;
-        _phoneAuthCodeSender = phoneAuthCodeSender;
-        _timeProvider = timeProvider;
+        _phoneAuthCodeService = phoneAuthCodeService;
         _logger = logger;
     }
 
@@ -59,34 +51,29 @@ public class RequestPhoneLinkCodeHandler
             && identity.Key == phoneNumber))
             return Result.Fail(UserErrors.IdentityAlreadyLinked());
 
-        var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
-        var activeCodes = await _phoneAuthCodeRepository.GetActiveByPhoneAsync(
+        var phoneOwner = await _userRepository.GetByIdentityAsync(
+            IdentityType.Phone,
             phoneNumber,
-            nowUtc,
             cancellationToken);
-        foreach (var activeCode in activeCodes)
-            activeCode.Expire(nowUtc);
+        if (phoneOwner is not null && phoneOwner.Id != command.UserId)
+            return Result.Fail(UserErrors.IdentityLinkedToAnotherUser());
 
-        var expiresAtUtc = nowUtc.AddMinutes(10);
-        var code = _phoneAuthCodeGenerator.Generate();
-        var authCodeResult = PhoneAuthCode.Create(phoneNumber, code, expiresAtUtc, nowUtc);
-        if (authCodeResult.IsFailed)
-            return Result.Fail(authCodeResult.Errors);
-
-        _phoneAuthCodeRepository.Add(authCodeResult.Value);
-        await _phoneAuthCodeRepository.SaveAsync(cancellationToken);
-
-        var sendResult = await _phoneAuthCodeSender.SendAsync(phoneNumber, code, cancellationToken);
-        if (sendResult.IsFailed)
-            return Result.Fail(sendResult.Errors);
+        var requestResult = await _phoneAuthCodeService.RequestCodeAsync(
+            phoneNumber,
+            nameof(command.PhoneNumber),
+            cancellationToken);
+        if (requestResult.IsFailed)
+            return Result.Fail(requestResult.Errors);
 
         _logger.LogInformation(
             "Phone link code requested. UserId={UserId} Phone={Phone} AuthCodeId={AuthCodeId} ExpiresAtUtc={ExpiresAtUtc:o}",
             command.UserId,
-            phoneNumber,
-            authCodeResult.Value.Id,
-            expiresAtUtc);
+            requestResult.Value.PhoneNumber,
+            requestResult.Value.AuthCodeId,
+            requestResult.Value.ExpiresAtUtc);
 
-        return Result.Ok(new RequestPhoneLinkCodeResponse(expiresAtUtc, authCodeResult.Value.Id));
+        return Result.Ok(new RequestPhoneLinkCodeResponse(
+            requestResult.Value.ExpiresAtUtc,
+            requestResult.Value.AuthCodeId));
     }
 }

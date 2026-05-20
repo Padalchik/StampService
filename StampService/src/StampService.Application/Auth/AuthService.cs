@@ -1,4 +1,3 @@
-using System.Text.Json;
 using FluentResults;
 using StampService.Application.Errors;
 using StampService.Application.Services;
@@ -13,30 +12,21 @@ public class AuthService : IAuthService
     private readonly IUserRepository _userRepository;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly ITelegramValidationService _telegramValidationService;
-    private readonly ICustomerCodeGenerator _customerCodeGenerator;
-    private readonly IPhoneAuthCodeRepository _phoneAuthCodeRepository;
-    private readonly IPhoneAuthCodeGenerator _phoneAuthCodeGenerator;
-    private readonly IPhoneAuthCodeSender _phoneAuthCodeSender;
-    private readonly TimeProvider _timeProvider;
+    private readonly IPhoneAuthCodeService _phoneAuthCodeService;
+    private readonly IPhoneAccountService _phoneAccountService;
 
     public AuthService(
         IUserRepository userRepository,
         IJwtTokenService jwtTokenService,
         ITelegramValidationService telegramValidationService,
-        ICustomerCodeGenerator customerCodeGenerator,
-        IPhoneAuthCodeRepository phoneAuthCodeRepository,
-        IPhoneAuthCodeGenerator phoneAuthCodeGenerator,
-        IPhoneAuthCodeSender phoneAuthCodeSender,
-        TimeProvider timeProvider)
+        IPhoneAuthCodeService phoneAuthCodeService,
+        IPhoneAccountService phoneAccountService)
     {
         _userRepository = userRepository;
         _jwtTokenService = jwtTokenService;
         _telegramValidationService = telegramValidationService;
-        _customerCodeGenerator = customerCodeGenerator;
-        _phoneAuthCodeRepository = phoneAuthCodeRepository;
-        _phoneAuthCodeGenerator = phoneAuthCodeGenerator;
-        _phoneAuthCodeSender = phoneAuthCodeSender;
-        _timeProvider = timeProvider;
+        _phoneAuthCodeService = phoneAuthCodeService;
+        _phoneAccountService = phoneAccountService;
     }
 
     public async Task<Result<AuthResponse>> LoginAsync(
@@ -53,30 +43,10 @@ public class AuthService : IAuthService
             cancellationToken);
 
         if (user is null)
-        {
-            var customerCode = await _customerCodeGenerator.GenerateAsync(cancellationToken);
-            var userResult = User.Create(GetDisplayName(request), customerCode);
-            if (userResult.IsFailed)
-                return Result.Fail(userResult.Errors);
+            return Result.Fail(UserErrors.TelegramIdentityNotLinked());
 
-            user = userResult.Value;
-
-            var metadata = JsonSerializer.Serialize(new
-            {
-                request.Id,
-                request.FirstName,
-                request.LastName,
-                request.Username,
-                request.AuthDate
-            });
-
-            var identityResult = user.AddIdentity(IdentityType.Telegram, providerKey, metadata);
-            if (identityResult.IsFailed)
-                return Result.Fail(identityResult.Errors);
-
-            _userRepository.Add(user);
-            await _userRepository.SaveAsync(cancellationToken);
-        }
+        if (!_phoneAccountService.HasActivePhoneIdentity(user))
+            return Result.Fail(UserErrors.TelegramIdentityNotLinked());
 
         var token = _jwtTokenService.CreateToken(user);
 
@@ -87,109 +57,35 @@ public class AuthService : IAuthService
         RequestPhoneAuthCodeRequest request,
         CancellationToken cancellationToken)
     {
-        var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(
+        var requestResult = await _phoneAuthCodeService.RequestCodeAsync(
             request.PhoneNumber,
-            nameof(request.PhoneNumber));
-        if (phoneNumberResult.IsFailed)
-            return Result.Fail(phoneNumberResult.Errors);
-
-        var phoneNumber = phoneNumberResult.Value;
-
-        var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
-        var activeCodes = await _phoneAuthCodeRepository.GetActiveByPhoneAsync(
-            phoneNumber,
-            nowUtc,
+            nameof(request.PhoneNumber),
             cancellationToken);
-        foreach (var activeCode in activeCodes)
-            activeCode.Expire(nowUtc);
+        if (requestResult.IsFailed)
+            return Result.Fail(requestResult.Errors);
 
-        var expiresAtUtc = nowUtc.AddMinutes(10);
-        var code = _phoneAuthCodeGenerator.Generate();
-        var authCodeResult = PhoneAuthCode.Create(phoneNumber, code, expiresAtUtc, nowUtc);
-        if (authCodeResult.IsFailed)
-            return Result.Fail(authCodeResult.Errors);
-
-        _phoneAuthCodeRepository.Add(authCodeResult.Value);
-        await _phoneAuthCodeRepository.SaveAsync(cancellationToken);
-
-        var sendResult = await _phoneAuthCodeSender.SendAsync(phoneNumber, code, cancellationToken);
-        if (sendResult.IsFailed)
-            return Result.Fail(sendResult.Errors);
-
-        return Result.Ok(new RequestPhoneAuthCodeResponse(expiresAtUtc));
+        return Result.Ok(new RequestPhoneAuthCodeResponse(requestResult.Value.ExpiresAtUtc));
     }
 
     public async Task<Result<AuthResponse>> VerifyPhoneCodeAsync(
         VerifyPhoneAuthCodeRequest request,
         CancellationToken cancellationToken)
     {
-        var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(
+        var verificationResult = await _phoneAuthCodeService.VerifyCodeAsync(
             request.PhoneNumber,
-            nameof(request.PhoneNumber));
-        if (phoneNumberResult.IsFailed)
-            return Result.Fail(phoneNumberResult.Errors);
+            request.Code,
+            authCodeId: null,
+            invalidField: nameof(request.PhoneNumber),
+            cancellationToken: cancellationToken);
+        if (verificationResult.IsFailed)
+            return Result.Fail(verificationResult.Errors);
 
-        var phoneNumber = phoneNumberResult.Value;
-
-        var code = PhoneAuthCode.NormalizeCode(request.Code);
-        if (!PhoneAuthCode.IsValidCode(code))
-            return Result.Fail(AuthErrors.PhoneCodeInvalid());
-
-        var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
-        var authCode = await _phoneAuthCodeRepository.GetLatestActiveByPhoneAsync(
-            phoneNumber,
-            nowUtc,
+        var userResult = await _phoneAccountService.GetOrCreateByPhoneAsync(
+            verificationResult.Value.PhoneNumber,
+            verificationResult.Value.VerifiedAtUtc,
             cancellationToken);
-        if (authCode is null)
-            return Result.Fail(AuthErrors.PhoneCodeInvalid());
-
-        if (authCode.Code != code)
-        {
-            var failedAttemptResult = authCode.RegisterFailedAttempt(nowUtc);
-            if (failedAttemptResult.IsFailed)
-                return Result.Fail(AuthErrors.PhoneCodeInvalid());
-
-            try
-            {
-                await _phoneAuthCodeRepository.SaveAsync(cancellationToken);
-            }
-            catch (ConcurrencyConflictException)
-            {
-                return Result.Fail(AuthErrors.PhoneCodeInvalid());
-            }
-
-            return Result.Fail(AuthErrors.PhoneCodeInvalid());
-        }
-
-        var useResult = authCode.Use(nowUtc);
-        if (useResult.IsFailed)
-            return Result.Fail(AuthErrors.PhoneCodeInvalid());
-
-        var user = await _userRepository.GetByIdentityAsync(
-            IdentityType.Phone,
-            phoneNumber,
-            cancellationToken);
-
-        if (user is null)
-        {
-            var customerCode = await _customerCodeGenerator.GenerateAsync(cancellationToken);
-            var userResult = User.Create(phoneNumber, customerCode);
-            if (userResult.IsFailed)
-                return Result.Fail(userResult.Errors);
-
-            user = userResult.Value;
-            var metadata = JsonSerializer.Serialize(new
-            {
-                PhoneNumber = phoneNumber,
-                VerifiedAtUtc = nowUtc
-            });
-
-            var identityResult = user.AddIdentity(IdentityType.Phone, phoneNumber, metadata);
-            if (identityResult.IsFailed)
-                return Result.Fail(identityResult.Errors);
-
-            _userRepository.Add(user);
-        }
+        if (userResult.IsFailed)
+            return Result.Fail(userResult.Errors);
 
         try
         {
@@ -200,16 +96,8 @@ public class AuthService : IAuthService
             return Result.Fail(AuthErrors.PhoneCodeInvalid());
         }
 
-        var token = _jwtTokenService.CreateToken(user);
+        var token = _jwtTokenService.CreateToken(userResult.Value);
 
-        return Result.Ok(new AuthResponse(token.Value, user.Id, token.ExpiresAt));
-    }
-
-    private static string GetDisplayName(TelegramLoginRequest request)
-    {
-        if (!string.IsNullOrWhiteSpace(request.Username))
-            return request.Username.Trim();
-
-        return $"{request.FirstName} {request.LastName}".Trim();
+        return Result.Ok(new AuthResponse(token.Value, userResult.Value.Id, token.ExpiresAt));
     }
 }

@@ -1,15 +1,11 @@
 using FluentResults;
 using Microsoft.Extensions.Options;
-using StampService.Application.Coins;
-using StampService.Application.Metrics;
 using StampService.Application.Services;
 using StampService.Application.Users;
 using StampService.Application.Users.Commands.ConfirmTelegramLinkSession;
 using StampService.Application.Users.Commands.RequestTelegramLink;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.Access;
-using StampService.Domain.Coins;
-using StampService.Domain.Loyalty;
 using StampService.Domain.User;
 
 namespace StampService.ApplicationTests.Users;
@@ -47,6 +43,7 @@ public class TelegramLinkSessionHandlerTests
     {
         var fixture = CreateFixture();
         var user = User.Create("phone-user").Value;
+        user.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
         var anotherUser = User.Create("telegram-user").Value;
         anotherUser.AddIdentity(IdentityType.Telegram, "278225388", "{}");
         anotherUser.AddIdentity(IdentityType.Phone, "+79991234568", "{}");
@@ -64,7 +61,7 @@ public class TelegramLinkSessionHandlerTests
     }
 
     [Fact]
-    public async Task ConfirmTelegramLinkSession_WhenSourceHasOnlyTelegramIdentity_ShouldMergeRewardsIntoTargetUser()
+    public async Task ConfirmTelegramLinkSession_WhenTelegramBelongsToLegacyTelegramOnlyUser_ShouldFail()
     {
         var fixture = CreateFixture();
         var targetUser = User.Create("phone-user").Value;
@@ -74,15 +71,6 @@ public class TelegramLinkSessionHandlerTests
         fixture.Users.Add(targetUser);
         fixture.Users.Add(sourceUser);
 
-        var brandId = Guid.NewGuid();
-        var metricDefinitionId = Guid.NewGuid();
-        var sourceWallet = CoinWallet.Create(sourceUser.Id, brandId).Value;
-        sourceWallet.Add(15);
-        fixture.CoinWallets.Add(sourceWallet);
-        var sourceMetricBalance = MetricBalance.Create(sourceUser.Id, brandId, metricDefinitionId).Value;
-        sourceMetricBalance.Add(3);
-        fixture.MetricBalances.Add(sourceMetricBalance);
-
         var token = fixture.Protector.Protect(new TelegramLinkSession(
             targetUser.Id,
             new DateTime(2026, 5, 18, 10, 10, 0, DateTimeKind.Utc)));
@@ -90,26 +78,13 @@ public class TelegramLinkSessionHandlerTests
             new ConfirmTelegramLinkSessionCommand(token, 278225388, null, null, "andrey"),
             CancellationToken.None);
 
-        Assert.True(result.IsSuccess);
-        Assert.NotNull(sourceUser.DeletedAt);
-        Assert.Contains(targetUser.Identities, identity => identity.Type == IdentityType.Telegram && identity.Key == "278225388");
-        Assert.DoesNotContain(sourceUser.Identities, identity => identity.DeletedAt is null);
-
-        var targetWallet = await fixture.CoinWallets.GetByUserAndBrandAsync(targetUser.Id, brandId, CancellationToken.None);
-        Assert.NotNull(targetWallet);
-        Assert.Equal(15, targetWallet.Value);
-
-        var targetMetricBalance = await fixture.MetricBalances.GetByUserAndMetricAsync(
-            targetUser.Id,
-            brandId,
-            metricDefinitionId,
-            CancellationToken.None);
-        Assert.NotNull(targetMetricBalance);
-        Assert.Equal(3, targetMetricBalance.Value);
+        Assert.True(result.IsFailed);
+        Assert.Null(sourceUser.DeletedAt);
+        Assert.DoesNotContain(targetUser.Identities, identity => identity.Type == IdentityType.Telegram && identity.Key == "278225388");
     }
 
     [Fact]
-    public async Task ConfirmTelegramLinkSession_WhenSourceHasBrandMembership_ShouldReassignMembershipToTargetUser()
+    public async Task ConfirmTelegramLinkSession_WhenLegacyTelegramOnlyUserHasBrandMembership_ShouldFail()
     {
         var fixture = CreateFixture();
         var targetUser = User.Create("phone-user").Value;
@@ -127,16 +102,16 @@ public class TelegramLinkSessionHandlerTests
             new ConfirmTelegramLinkSessionCommand(token, 278225388, null, null, "andrey"),
             CancellationToken.None);
 
-        Assert.True(result.IsSuccess);
-        Assert.NotNull(sourceUser.DeletedAt);
+        Assert.True(result.IsFailed);
+        Assert.Null(sourceUser.DeletedAt);
         var targetMemberships = await fixture.BrandMemberships.GetUserMembershipsAsync(
             targetUser.Id,
             CancellationToken.None);
-        Assert.Single(targetMemberships);
+        Assert.Empty(targetMemberships);
         var sourceMemberships = await fixture.BrandMemberships.GetUserMembershipsAsync(
             sourceUser.Id,
             CancellationToken.None);
-        Assert.Empty(sourceMemberships);
+        Assert.Single(sourceMemberships);
     }
 
     [Fact]
@@ -170,32 +145,18 @@ public class TelegramLinkSessionHandlerTests
         var protector = new FakeTelegramLinkSessionProtector();
         var timeProvider = new FixedTimeProvider(new DateTimeOffset(2026, 5, 18, 10, 0, 0, TimeSpan.Zero));
         var telegramOptions = Options.Create(new TelegramOptions { BotUsername = "StampServiceBot" });
-        var coinWallets = new FakeCoinWalletRepository();
-        var coinTransactions = new FakeCoinTransactionRepository();
-        var metricBalances = new FakeMetricBalanceRepository();
-        var stampTransactions = new FakeStampTransactionRepository();
-        var redemptionCodes = new FakeRedemptionCodeRepository();
         var brandMemberships = new FakeBrandMembershipRepository();
-        var autoMergeService = new AutoMergeUserAccountsService(
-            brandMemberships,
-            coinWallets,
-            new CoinLedgerService(coinWallets, coinTransactions),
-            metricBalances,
-            new MetricLedgerService(metricBalances, stampTransactions),
-            redemptionCodes,
-            users);
+        var phoneAccountService = new PhoneAccountService(users, new CustomerCodeGenerator(users));
 
         return new Fixture(
             users,
             protector,
-            new RequestTelegramLinkHandler(users, protector, timeProvider, telegramOptions),
+            new RequestTelegramLinkHandler(users, protector, timeProvider, telegramOptions, phoneAccountService),
             new ConfirmTelegramLinkSessionHandler(
                 users,
                 protector,
                 timeProvider,
-                autoMergeService),
-            coinWallets,
-            metricBalances,
+                phoneAccountService),
             brandMemberships);
     }
 
@@ -204,8 +165,6 @@ public class TelegramLinkSessionHandlerTests
         FakeTelegramLinkSessionProtector Protector,
         RequestTelegramLinkHandler RequestHandler,
         ConfirmTelegramLinkSessionHandler ConfirmHandler,
-        FakeCoinWalletRepository CoinWallets,
-        FakeMetricBalanceRepository MetricBalances,
         FakeBrandMembershipRepository BrandMemberships);
 
     private sealed class FakeTelegramLinkSessionProtector : ITelegramLinkSessionProtector

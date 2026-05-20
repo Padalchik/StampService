@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using StampService.Application.Abstractions;
 using StampService.Application.Errors;
 using StampService.Application.Services;
+using StampService.Application.Users;
 using StampService.Contracts.DTOs.Profile;
 
 namespace StampService.Application.Users.Commands.RequestTelegramLink;
@@ -14,17 +15,20 @@ public class RequestTelegramLinkHandler
     private readonly ITelegramLinkSessionProtector _protector;
     private readonly TimeProvider _timeProvider;
     private readonly TelegramOptions _telegramOptions;
+    private readonly IPhoneAccountService _phoneAccountService;
 
     public RequestTelegramLinkHandler(
         IUserRepository userRepository,
         ITelegramLinkSessionProtector protector,
         TimeProvider timeProvider,
-        IOptions<TelegramOptions> telegramOptions)
+        IOptions<TelegramOptions> telegramOptions,
+        IPhoneAccountService phoneAccountService)
     {
         _userRepository = userRepository;
         _protector = protector;
         _timeProvider = timeProvider;
         _telegramOptions = telegramOptions.Value;
+        _phoneAccountService = phoneAccountService;
     }
 
     public async Task<Result<RequestTelegramLinkResponse>> Handle(
@@ -34,9 +38,11 @@ public class RequestTelegramLinkHandler
         if (command.UserId == Guid.Empty)
             return Result.Fail(UserErrors.IdIsEmpty());
 
-        var userExists = await _userRepository.ExistsAsync(command.UserId, cancellationToken);
-        if (!userExists)
+        var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
+        if (user is null)
             return Result.Fail(UserErrors.NotFound());
+        if (!_phoneAccountService.HasActivePhoneIdentity(user))
+            return Result.Fail(UserErrors.TelegramIdentityNotLinked());
 
         var botUsername = GetBotUsername();
         if (string.IsNullOrWhiteSpace(botUsername))

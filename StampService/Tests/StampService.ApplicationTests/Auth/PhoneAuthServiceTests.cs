@@ -91,15 +91,20 @@ public class PhoneAuthServiceTests
         var users = new FakeUserRepository();
         var phoneCodes = new FakePhoneAuthCodeRepository();
         var sender = new FakePhoneAuthCodeSender();
+        var timeProvider = new FixedTimeProvider(now);
+        var customerCodeGenerator = new CustomerCodeGenerator(users);
+        var phoneAuthCodeService = new PhoneAuthCodeService(
+            phoneCodes,
+            new FixedPhoneAuthCodeGenerator(),
+            sender,
+            timeProvider);
+        var phoneAccountService = new PhoneAccountService(users, customerCodeGenerator);
         var service = new AuthService(
             users,
             new FakeJwtTokenService(),
             new AlwaysValidTelegramValidationService(),
-            new CustomerCodeGenerator(users),
-            phoneCodes,
-            new FixedPhoneAuthCodeGenerator(),
-            sender,
-            new FixedTimeProvider(now));
+            phoneAuthCodeService,
+            phoneAccountService);
 
         return new Fixture(service, users, phoneCodes, sender, now);
     }

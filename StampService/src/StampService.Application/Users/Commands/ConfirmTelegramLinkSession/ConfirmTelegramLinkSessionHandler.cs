@@ -2,6 +2,7 @@ using System.Text.Json;
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Errors;
+using StampService.Application.Users;
 using StampService.Contracts.DTOs.Profile;
 using StampService.Domain.User;
 
@@ -13,18 +14,18 @@ public class ConfirmTelegramLinkSessionHandler
     private readonly IUserRepository _userRepository;
     private readonly ITelegramLinkSessionProtector _protector;
     private readonly TimeProvider _timeProvider;
-    private readonly IAutoMergeUserAccountsService _autoMergeUserAccountsService;
+    private readonly IPhoneAccountService _phoneAccountService;
 
     public ConfirmTelegramLinkSessionHandler(
         IUserRepository userRepository,
         ITelegramLinkSessionProtector protector,
         TimeProvider timeProvider,
-        IAutoMergeUserAccountsService autoMergeUserAccountsService)
+        IPhoneAccountService phoneAccountService)
     {
         _userRepository = userRepository;
         _protector = protector;
         _timeProvider = timeProvider;
-        _autoMergeUserAccountsService = autoMergeUserAccountsService;
+        _phoneAccountService = phoneAccountService;
     }
 
     public async Task<Result<ConfirmTelegramLinkResponse>> Handle(
@@ -46,6 +47,8 @@ public class ConfirmTelegramLinkSessionHandler
         var user = await _userRepository.GetByIdAsync(session.UserId, cancellationToken);
         if (user is null)
             return Result.Fail(UserErrors.NotFound());
+        if (!_phoneAccountService.HasActivePhoneIdentity(user))
+            return Result.Fail(UserErrors.TelegramIdentityNotLinked());
 
         var providerKey = command.TelegramUserId.ToString();
         var sameTelegramIdentity = user.Identities.FirstOrDefault(identity =>
@@ -61,18 +64,7 @@ public class ConfirmTelegramLinkSessionHandler
             providerKey,
             cancellationToken);
         if (telegramOwner is not null && telegramOwner.Id != session.UserId)
-        {
-            var mergeResult = await _autoMergeUserAccountsService.MergeSingleIdentitySourceIntoTargetAsync(
-                user,
-                telegramOwner,
-                IdentityType.Telegram,
-                providerKey,
-                nowUtc,
-                cancellationToken);
-            return mergeResult.IsFailed
-                ? Result.Fail<ConfirmTelegramLinkResponse>(mergeResult.Errors)
-                : Result.Ok(new ConfirmTelegramLinkResponse(command.TelegramUserId, displayName));
-        }
+            return Result.Fail(UserErrors.IdentityLinkedToAnotherUser());
 
         var currentTelegramIdentity = user.Identities.FirstOrDefault(identity =>
             identity.DeletedAt is null && identity.Type == IdentityType.Telegram);

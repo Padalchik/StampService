@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using StampService.Application.Abstractions;
 using StampService.Application.Auth;
 using StampService.Application.Errors;
+using StampService.Application.Users;
 using StampService.Contracts.DTOs.Profile;
 using StampService.Domain.User;
 
@@ -13,23 +14,17 @@ public class ConfirmPhoneLinkCodeHandler
     : ICommandHandler<ConfirmPhoneLinkCodeResponse, ConfirmPhoneLinkCodeCommand>
 {
     private readonly IUserRepository _userRepository;
-    private readonly IPhoneAuthCodeRepository _phoneAuthCodeRepository;
-    private readonly TimeProvider _timeProvider;
+    private readonly IPhoneAuthCodeService _phoneAuthCodeService;
     private readonly ILogger<ConfirmPhoneLinkCodeHandler> _logger;
-    private readonly IAutoMergeUserAccountsService _autoMergeUserAccountsService;
 
     public ConfirmPhoneLinkCodeHandler(
         IUserRepository userRepository,
-        IPhoneAuthCodeRepository phoneAuthCodeRepository,
-        TimeProvider timeProvider,
-        ILogger<ConfirmPhoneLinkCodeHandler> logger,
-        IAutoMergeUserAccountsService autoMergeUserAccountsService)
+        IPhoneAuthCodeService phoneAuthCodeService,
+        ILogger<ConfirmPhoneLinkCodeHandler> logger)
     {
         _userRepository = userRepository;
-        _phoneAuthCodeRepository = phoneAuthCodeRepository;
-        _timeProvider = timeProvider;
+        _phoneAuthCodeService = phoneAuthCodeService;
         _logger = logger;
-        _autoMergeUserAccountsService = autoMergeUserAccountsService;
     }
 
     public async Task<Result<ConfirmPhoneLinkCodeResponse>> Handle(
@@ -46,10 +41,6 @@ public class ConfirmPhoneLinkCodeHandler
             return Result.Fail(phoneNumberResult.Errors);
 
         var phoneNumber = phoneNumberResult.Value;
-
-        var code = PhoneAuthCode.NormalizeCode(command.Code);
-        if (!PhoneAuthCode.IsValidCode(code))
-            return Result.Fail(AuthErrors.PhoneCodeInvalid());
 
         var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
         if (user is null)
@@ -73,73 +64,30 @@ public class ConfirmPhoneLinkCodeHandler
             IdentityType.Phone,
             phoneNumber,
             cancellationToken);
-
-        var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
-        var authCode = await GetActiveAuthCodeAsync(
-            command.AuthCodeId,
-            phoneNumber,
-            nowUtc,
-            cancellationToken);
-
-        if (authCode is null)
-        {
-            _logger.LogWarning(
-                "Phone link confirmation failed: active code not found. UserId={UserId} Phone={Phone} AuthCodeId={AuthCodeId}",
-                command.UserId,
-                phoneNumber,
-                command.AuthCodeId);
-            return Result.Fail(AuthErrors.PhoneCodeInvalid());
-        }
-
-        if (authCode.Code != code)
-        {
-            var failedAttemptResult = authCode.RegisterFailedAttempt(nowUtc);
-            if (failedAttemptResult.IsSuccess)
-            {
-                try
-                {
-                    await _phoneAuthCodeRepository.SaveAsync(cancellationToken);
-                }
-                catch (ConcurrencyConflictException)
-                {
-                    return Result.Fail(AuthErrors.PhoneCodeInvalid());
-                }
-            }
-
-            _logger.LogWarning(
-                "Phone link confirmation failed: code mismatch. UserId={UserId} Phone={Phone} AuthCodeId={AuthCodeId}",
-                command.UserId,
-                phoneNumber,
-                authCode.Id);
-            return Result.Fail(AuthErrors.PhoneCodeInvalid());
-        }
-
-        var useResult = authCode.Use(nowUtc);
-        if (useResult.IsFailed)
-            return Result.Fail(AuthErrors.PhoneCodeInvalid());
-
         if (phoneOwner is not null && phoneOwner.Id != command.UserId)
+            return Result.Fail(UserErrors.IdentityLinkedToAnotherUser());
+
+        var verificationResult = await _phoneAuthCodeService.VerifyCodeAsync(
+            phoneNumber,
+            command.Code,
+            command.AuthCodeId,
+            nameof(command.PhoneNumber),
+            cancellationToken);
+        if (verificationResult.IsFailed)
         {
-            var mergeResult = await _autoMergeUserAccountsService.MergeSingleIdentitySourceIntoTargetAsync(
-                user,
-                phoneOwner,
-                IdentityType.Phone,
+            _logger.LogWarning(
+                "Phone link confirmation failed. UserId={UserId} Phone={Phone} AuthCodeId={AuthCodeId} Errors={Errors}",
+                command.UserId,
                 phoneNumber,
-                nowUtc,
-                cancellationToken);
-
-            if (mergeResult.IsFailed)
-                return Result.Fail(mergeResult.Errors);
-
-            return Result.Ok(new ConfirmPhoneLinkCodeResponse(
-                phoneNumber,
-                UserIdentityFormatter.MaskPhone(phoneNumber)));
+                command.AuthCodeId,
+                string.Join("; ", verificationResult.Errors.Select(error => error.Message)));
+            return Result.Fail(verificationResult.Errors);
         }
 
         var metadata = JsonSerializer.Serialize(new
         {
             PhoneNumber = phoneNumber,
-            LinkedAtUtc = nowUtc
+            LinkedAtUtc = verificationResult.Value.VerifiedAtUtc
         });
         Result<UserIdentity> identityResult;
         if (currentPhoneIdentity is null)
@@ -148,7 +96,7 @@ public class ConfirmPhoneLinkCodeHandler
         }
         else
         {
-            currentPhoneIdentity.Deactivate(nowUtc);
+            currentPhoneIdentity.Deactivate(verificationResult.Value.VerifiedAtUtc);
             identityResult = user.AddIdentity(IdentityType.Phone, phoneNumber, metadata);
         }
         if (identityResult.IsFailed)
@@ -178,26 +126,5 @@ public class ConfirmPhoneLinkCodeHandler
         return Result.Ok(new ConfirmPhoneLinkCodeResponse(
             phoneNumber,
             UserIdentityFormatter.MaskPhone(phoneNumber)));
-    }
-
-    private async Task<PhoneAuthCode?> GetActiveAuthCodeAsync(
-        Guid? authCodeId,
-        string phoneNumber,
-        DateTime nowUtc,
-        CancellationToken cancellationToken)
-    {
-        if (authCodeId is { } id)
-        {
-            var authCode = await _phoneAuthCodeRepository.GetActiveByIdAsync(id, nowUtc, cancellationToken);
-            if (authCode?.PhoneNumber == phoneNumber)
-                return authCode;
-
-            return null;
-        }
-
-        return await _phoneAuthCodeRepository.GetLatestActiveByPhoneAsync(
-            phoneNumber,
-            nowUtc,
-            cancellationToken);
     }
 }

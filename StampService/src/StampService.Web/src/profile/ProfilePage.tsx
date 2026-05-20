@@ -289,6 +289,14 @@ function getUserMessage(error: unknown): string {
       return 'Код телефона неверен или устарел.';
     }
 
+    if (error.errors.some((item) => item.code === 'user.identity_linked_to_another_user')) {
+      return 'Этот способ входа уже привязан к другому пользователю.';
+    }
+
+    if (error.errors.some((item) => item.code === 'user.telegram_identity_not_linked')) {
+      return 'Сначала войдите по подтвержденному телефону.';
+    }
+
     return error.message;
   }
 

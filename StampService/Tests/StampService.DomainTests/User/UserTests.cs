@@ -61,4 +61,35 @@ public class UserTests
         var error = Assert.IsType<DomainError>(result.Errors.Single());
         Assert.Equal("user_identity.phone_key_invalid", error.Code);
     }
+
+    [Fact]
+    public void HasActiveIdentity_WhenIdentityIsActive_ShouldReturnTrue()
+    {
+        var user = DomainUser.Create("Ivan").Value;
+        user.AddIdentity(
+            StampService.Domain.User.IdentityType.Phone,
+            "+79991234567",
+            "{}");
+
+        Assert.True(user.HasActiveIdentity(StampService.Domain.User.IdentityType.Phone));
+    }
+
+    [Fact]
+    public void ReassignIdentity_ShouldMoveIdentityToAnotherUser()
+    {
+        var sourceUser = DomainUser.Create("Telegram user").Value;
+        var targetUser = DomainUser.Create("Phone user").Value;
+        var identity = sourceUser.AddIdentity(
+            StampService.Domain.User.IdentityType.Telegram,
+            "278225388",
+            "{}").Value;
+
+        var result = identity.ReassignTo(targetUser);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(targetUser.Id, identity.UserId);
+        Assert.Same(targetUser, identity.User);
+        Assert.DoesNotContain(identity, sourceUser.Identities);
+        Assert.Contains(identity, targetUser.Identities);
+    }
 }
