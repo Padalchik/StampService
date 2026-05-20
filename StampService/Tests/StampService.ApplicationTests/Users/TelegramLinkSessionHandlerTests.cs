@@ -61,6 +61,42 @@ public class TelegramLinkSessionHandlerTests
     }
 
     [Fact]
+    public async Task ConfirmTelegramLinkSession_WhenUserAlreadyHasTelegram_ShouldFail()
+    {
+        var fixture = CreateFixture();
+        var user = User.Create("phone-user").Value;
+        user.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
+        user.AddIdentity(IdentityType.Telegram, "278225388", "{}");
+        fixture.Users.Add(user);
+
+        var token = fixture.Protector.Protect(new TelegramLinkSession(
+            user.Id,
+            new DateTime(2026, 5, 18, 10, 10, 0, DateTimeKind.Utc)));
+        var result = await fixture.ConfirmHandler.Handle(
+            new ConfirmTelegramLinkSessionCommand(token, 278225389, null, null, "andrey2"),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.DoesNotContain(user.Identities, identity => identity.Type == IdentityType.Telegram && identity.Key == "278225389");
+    }
+
+    [Fact]
+    public async Task RequestTelegramLink_WhenUserAlreadyHasTelegram_ShouldFail()
+    {
+        var fixture = CreateFixture();
+        var user = User.Create("phone-user").Value;
+        user.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
+        user.AddIdentity(IdentityType.Telegram, "278225388", "{}");
+        fixture.Users.Add(user);
+
+        var result = await fixture.RequestHandler.Handle(
+            new RequestTelegramLinkCommand(user.Id),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+    }
+
+    [Fact]
     public async Task ConfirmTelegramLinkSession_WhenTelegramBelongsToLegacyTelegramOnlyUser_ShouldFail()
     {
         var fixture = CreateFixture();

@@ -5,6 +5,7 @@ using StampService.Application.Errors;
 using StampService.Application.Services;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Profile;
+using StampService.Domain.User;
 
 namespace StampService.Application.Users.Commands.RequestTelegramLink;
 
@@ -43,6 +44,9 @@ public class RequestTelegramLinkHandler
             return Result.Fail(UserErrors.NotFound());
         if (!_phoneAccountService.HasActivePhoneIdentity(user))
             return Result.Fail(UserErrors.TelegramIdentityNotLinked());
+        if (user.Identities.Any(identity =>
+            identity.DeletedAt is null && identity.Type == IdentityType.Telegram))
+            return Result.Fail(UserErrors.IdentityAlreadyLinked());
 
         var botUsername = GetBotUsername();
         if (string.IsNullOrWhiteSpace(botUsername))

@@ -63,7 +63,7 @@ public class TelegramPhoneOnboardingHandlerTests
     }
 
     [Fact]
-    public async Task ConfirmTelegramPhoneCode_WhenLegacyTelegramOnlyUserExists_ShouldMoveTelegramToPhoneUser()
+    public async Task ConfirmTelegramPhoneCode_WhenTelegramBelongsToLegacyTelegramOnlyUser_ShouldFail()
     {
         var fixture = CreateFixture();
         var phoneUser = User.Create("phone-user").Value;
@@ -88,10 +88,13 @@ public class TelegramPhoneOnboardingHandlerTests
                 "123456"),
             CancellationToken.None);
 
-        Assert.True(result.IsSuccess);
-        Assert.Contains(phoneUser.Identities, identity => identity.Type == IdentityType.Telegram && identity.Key == "278225388");
-        Assert.DoesNotContain(legacyTelegramUser.Identities, identity => identity.DeletedAt is null);
-        Assert.NotNull(legacyTelegramUser.DeletedAt);
+        Assert.True(result.IsFailed);
+        Assert.DoesNotContain(phoneUser.Identities, identity => identity.Type == IdentityType.Telegram && identity.Key == "278225388");
+        Assert.Contains(legacyTelegramUser.Identities, identity =>
+            identity.DeletedAt is null
+            && identity.Type == IdentityType.Telegram
+            && identity.Key == "278225388");
+        Assert.Null(legacyTelegramUser.DeletedAt);
     }
 
     [Fact]
@@ -124,6 +127,39 @@ public class TelegramPhoneOnboardingHandlerTests
         Assert.DoesNotContain(
             fixture.Users.Users,
             user => user.Identities.Any(identity => identity.Type == IdentityType.Phone && identity.Key == "+79991234567"));
+    }
+
+    [Fact]
+    public async Task ConfirmTelegramPhoneCode_WhenPhoneUserAlreadyHasTelegram_ShouldFail()
+    {
+        var fixture = CreateFixture();
+        var phoneUser = User.Create("phone-user").Value;
+        phoneUser.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
+        phoneUser.AddIdentity(IdentityType.Telegram, "278225389", "{}");
+        fixture.Users.Add(phoneUser);
+
+        await fixture.PhoneAuthCodeService.RequestCodeAsync(
+            "+79991234567",
+            invalidField: null,
+            cancellationToken: CancellationToken.None);
+
+        var result = await fixture.Handler.Handle(
+            new ConfirmTelegramPhoneCodeCommand(
+                278225388,
+                "Andrey",
+                null,
+                "andrey",
+                "+79991234567",
+                "123456"),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Contains(phoneUser.Identities, identity =>
+            identity.Type == IdentityType.Telegram
+            && identity.Key == "278225389"
+            && identity.DeletedAt is null);
+        Assert.DoesNotContain(phoneUser.Identities, identity => identity.Type == IdentityType.Telegram && identity.Key == "278225388");
+        Assert.True(fixture.PhoneAuthCodeServiceCodes.Single().IsActive(fixture.Now.UtcDateTime));
     }
 
     private static Fixture CreateFixture()

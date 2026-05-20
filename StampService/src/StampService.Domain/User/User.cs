@@ -90,18 +90,6 @@ public class User : BaseEntity
         Touch();
     }
 
-    internal void AttachIdentity(UserIdentity identity)
-    {
-        _identities.Add(identity);
-        Touch();
-    }
-
-    internal void DetachIdentity(UserIdentity identity)
-    {
-        _identities.Remove(identity);
-        Touch();
-    }
-
     public static bool IsValidCustomerCode(string? customerCode)
     {
         return customerCode is not null

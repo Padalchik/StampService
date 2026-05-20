@@ -49,6 +49,22 @@ public class PhoneLinkHandlerTests
         Assert.Empty(fixture.Sender.SentCodes);
     }
 
+    [Fact]
+    public async Task RequestPhoneLink_WhenUserAlreadyHasPhone_ShouldFail()
+    {
+        var fixture = CreateFixture();
+        var user = User.Create("phone-user").Value;
+        user.AddIdentity(IdentityType.Phone, "+79990000000", "{}");
+        fixture.Users.Add(user);
+
+        var result = await fixture.RequestHandler.Handle(
+            new RequestPhoneLinkCodeCommand(user.Id, "+79991234567"),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Empty(fixture.Sender.SentCodes);
+    }
+
     [Theory]
     [InlineData("79991234567")]
     [InlineData("+7abc9991234567")]

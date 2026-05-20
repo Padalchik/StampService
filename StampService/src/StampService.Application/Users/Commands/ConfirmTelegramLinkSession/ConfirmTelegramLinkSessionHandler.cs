@@ -68,7 +68,8 @@ public class ConfirmTelegramLinkSessionHandler
 
         var currentTelegramIdentity = user.Identities.FirstOrDefault(identity =>
             identity.DeletedAt is null && identity.Type == IdentityType.Telegram);
-        currentTelegramIdentity?.Deactivate(nowUtc);
+        if (currentTelegramIdentity is not null)
+            return Result.Fail(UserErrors.IdentityAlreadyLinked());
 
         var metadata = JsonSerializer.Serialize(new
         {

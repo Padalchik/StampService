@@ -44,10 +44,10 @@ public class ConfirmTelegramLinkHandler
             return Result.Fail(UserErrors.TelegramIdentityNotLinked());
 
         var providerKey = command.TelegramLogin.Id.ToString();
-        if (user.Identities.Any(identity =>
+        var currentTelegramIdentity = user.Identities.FirstOrDefault(identity =>
             identity.DeletedAt is null
-            && identity.Type == IdentityType.Telegram
-            && identity.Key == providerKey))
+            && identity.Type == IdentityType.Telegram);
+        if (currentTelegramIdentity is not null)
             return Result.Fail(UserErrors.IdentityAlreadyLinked());
 
         var telegramOwner = await _userRepository.GetByIdentityAsync(
@@ -70,7 +70,14 @@ public class ConfirmTelegramLinkHandler
         if (identityResult.IsFailed)
             return Result.Fail(identityResult.Errors);
 
-        await _userRepository.SaveAsync(cancellationToken);
+        try
+        {
+            await _userRepository.SaveIdentityAsync(user, identityResult.Value, cancellationToken);
+        }
+        catch (ConcurrencyConflictException)
+        {
+            return Result.Fail(AuthErrors.TelegramCodeInvalid());
+        }
 
         return Result.Ok(new ConfirmTelegramLinkResponse(
             command.TelegramLogin.Id,

@@ -45,10 +45,10 @@ public class RequestPhoneLinkCodeHandler
         if (user is null)
             return Result.Fail(UserErrors.NotFound());
 
-        if (user.Identities.Any(identity =>
+        var currentPhoneIdentity = user.Identities.FirstOrDefault(identity =>
             identity.DeletedAt is null
-            && identity.Type == IdentityType.Phone
-            && identity.Key == phoneNumber))
+            && identity.Type == IdentityType.Phone);
+        if (currentPhoneIdentity is not null)
             return Result.Fail(UserErrors.IdentityAlreadyLinked());
 
         var phoneOwner = await _userRepository.GetByIdentityAsync(

@@ -74,22 +74,4 @@ public class UserTests
         Assert.True(user.HasActiveIdentity(StampService.Domain.User.IdentityType.Phone));
     }
 
-    [Fact]
-    public void ReassignIdentity_ShouldMoveIdentityToAnotherUser()
-    {
-        var sourceUser = DomainUser.Create("Telegram user").Value;
-        var targetUser = DomainUser.Create("Phone user").Value;
-        var identity = sourceUser.AddIdentity(
-            StampService.Domain.User.IdentityType.Telegram,
-            "278225388",
-            "{}").Value;
-
-        var result = identity.ReassignTo(targetUser);
-
-        Assert.True(result.IsSuccess);
-        Assert.Equal(targetUser.Id, identity.UserId);
-        Assert.Same(targetUser, identity.User);
-        Assert.DoesNotContain(identity, sourceUser.Identities);
-        Assert.Contains(identity, targetUser.Identities);
-    }
 }

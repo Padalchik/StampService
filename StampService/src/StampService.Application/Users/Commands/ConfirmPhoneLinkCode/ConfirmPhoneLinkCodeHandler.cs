@@ -59,6 +59,8 @@ public class ConfirmPhoneLinkCodeHandler
 
         var currentPhoneIdentity = user.Identities.FirstOrDefault(identity =>
             identity.DeletedAt is null && identity.Type == IdentityType.Phone);
+        if (currentPhoneIdentity is not null)
+            return Result.Fail(UserErrors.IdentityAlreadyLinked());
 
         var phoneOwner = await _userRepository.GetByIdentityAsync(
             IdentityType.Phone,
@@ -89,16 +91,7 @@ public class ConfirmPhoneLinkCodeHandler
             PhoneNumber = phoneNumber,
             LinkedAtUtc = verificationResult.Value.VerifiedAtUtc
         });
-        Result<UserIdentity> identityResult;
-        if (currentPhoneIdentity is null)
-        {
-            identityResult = user.AddIdentity(IdentityType.Phone, phoneNumber, metadata);
-        }
-        else
-        {
-            currentPhoneIdentity.Deactivate(verificationResult.Value.VerifiedAtUtc);
-            identityResult = user.AddIdentity(IdentityType.Phone, phoneNumber, metadata);
-        }
+        var identityResult = user.AddIdentity(IdentityType.Phone, phoneNumber, metadata);
         if (identityResult.IsFailed)
             return Result.Fail(identityResult.Errors);
 

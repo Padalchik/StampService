@@ -50,10 +50,14 @@ public class ConfirmTelegramPhoneCodeHandler
             phoneNumber,
             cancellationToken);
 
-        var telegramOwnerHasPhone = telegramOwner is not null
-            && _phoneAccountService.HasActivePhoneIdentity(telegramOwner);
-        if (telegramOwnerHasPhone && (phoneOwner is null || phoneOwner.Id != telegramOwner!.Id))
+        if (telegramOwner is not null
+            && (phoneOwner is null || phoneOwner.Id != telegramOwner.Id))
             return Result.Fail(UserErrors.IdentityLinkedToAnotherUser());
+
+        var phoneOwnerTelegramIdentity = phoneOwner?.Identities.FirstOrDefault(identity =>
+            identity.DeletedAt is null && identity.Type == IdentityType.Telegram);
+        if (phoneOwnerTelegramIdentity is not null && phoneOwnerTelegramIdentity.Key != providerKey)
+            return Result.Fail(UserErrors.IdentityAlreadyLinked());
 
         var verificationResult = await _phoneAuthCodeService.VerifyCodeAsync(
             phoneNumber,
@@ -79,65 +83,40 @@ public class ConfirmTelegramPhoneCodeHandler
 
         if (sameTelegramIdentity is null)
         {
-            UserIdentity? newTelegramIdentity = null;
             var currentTelegramIdentity = user.Identities.FirstOrDefault(identity =>
                 identity.DeletedAt is null && identity.Type == IdentityType.Telegram);
-            currentTelegramIdentity?.Deactivate(verificationResult.Value.VerifiedAtUtc);
+            if (currentTelegramIdentity is not null)
+                return Result.Fail(UserErrors.IdentityAlreadyLinked());
 
-            var legacyTelegramIdentity = telegramOwner?.Identities.FirstOrDefault(identity =>
-                identity.DeletedAt is null
-                && identity.Type == IdentityType.Telegram
-                && identity.Key == providerKey);
-            if (legacyTelegramIdentity is not null)
+            var displayName = GetDisplayName(command);
+            var metadata = JsonSerializer.Serialize(new
             {
-                var reassignResult = legacyTelegramIdentity.ReassignTo(user);
-                if (reassignResult.IsFailed)
-                    return Result.Fail(reassignResult.Errors);
+                Id = command.TelegramUserId,
+                command.FirstName,
+                command.LastName,
+                command.Username,
+                DisplayName = displayName,
+                LinkedAtUtc = verificationResult.Value.VerifiedAtUtc
+            });
 
-                if (telegramOwner is not null
-                    && telegramOwner.Id != user.Id
-                    && !telegramOwner.Identities.Any(identity => identity.DeletedAt is null))
-                {
-                    telegramOwner.Deactivate(verificationResult.Value.VerifiedAtUtc);
-                }
+            var identityResult = user.AddIdentity(IdentityType.Telegram, providerKey, metadata);
+            if (identityResult.IsFailed)
+                return Result.Fail(identityResult.Errors);
+
+            try
+            {
+                await _userRepository.SaveIdentityAsync(user, identityResult.Value, cancellationToken);
             }
-            else
+            catch (ConcurrencyConflictException)
             {
-                var displayName = GetDisplayName(command);
-                var metadata = JsonSerializer.Serialize(new
-                {
-                    Id = command.TelegramUserId,
-                    command.FirstName,
-                    command.LastName,
-                    command.Username,
-                    DisplayName = displayName,
-                    LinkedAtUtc = verificationResult.Value.VerifiedAtUtc
-                });
-
-                var identityResult = user.AddIdentity(IdentityType.Telegram, providerKey, metadata);
-                if (identityResult.IsFailed)
-                    return Result.Fail(identityResult.Errors);
-
-                newTelegramIdentity = identityResult.Value;
+                return Result.Fail(AuthErrors.PhoneCodeInvalid());
             }
 
-            if (newTelegramIdentity is not null)
-            {
-                try
-                {
-                    await _userRepository.SaveIdentityAsync(user, newTelegramIdentity, cancellationToken);
-                }
-                catch (ConcurrencyConflictException)
-                {
-                    return Result.Fail(AuthErrors.PhoneCodeInvalid());
-                }
-
-                return Result.Ok(new EnsureTelegramUserResponse(
-                    user.Id,
-                    Created: false,
-                    user.Name,
-                    user.CustomerCode));
-            }
+            return Result.Ok(new EnsureTelegramUserResponse(
+                user.Id,
+                Created: false,
+                user.Name,
+                user.CustomerCode));
         }
 
         try

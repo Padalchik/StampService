@@ -163,10 +163,11 @@ export function ProfilePage() {
       </section>
 
       <section className="profile-actions-grid">
+        {!profile?.phone.linked ? (
         <div className="surface-panel profile-action-panel">
           <div className="section-heading">
             <Phone size={22} />
-            <h2>{profile?.phone.linked ? 'Изменить телефон' : 'Привязать телефон'}</h2>
+            <h2>Привязать телефон</h2>
           </div>
 
           {phoneStep === 'idle' ? (
@@ -219,7 +220,7 @@ export function ProfilePage() {
                     setPhoneStatus('');
                   }}
                 >
-                  Изменить телефон
+                  Исправить номер
                 </button>
               </div>
             </form>
@@ -228,18 +229,20 @@ export function ProfilePage() {
           {phoneStatus ? <p className="form-status form-status--ok">{phoneStatus}</p> : null}
           {phoneError ? <p className="form-status form-status--error">{phoneError}</p> : null}
         </div>
+        ) : null}
 
+        {!profile?.telegram.linked ? (
         <div className="surface-panel profile-action-panel">
           <div className="section-heading">
             <Send size={22} />
-            <h2>{profile?.telegram.linked ? 'Изменить Telegram' : 'Привязать Telegram'}</h2>
+            <h2>Привязать Telegram</h2>
           </div>
 
           <div className="auth-form">
             <div className="auth-actions">
               <button type="button" disabled={isTelegramSubmitting} onClick={() => void handleRequestTelegramLink()}>
                 <Send size={18} />
-                {profile?.telegram.linked ? 'Изменить Telegram' : 'Привязать Telegram'}
+                Привязать Telegram
               </button>
               <button className="button-secondary" type="button" onClick={() => void loadProfile()}>
                 <RefreshCw size={18} />
@@ -251,6 +254,7 @@ export function ProfilePage() {
           {telegramStatus ? <p className="form-status form-status--ok">{telegramStatus}</p> : null}
           {telegramError ? <p className="form-status form-status--error">{telegramError}</p> : null}
         </div>
+        ) : null}
       </section>
     </div>
   );
