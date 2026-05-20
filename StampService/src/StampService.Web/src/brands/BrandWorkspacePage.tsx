@@ -30,6 +30,7 @@ import {
   type RedeemMetricOptionsResponse,
   type RedeemMetricResponse
 } from './brandWorkspaceApi';
+import { formatRuPhoneInput, isRuPhoneInputComplete } from '../validation/phoneNumber';
 
 type OperationResult =
   | { kind: 'metric'; title: string; response: IssueMetricResponse | RedeemMetricResponse }
@@ -225,7 +226,7 @@ function IssueMetricPanel({
   onReloadMetrics: () => Promise<void>;
 }) {
   const [metricId, setMetricId] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(formatRuPhoneInput(''));
   const [amount, setAmount] = useState('');
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -240,7 +241,7 @@ function IssueMetricPanel({
 
   async function submit() {
     const parsedAmount = Number(amount);
-    if (!metricId || !phoneNumber.trim() || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+    if (!metricId || !isRuPhoneInputComplete(phoneNumber) || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
       setError('Выберите метрику, укажите телефон клиента и положительное количество.');
       return;
     }
@@ -284,8 +285,8 @@ function IssueMetricPanel({
           <input
             value={phoneNumber}
             inputMode="tel"
-            placeholder="+7 999 123-45-67"
-            onChange={(event) => setPhoneNumber(event.target.value)}
+            placeholder="+7 (999) 123-45-67"
+            onChange={(event) => setPhoneNumber(formatRuPhoneInput(event.target.value))}
           />
         </label>
         <label>
@@ -401,7 +402,7 @@ function RedeemMetricPanel({ brandId }: { brandId: string }) {
 }
 
 function IssueCoinsPanel({ brandId }: { brandId: string }) {
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(formatRuPhoneInput(''));
   const [amount, setAmount] = useState('');
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -410,7 +411,7 @@ function IssueCoinsPanel({ brandId }: { brandId: string }) {
 
   async function submit() {
     const parsedAmount = Number(amount);
-    if (!phoneNumber.trim() || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+    if (!isRuPhoneInputComplete(phoneNumber) || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
       setError('Укажите телефон клиента и положительное количество монеток.');
       return;
     }
@@ -443,8 +444,8 @@ function IssueCoinsPanel({ brandId }: { brandId: string }) {
           <input
             value={phoneNumber}
             inputMode="tel"
-            placeholder="+7 999 123-45-67"
-            onChange={(event) => setPhoneNumber(event.target.value)}
+            placeholder="+7 (999) 123-45-67"
+            onChange={(event) => setPhoneNumber(formatRuPhoneInput(event.target.value))}
           />
         </label>
         <label>

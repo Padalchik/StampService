@@ -87,6 +87,14 @@ StampService - loyalty-сервис для брендов. Основной ин
 - Нельзя использовать legacy Telegram-only аккаунт как источник для автоматического переноса Telegram identity на телефонный аккаунт.
 - Нельзя отвязывать последний способ входа без отдельного бизнес-решения и UX-подтверждения.
 
+## Идентификация клиента в операциях бренда
+
+Для операций начисления метрик и монеток основной внешний идентификатор клиента - номер телефона. Сотрудник в web или Telegram вводит телефон клиента, backend/Application нормализует его и резолвит пользователя через активную `Phone` identity. Внутренним владельцем данных остается `User.Id`; телефон не становится primary key и не является владельцем балансов.
+
+4-значный `CustomerCode` не является основным способом начисления. Он сохраняется как legacy/совместимость и может временно использоваться как внутренний мост для старых Application-сценариев, пока они еще принимают код. Новые UI-сценарии начисления не должны просить сотрудника вводить `CustomerCode`.
+
+Списание метрик, ручное списание монеток и выдача товаров за монетки остаются по одноразовому `RedemptionCode`, потому что этот код подтверждает конкретную операцию клиента. Телефон используется для поиска клиента при начислении, а не как подтверждение списания.
+
 ## Телефонная авторизация и привязка
 
 Реализованы два связанных сценария:
@@ -135,6 +143,8 @@ Telegram bot - основной рабочий UI.
 Ключевые места:
 
 - `src/StampService.TelegramBot/Features/Profile` - личный кабинет и первичная привязка телефона.
+- `src/StampService.TelegramBot/Features/IssueMetric` - выдача метрик сотрудником; получатель резолвится по телефону клиента через `IRecipientResolver`.
+- `src/StampService.TelegramBot/Features/Coins` - начисление/списание монеток; начисление идет по телефону клиента, списание остается по одноразовому коду списания.
 - `src/StampService.TelegramBot/Common/Errors/BotErrorFormatter.cs` - перевод application errors в пользовательские сообщения.
 - `external/telegram-bot-flow` - смотреть перед изменениями navigation/callback/input flow.
 
@@ -156,8 +166,6 @@ Web/API сценарии профиля не должны перепривязы
 Web UI сейчас является вспомогательной и будущей поверхностью. При развитии полноценного web UI важно не дублировать бизнес-логику во frontend/backend controllers: логика должна оставаться в Application use cases.
 
 Web и Telegram могут иметь разные UI labels для одного сценария: Telegram допускает emoji и более короткие кнопки, web должен оставаться спокойным рабочим интерфейсом без emoji в навигации. Повторяемые web labels держать в одном локальном frontend-источнике.
-
-В рабочих сценариях Telegram сотрудник также начисляет метрики и монетки по номеру телефона клиента. Бот резолвит телефон через активную `Phone` identity в `IRecipientResolver`; 4-значный `CustomerCode` не является основным вводом для начислений и может использоваться только как legacy/внутренний мост для старых Application-сценариев. Списание метрик, монеток и товаров остается по одноразовому коду списания клиента.
 
 ### Web brand workspace и операции с клиентами
 
@@ -185,6 +193,7 @@ Web и Telegram могут иметь разные UI labels для одного
 - `src/StampService.Web/src/app/navigationLabels.ts` - повторяемые web labels навигации;
 - `src/StampService.Web/src/brands/BrandWorkspacePage.tsx` - рабочий UI бренда и формы клиентских операций;
 - `src/StampService.Web/src/brands/brandWorkspaceApi.ts` - typed API client для brand workspace;
+- `src/StampService.Web/src/validation/phoneNumber.ts` - единая frontend-нормализация и маска телефона для web-полей;
 - `src/StampService.Web/src/styles.css` - стили рабочего интерфейса.
 
 Действия в web workspace скрываются по `CanIssue`, `CanRedeem` и feature toggles бренда: `IsMetricsEnabled`, `IsCoinsEnabled`, `IsCoinProductRedemptionEnabled`, `IsManualCoinRedemptionEnabled`. Backend всё равно остается авторитетным источником проверок доступа.

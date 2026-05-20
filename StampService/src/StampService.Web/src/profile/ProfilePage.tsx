@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, MessageSquareText, Phone, RefreshCw, Send, UserRound } from 'lucide-react';
 import { ApiRequestError } from '../api/apiClient';
-import { normalizePhoneNumber } from '../validation/phoneNumber';
+import { formatRuPhoneInput, isRuPhoneInputComplete, normalizePhoneNumber } from '../validation/phoneNumber';
 import {
   confirmPhoneLinkCode,
   getMyProfile,
@@ -18,7 +18,7 @@ export function ProfilePage() {
   const [loadError, setLoadError] = useState('');
   const hasRequestedProfile = useRef(false);
 
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(formatRuPhoneInput(''));
   const [phoneCode, setPhoneCode] = useState('');
   const [phoneAuthCodeId, setPhoneAuthCodeId] = useState('');
   const [phoneExpiresAt, setPhoneExpiresAt] = useState<string | null>(null);
@@ -70,7 +70,7 @@ export function ProfilePage() {
       }
 
       const response = await requestPhoneLinkCode(normalizedPhone.value);
-      setPhoneNumber(normalizedPhone.value);
+      setPhoneNumber(formatRuPhoneInput(normalizedPhone.value));
       setPhoneAuthCodeId(response.authCodeId);
       setPhoneExpiresAt(response.expiresAtUtc);
       setPhoneStep('code');
@@ -178,12 +178,12 @@ export function ProfilePage() {
                 type="tel"
                 inputMode="tel"
                 autoComplete="tel"
-                placeholder="+7 999 123-45-67"
+                placeholder="+7 (999) 123-45-67"
                 value={phoneNumber}
-                onChange={(event) => setPhoneNumber(event.target.value)}
+                onChange={(event) => setPhoneNumber(formatRuPhoneInput(event.target.value))}
                 required
               />
-              <button type="submit" disabled={isPhoneSubmitting || !phoneNumber.trim()}>
+              <button type="submit" disabled={isPhoneSubmitting || !isRuPhoneInputComplete(phoneNumber)}>
                 <MessageSquareText size={18} />
                 Получить код
               </button>
@@ -215,6 +215,7 @@ export function ProfilePage() {
                   disabled={isPhoneSubmitting}
                   onClick={() => {
                     setPhoneStep('idle');
+                    setPhoneNumber(formatRuPhoneInput(phoneNumber));
                     setPhoneCode('');
                     setPhoneError('');
                     setPhoneStatus('');
@@ -286,7 +287,7 @@ function useFormattedTime(value: string | null): string | null {
 function getUserMessage(error: unknown): string {
   if (error instanceof ApiRequestError) {
     if (error.errors.some((item) => item.code === 'auth.phone_invalid')) {
-      return 'Введите телефон в международном формате, например +7 999 123-45-67.';
+      return 'Введите телефон в формате +7 (999) 123-45-67.';
     }
 
     if (error.errors.some((item) => item.code === 'auth.phone_code_invalid')) {
