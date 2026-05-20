@@ -6,6 +6,7 @@ using StampService.Application.CustomerNotifications.Queries.GetCustomerRewardDi
 using StampService.Domain.CustomerNotifications;
 using StampService.Domain.User;
 using StampService.Infrastructure;
+using StampService.TelegramBot.Common.UI;
 using StampService.TelegramBot.Features.Wallet.Screens;
 using Telegram.Bot.Types.ReplyMarkups;
 using TelegramBotFlow.Core.Messaging;
@@ -133,7 +134,7 @@ public sealed class CustomerRewardDigestSender
     private static InlineKeyboardMarkup BuildWalletKeyboard()
     {
         var screenId = ScreenIdConvention.GetIdFromType(typeof(MyWalletScreen));
-        return InlineKeyboard.SingleButton("Мой кошелёк", $"nav:{screenId}");
+        return InlineKeyboard.SingleButton(BotMenuLabels.MyWallet, $"nav:{screenId}");
     }
 
     private async Task ForceNextScreenToNewMessageAsync(

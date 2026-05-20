@@ -4,6 +4,7 @@ using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Users;
 using StampService.Contracts.DTOs.Wallet;
 using StampService.Application.Wallet.Commands.OpenUserWallet;
+using StampService.TelegramBot.Common.UI;
 using StampService.TelegramBot.Features.Wallet.Actions;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
@@ -50,7 +51,7 @@ public sealed class MyWalletScreen : IScreen
 
         var wallet = walletResult.Value;
         var view = new ScreenView(
-            "<b>Мой кошелёк</b>\n\n" +
+            $"<b>{BotMenuLabels.MyWallet}</b>\n\n" +
             $"Код пользователя: <code>{Html(wallet.CustomerCode)}</code>\n" +
             $"Код для списания: <code>{Html(wallet.RedemptionCode.Code)}</code>\n" +
             $"Действует до: {FormatLocalTime(wallet.RedemptionCode.ExpiresAtUtc)}\n\n" +

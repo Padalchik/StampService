@@ -4,6 +4,7 @@ using StampService.Application.Abstractions;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Application.Users.Queries.GetMyProfile;
 using StampService.Contracts.DTOs.Profile;
+using StampService.TelegramBot.Common.UI;
 using StampService.TelegramBot.Features.Profile.Actions;
 using TelegramBotFlow.Core.Context;
 using TelegramBotFlow.Core.Screens;
@@ -44,7 +45,7 @@ public sealed class ProfileScreen : IScreen
             : "не привязан";
 
         var view = new ScreenView(
-            "<b>Личный кабинет</b>\n\n" +
+            $"<b>{BotMenuLabels.AccountSettings}</b>\n\n" +
             $"Имя: {Html(profile.DisplayName)}\n" +
             $"Код пользователя: <code>{Html(profile.CustomerCode)}</code>\n" +
             $"Telegram: {telegramText}\n" +
