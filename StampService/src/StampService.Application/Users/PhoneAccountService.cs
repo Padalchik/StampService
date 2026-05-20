@@ -8,13 +8,16 @@ public class PhoneAccountService : IPhoneAccountService
 {
     private readonly IUserRepository _userRepository;
     private readonly ICustomerCodeGenerator _customerCodeGenerator;
+    private readonly IUserDisplayNameGenerator _displayNameGenerator;
 
     public PhoneAccountService(
         IUserRepository userRepository,
-        ICustomerCodeGenerator customerCodeGenerator)
+        ICustomerCodeGenerator customerCodeGenerator,
+        IUserDisplayNameGenerator displayNameGenerator)
     {
         _userRepository = userRepository;
         _customerCodeGenerator = customerCodeGenerator;
+        _displayNameGenerator = displayNameGenerator;
     }
 
     public async Task<Result<User>> GetOrCreateByPhoneAsync(
@@ -30,7 +33,7 @@ public class PhoneAccountService : IPhoneAccountService
             return Result.Ok(user);
 
         var customerCode = await _customerCodeGenerator.GenerateAsync(cancellationToken);
-        var userResult = User.Create(phoneNumber, customerCode);
+        var userResult = User.Create(_displayNameGenerator.Generate(), customerCode);
         if (userResult.IsFailed)
             return Result.Fail(userResult.Errors);
 

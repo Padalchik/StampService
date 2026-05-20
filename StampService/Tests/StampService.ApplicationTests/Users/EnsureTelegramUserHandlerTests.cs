@@ -13,7 +13,7 @@ public class EnsureTelegramUserHandlerTests
         var repository = new FakeUserRepository();
         var handler = new EnsureTelegramUserHandler(
             repository,
-            new PhoneAccountService(repository, new CustomerCodeGenerator(repository)));
+            CreatePhoneAccountService(repository));
 
         var result = await handler.Handle(
             new EnsureTelegramUserCommand(
@@ -38,7 +38,7 @@ public class EnsureTelegramUserHandlerTests
         repository.Add(existingUser);
         var handler = new EnsureTelegramUserHandler(
             repository,
-            new PhoneAccountService(repository, new CustomerCodeGenerator(repository)));
+            CreatePhoneAccountService(repository));
 
         var result = await handler.Handle(
             new EnsureTelegramUserCommand(
@@ -62,7 +62,7 @@ public class EnsureTelegramUserHandlerTests
         var repository = new FakeUserRepository();
         var handler = new EnsureTelegramUserHandler(
             repository,
-            new PhoneAccountService(repository, new CustomerCodeGenerator(repository)));
+            CreatePhoneAccountService(repository));
 
         var result = await handler.Handle(
             new EnsureTelegramUserCommand(
@@ -84,7 +84,7 @@ public class EnsureTelegramUserHandlerTests
         repository.Add(existingUser);
         var handler = new EnsureTelegramUserHandler(
             repository,
-            new PhoneAccountService(repository, new CustomerCodeGenerator(repository)));
+            CreatePhoneAccountService(repository));
 
         var result = await handler.Handle(
             new EnsureTelegramUserCommand(
@@ -95,5 +95,13 @@ public class EnsureTelegramUserHandlerTests
             CancellationToken.None);
 
         Assert.True(result.IsFailed);
+    }
+
+    private static PhoneAccountService CreatePhoneAccountService(FakeUserRepository repository)
+    {
+        return new PhoneAccountService(
+            repository,
+            new CustomerCodeGenerator(repository),
+            new CuteUserDisplayNameGenerator());
     }
 }

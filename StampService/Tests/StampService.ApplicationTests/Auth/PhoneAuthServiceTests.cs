@@ -60,7 +60,7 @@ public class PhoneAuthServiceTests
         Assert.True(result.IsSuccess);
         Assert.Equal("token", result.Value.Token);
         var user = Assert.Single(fixture.Users.Users);
-        Assert.Equal("+79991234567", user.Name);
+        Assert.StartsWith("Неопознанн", user.Name, StringComparison.Ordinal);
         Assert.Contains(
             user.Identities,
             identity => identity.Type == IdentityType.Phone && identity.Key == "+79991234567");
@@ -98,7 +98,10 @@ public class PhoneAuthServiceTests
             new FixedPhoneAuthCodeGenerator(),
             sender,
             timeProvider);
-        var phoneAccountService = new PhoneAccountService(users, customerCodeGenerator);
+        var phoneAccountService = new PhoneAccountService(
+            users,
+            customerCodeGenerator,
+            new CuteUserDisplayNameGenerator());
         var service = new AuthService(
             users,
             new FakeJwtTokenService(),

@@ -182,7 +182,10 @@ public class TelegramLinkSessionHandlerTests
         var timeProvider = new FixedTimeProvider(new DateTimeOffset(2026, 5, 18, 10, 0, 0, TimeSpan.Zero));
         var telegramOptions = Options.Create(new TelegramOptions { BotUsername = "StampServiceBot" });
         var brandMemberships = new FakeBrandMembershipRepository();
-        var phoneAccountService = new PhoneAccountService(users, new CustomerCodeGenerator(users));
+        var phoneAccountService = new PhoneAccountService(
+            users,
+            new CustomerCodeGenerator(users),
+            new CuteUserDisplayNameGenerator());
 
         return new Fixture(
             users,
