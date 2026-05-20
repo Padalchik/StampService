@@ -259,16 +259,16 @@
     <aside>
         <div class="brand">StampService</div>
         <nav>
-            <button class="nav-btn active" data-view="profile" type="button">Личный кабинет</button>
-            <button class="nav-btn" data-view="wallet" type="button">Кошелек</button>
+            <button class="nav-btn" data-view="wallet" type="button" data-label="wallet"></button>
             <button class="nav-btn" data-view="debug" type="button">Ответы API</button>
+            <button class="nav-btn active" data-view="profile" type="button" data-label="account-settings"></button>
         </nav>
     </aside>
 
     <main>
         <header>
             <div>
-                <h1 id="title">Личный кабинет</h1>
+                <h1 id="title"></h1>
                 <div id="subtitle" class="muted">Вход и привязанные способы авторизации</div>
             </div>
             <button id="logout" class="secondary hidden" type="button">Выйти</button>
@@ -330,7 +330,7 @@
 
             <div id="walletView" class="hidden">
                 <section>
-                    <h2>Кошелек</h2>
+                    <h2 data-label="wallet"></h2>
                     <p class="muted">Следующий шаг web-интерфейса: вывести балансы, награды и историю через отдельные API endpoints для кошелька.</p>
                 </section>
             </div>
@@ -347,6 +347,10 @@
 
 <script>
     const tokenKey = 'stampservice.jwt';
+    const labels = {
+        accountSettings: 'Настройки аккаунта',
+        wallet: 'Мой кошелек'
+    };
     let token = localStorage.getItem(tokenKey) || '';
     let profile = null;
     let linkPhoneAuthCodeId = null;
@@ -373,6 +377,14 @@
         linkTelegramPanel: document.getElementById('linkTelegramPanel'),
         debugOutput: document.getElementById('debugOutput')
     };
+
+    document.querySelectorAll('[data-label="account-settings"]').forEach((element) => {
+        element.textContent = labels.accountSettings;
+    });
+    document.querySelectorAll('[data-label="wallet"]').forEach((element) => {
+        element.textContent = labels.wallet;
+    });
+    els.title.textContent = labels.accountSettings;
 
     document.getElementById('requestLoginCode').addEventListener('click', () => requestLoginCode());
     document.getElementById('verifyLoginCode').addEventListener('click', () => verifyLoginCode());
@@ -533,7 +545,7 @@
         els.loginPanel.classList.add('hidden');
         els.content.classList.remove('hidden');
         els.logout.classList.remove('hidden');
-        els.title.textContent = 'Личный кабинет';
+        els.title.textContent = labels.accountSettings;
         els.subtitle.textContent = 'Профиль и способы входа';
 
         els.profileName.textContent = profile.displayName;

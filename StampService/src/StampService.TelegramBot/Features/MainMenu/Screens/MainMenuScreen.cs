@@ -3,6 +3,7 @@ using StampService.Application.Administration;
 using StampService.Application.Brands.Queries.GetMyBrands;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Brands;
+using StampService.TelegramBot.Common.UI;
 using StampService.TelegramBot.Features.Admin.Screens;
 using StampService.TelegramBot.Features.Brands.Actions;
 using StampService.TelegramBot.Features.Brands.Screens;
@@ -59,9 +60,7 @@ public sealed class MainMenuScreen : IScreen
             $"{greeting}\n\n" +
             "Выберите действие:")
             .WithoutAutoMenuButton()
-            .NavigateButton<ProfileScreen>("Личный кабинет")
-            .Row()
-            .NavigateButton<MyWalletScreen>("Мой кошелек");
+            .NavigateButton<MyWalletScreen>(BotMenuLabels.MyWallet);
 
         if (_adminAccessService.IsAdmin(ctx.UserId))
         {
@@ -73,16 +72,18 @@ public sealed class MainMenuScreen : IScreen
             ctx.CancellationToken);
 
         if (brandsResult.IsFailed || brandsResult.Value.Brands.Count == 0)
-            return view;
+            return view.Row().NavigateButton<ProfileScreen>(BotMenuLabels.AccountSettings);
 
         if (brandsResult.Value.Brands.Count == 1)
         {
             var brand = brandsResult.Value.Brands.Single();
-            return view.Row().Button<OpenBrandWorkspaceAction, OpenBrandWorkspacePayload>(
+            view.Row().Button<OpenBrandWorkspaceAction, OpenBrandWorkspacePayload>(
                 $"Бренд: {brand.BrandName}",
                 new OpenBrandWorkspacePayload(brand.BrandId));
+            return view.Row().NavigateButton<ProfileScreen>(BotMenuLabels.AccountSettings);
         }
 
-        return view.Row().NavigateButton<MyBrandsScreen>("Рабочие бренды");
+        view.Row().NavigateButton<MyBrandsScreen>("Рабочие бренды");
+        return view.Row().NavigateButton<ProfileScreen>(BotMenuLabels.AccountSettings);
     }
 }

@@ -1,10 +1,11 @@
-import { LogOut, UserRound, WalletCards, Workflow } from 'lucide-react';
+import { LogOut, Settings, WalletCards, Workflow } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../auth/AuthContext';
 import { PhoneLoginPage } from '../auth/PhoneLoginPage';
 import { ProfilePage } from '../profile/ProfilePage';
 import { WalletPage } from '../wallet/WalletPage';
+import { navigationLabels } from './navigationLabels';
 
 export function App() {
   return (
@@ -49,7 +50,9 @@ function RequireAuth({ children }: { children: ReactNode }) {
 function AppShell() {
   const auth = useAuth();
   const [activeSection, setActiveSection] = useState<'profile' | 'wallet'>('wallet');
-  const pageTitle = activeSection === 'profile' ? 'Личный кабинет' : 'Мой кошелёк';
+  const pageTitle = activeSection === 'profile'
+    ? navigationLabels.accountSettings
+    : navigationLabels.myWallet;
   const pageDescription = activeSection === 'profile'
     ? 'Профиль, способы входа и привязка контактов.'
     : 'Балансы, доступные награды и код для списания.';
@@ -60,24 +63,24 @@ function AppShell() {
         <div className="sidebar__brand">StampService</div>
         <nav className="sidebar__nav">
           <button
-            className={`sidebar__item ${activeSection === 'profile' ? 'sidebar__item--active' : ''}`}
-            type="button"
-            onClick={() => setActiveSection('profile')}
-          >
-            <UserRound size={18} />
-            Личный кабинет
-          </button>
-          <button
             className={`sidebar__item ${activeSection === 'wallet' ? 'sidebar__item--active' : ''}`}
             type="button"
             onClick={() => setActiveSection('wallet')}
           >
             <WalletCards size={18} />
-            Мой кошелёк
+            {navigationLabels.myWallet}
           </button>
           <button className="sidebar__item" type="button" disabled>
             <Workflow size={18} />
             Рабочие бренды
+          </button>
+          <button
+            className={`sidebar__item ${activeSection === 'profile' ? 'sidebar__item--active' : ''}`}
+            type="button"
+            onClick={() => setActiveSection('profile')}
+          >
+            <Settings size={18} />
+            {navigationLabels.accountSettings}
           </button>
         </nav>
       </aside>
