@@ -8,12 +8,12 @@ namespace StampService.ApplicationTests.Users;
 public class EnsureTelegramUserHandlerTests
 {
     [Fact]
-    public async Task Handle_WhenTelegramUserDoesNotExist_ShouldCreateUserWithTelegramIdentity()
+    public async Task Handle_WhenTelegramUserDoesNotExist_ShouldFail()
     {
         var repository = new FakeUserRepository();
         var handler = new EnsureTelegramUserHandler(
             repository,
-            new CustomerCodeGenerator(repository));
+            new PhoneAccountService(repository, new CustomerCodeGenerator(repository)));
 
         var result = await handler.Handle(
             new EnsureTelegramUserCommand(
@@ -23,15 +23,9 @@ public class EnsureTelegramUserHandlerTests
                 "ivan"),
             CancellationToken.None);
 
-        Assert.True(result.IsSuccess);
-        Assert.True(result.Value.Created);
-        Assert.Equal("ivan", result.Value.DisplayName);
-        Assert.Matches("^[0-9]{4}$", result.Value.CustomerCode);
-        Assert.Single(repository.Users);
-        Assert.Equal(1, repository.SaveCount);
-        Assert.Contains(
-            repository.Users[0].Identities,
-            identity => identity.Type == IdentityType.Telegram && identity.Key == "123456");
+        Assert.True(result.IsFailed);
+        Assert.Empty(repository.Users);
+        Assert.Equal(0, repository.SaveCount);
     }
 
     [Fact]
@@ -39,11 +33,12 @@ public class EnsureTelegramUserHandlerTests
     {
         var repository = new FakeUserRepository();
         var existingUser = User.Create("existing").Value;
+        existingUser.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
         existingUser.AddIdentity(IdentityType.Telegram, "123456", "{}");
         repository.Add(existingUser);
         var handler = new EnsureTelegramUserHandler(
             repository,
-            new CustomerCodeGenerator(repository));
+            new PhoneAccountService(repository, new CustomerCodeGenerator(repository)));
 
         var result = await handler.Handle(
             new EnsureTelegramUserCommand(
@@ -67,7 +62,7 @@ public class EnsureTelegramUserHandlerTests
         var repository = new FakeUserRepository();
         var handler = new EnsureTelegramUserHandler(
             repository,
-            new CustomerCodeGenerator(repository));
+            new PhoneAccountService(repository, new CustomerCodeGenerator(repository)));
 
         var result = await handler.Handle(
             new EnsureTelegramUserCommand(
@@ -81,23 +76,24 @@ public class EnsureTelegramUserHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenTelegramUserHasNoNames_ShouldUseTelegramIdAsDisplayName()
+    public async Task Handle_WhenTelegramUserHasNoPhoneIdentity_ShouldFail()
     {
         var repository = new FakeUserRepository();
+        var existingUser = User.Create("existing").Value;
+        existingUser.AddIdentity(IdentityType.Telegram, "123456", "{}");
+        repository.Add(existingUser);
         var handler = new EnsureTelegramUserHandler(
             repository,
-            new CustomerCodeGenerator(repository));
+            new PhoneAccountService(repository, new CustomerCodeGenerator(repository)));
 
         var result = await handler.Handle(
             new EnsureTelegramUserCommand(
                 123456,
-                null,
-                null,
-                null),
+                "Ivan",
+                "Petrov",
+                "ivan"),
             CancellationToken.None);
 
-        Assert.True(result.IsSuccess);
-        Assert.Equal("123456", result.Value.DisplayName);
-        Assert.Equal("123456", repository.Users.Single().Name);
+        Assert.True(result.IsFailed);
     }
 }

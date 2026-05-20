@@ -66,10 +66,12 @@ public class UserRepository : IUserRepository
         CancellationToken cancellationToken)
     {
         var identityEntry = _dbContext.Entry(identity);
-        if (identityEntry.State == EntityState.Detached)
+        if (identityEntry.State is EntityState.Detached or EntityState.Modified)
             _dbContext.UserIdentities.Add(identity);
 
-        _dbContext.Entry(user).State = EntityState.Unchanged;
+        var userEntry = _dbContext.Entry(user);
+        if (userEntry.State != EntityState.Added)
+            userEntry.State = EntityState.Unchanged;
 
         try
         {

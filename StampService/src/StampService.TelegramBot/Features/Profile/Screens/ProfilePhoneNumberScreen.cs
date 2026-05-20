@@ -9,7 +9,7 @@ public sealed class ProfilePhoneNumberScreen : IScreen
     public ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
     {
         return ValueTask.FromResult(new ScreenView(
-            "<b>Привязка телефона</b>\n\n" +
+            "<b>Вход по телефону</b>\n\n" +
             "Введите номер телефона в международном формате, например <code>+79991234567</code>.")
             .AwaitInput<EnterProfilePhoneAction>()
             .BackButton());

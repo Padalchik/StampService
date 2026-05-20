@@ -1,7 +1,7 @@
-using System.Text.Json;
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Errors;
+using StampService.Application.Users;
 using StampService.Domain.User;
 
 namespace StampService.Application.Users.Commands.EnsureTelegramUser;
@@ -10,14 +10,14 @@ public class EnsureTelegramUserHandler
     : ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand>
 {
     private readonly IUserRepository _userRepository;
-    private readonly ICustomerCodeGenerator _customerCodeGenerator;
+    private readonly IPhoneAccountService _phoneAccountService;
 
     public EnsureTelegramUserHandler(
         IUserRepository userRepository,
-        ICustomerCodeGenerator customerCodeGenerator)
+        IPhoneAccountService phoneAccountService)
     {
         _userRepository = userRepository;
-        _customerCodeGenerator = customerCodeGenerator;
+        _phoneAccountService = phoneAccountService;
     }
 
     public async Task<Result<EnsureTelegramUserResponse>> Handle(
@@ -35,6 +35,9 @@ public class EnsureTelegramUserHandler
 
         if (user is not null)
         {
+            if (!_phoneAccountService.HasActivePhoneIdentity(user))
+                return Result.Fail(UserErrors.TelegramIdentityNotLinked());
+
             return Result.Ok(new EnsureTelegramUserResponse(
                 user.Id,
                 Created: false,
@@ -42,48 +45,6 @@ public class EnsureTelegramUserHandler
                 user.CustomerCode));
         }
 
-        var displayName = GetDisplayName(command);
-        var customerCode = await _customerCodeGenerator.GenerateAsync(cancellationToken);
-        var userResult = User.Create(displayName, customerCode);
-        if (userResult.IsFailed)
-            return Result.Fail(userResult.Errors);
-
-        user = userResult.Value;
-
-        var metadata = JsonSerializer.Serialize(new
-        {
-            command.TelegramUserId,
-            command.FirstName,
-            command.LastName,
-            command.Username
-        });
-
-        var identityResult = user.AddIdentity(
-            IdentityType.Telegram,
-            providerKey,
-            metadata);
-
-        if (identityResult.IsFailed)
-            return Result.Fail(identityResult.Errors);
-
-        _userRepository.Add(user);
-        await _userRepository.SaveAsync(cancellationToken);
-
-        return Result.Ok(new EnsureTelegramUserResponse(
-            user.Id,
-            Created: true,
-            user.Name,
-            user.CustomerCode));
-    }
-
-    private static string GetDisplayName(EnsureTelegramUserCommand command)
-    {
-        if (!string.IsNullOrWhiteSpace(command.Username))
-            return command.Username.Trim();
-
-        var name = $"{command.FirstName} {command.LastName}".Trim();
-        return string.IsNullOrWhiteSpace(name)
-            ? command.TelegramUserId.ToString()
-            : name;
+        return Result.Fail(UserErrors.TelegramIdentityNotLinked());
     }
 }

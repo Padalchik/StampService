@@ -14,6 +14,10 @@ public interface IBrandMembershipRepository
         Guid userId,
         CancellationToken cancellationToken);
 
+    Task<IReadOnlyCollection<BrandMembership>> GetUserMembershipsAsync(
+        Guid userId,
+        CancellationToken cancellationToken);
+
     Task<IReadOnlyCollection<BrandStaffReadModel>> GetBrandStaffAsync(
         Guid brandId,
         CancellationToken cancellationToken);

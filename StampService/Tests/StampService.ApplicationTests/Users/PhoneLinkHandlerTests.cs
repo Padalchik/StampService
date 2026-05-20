@@ -1,5 +1,7 @@
 using FluentResults;
+using Microsoft.Extensions.Logging.Abstractions;
 using StampService.Application.Auth;
+using StampService.Application.Users;
 using StampService.Application.Users.Commands.ConfirmPhoneLinkCode;
 using StampService.Application.Users.Commands.RequestPhoneLinkCode;
 using StampService.ApplicationTests.Fakes;
@@ -48,6 +50,41 @@ public class PhoneLinkHandlerTests
     }
 
     [Fact]
+    public async Task RequestPhoneLink_WhenUserAlreadyHasPhone_ShouldFail()
+    {
+        var fixture = CreateFixture();
+        var user = User.Create("phone-user").Value;
+        user.AddIdentity(IdentityType.Phone, "+79990000000", "{}");
+        fixture.Users.Add(user);
+
+        var result = await fixture.RequestHandler.Handle(
+            new RequestPhoneLinkCodeCommand(user.Id, "+79991234567"),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Empty(fixture.Sender.SentCodes);
+    }
+
+    [Theory]
+    [InlineData("79991234567")]
+    [InlineData("+7abc9991234567")]
+    [InlineData("++79991234567")]
+    public async Task RequestPhoneLink_WhenPhoneIsInvalid_ShouldFail(string phoneNumber)
+    {
+        var fixture = CreateFixture();
+        var user = User.Create("telegram-user").Value;
+        fixture.Users.Add(user);
+
+        var result = await fixture.RequestHandler.Handle(
+            new RequestPhoneLinkCodeCommand(user.Id, phoneNumber),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Empty(fixture.PhoneCodes.Codes);
+        Assert.Empty(fixture.Sender.SentCodes);
+    }
+
+    [Fact]
     public async Task ConfirmPhoneLink_WhenCodeIsInvalid_ShouldRegisterFailedAttempt()
     {
         var fixture = CreateFixture();
@@ -65,6 +102,30 @@ public class PhoneLinkHandlerTests
         Assert.Equal(1, fixture.PhoneCodes.Codes.Single().FailedAttempts);
     }
 
+    [Fact]
+    public async Task ConfirmPhoneLink_WhenPhoneBelongsToAnotherUser_ShouldFail()
+    {
+        var fixture = CreateFixture();
+        var targetUser = User.Create("telegram-user").Value;
+        targetUser.AddIdentity(IdentityType.Telegram, "278225388", "{}");
+        var sourceUser = User.Create("phone-user").Value;
+        sourceUser.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
+        fixture.Users.Add(targetUser);
+        fixture.Users.Add(sourceUser);
+
+        await fixture.RequestHandler.Handle(
+            new RequestPhoneLinkCodeCommand(targetUser.Id, "+79991234567"),
+            CancellationToken.None);
+
+        var result = await fixture.ConfirmHandler.Handle(
+            new ConfirmPhoneLinkCodeCommand(targetUser.Id, "+79991234567", "123456"),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Null(sourceUser.DeletedAt);
+        Assert.DoesNotContain(targetUser.Identities, identity => identity.Type == IdentityType.Phone && identity.Key == "+79991234567");
+    }
+
     private static Fixture CreateFixture()
     {
         var now = new DateTimeOffset(2026, 5, 17, 10, 0, 0, TimeSpan.Zero);
@@ -72,6 +133,11 @@ public class PhoneLinkHandlerTests
         var phoneCodes = new FakePhoneAuthCodeRepository();
         var sender = new FakePhoneAuthCodeSender();
         var timeProvider = new FixedTimeProvider(now);
+        var phoneAuthCodeService = new PhoneAuthCodeService(
+            phoneCodes,
+            new FixedPhoneAuthCodeGenerator(),
+            sender,
+            timeProvider);
 
         return new Fixture(
             users,
@@ -79,11 +145,12 @@ public class PhoneLinkHandlerTests
             sender,
             new RequestPhoneLinkCodeHandler(
                 users,
-                phoneCodes,
-                new FixedPhoneAuthCodeGenerator(),
-                sender,
-                timeProvider),
-            new ConfirmPhoneLinkCodeHandler(users, phoneCodes, timeProvider));
+                phoneAuthCodeService,
+                NullLogger<RequestPhoneLinkCodeHandler>.Instance),
+            new ConfirmPhoneLinkCodeHandler(
+                users,
+                phoneAuthCodeService,
+                NullLogger<ConfirmPhoneLinkCodeHandler>.Instance));
     }
 
     private sealed record Fixture(

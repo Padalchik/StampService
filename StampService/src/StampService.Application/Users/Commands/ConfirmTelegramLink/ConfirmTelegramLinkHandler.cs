@@ -3,6 +3,7 @@ using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Errors;
 using StampService.Application.Services;
+using StampService.Application.Users;
 using StampService.Contracts.DTOs.Auth;
 using StampService.Contracts.DTOs.Profile;
 using StampService.Domain.User;
@@ -14,13 +15,16 @@ public class ConfirmTelegramLinkHandler
 {
     private readonly IUserRepository _userRepository;
     private readonly ITelegramValidationService _telegramValidationService;
+    private readonly IPhoneAccountService _phoneAccountService;
 
     public ConfirmTelegramLinkHandler(
         IUserRepository userRepository,
-        ITelegramValidationService telegramValidationService)
+        ITelegramValidationService telegramValidationService,
+        IPhoneAccountService phoneAccountService)
     {
         _userRepository = userRepository;
         _telegramValidationService = telegramValidationService;
+        _phoneAccountService = phoneAccountService;
     }
 
     public async Task<Result<ConfirmTelegramLinkResponse>> Handle(
@@ -36,9 +40,14 @@ public class ConfirmTelegramLinkHandler
         var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
         if (user is null)
             return Result.Fail(UserErrors.NotFound());
+        if (!_phoneAccountService.HasActivePhoneIdentity(user))
+            return Result.Fail(UserErrors.TelegramIdentityNotLinked());
 
         var providerKey = command.TelegramLogin.Id.ToString();
-        if (user.Identities.Any(identity => identity.Type == IdentityType.Telegram && identity.Key == providerKey))
+        var currentTelegramIdentity = user.Identities.FirstOrDefault(identity =>
+            identity.DeletedAt is null
+            && identity.Type == IdentityType.Telegram);
+        if (currentTelegramIdentity is not null)
             return Result.Fail(UserErrors.IdentityAlreadyLinked());
 
         var telegramOwner = await _userRepository.GetByIdentityAsync(
@@ -61,7 +70,14 @@ public class ConfirmTelegramLinkHandler
         if (identityResult.IsFailed)
             return Result.Fail(identityResult.Errors);
 
-        await _userRepository.SaveAsync(cancellationToken);
+        try
+        {
+            await _userRepository.SaveIdentityAsync(user, identityResult.Value, cancellationToken);
+        }
+        catch (ConcurrencyConflictException)
+        {
+            return Result.Fail(AuthErrors.TelegramCodeInvalid());
+        }
 
         return Result.Ok(new ConfirmTelegramLinkResponse(
             command.TelegramLogin.Id,

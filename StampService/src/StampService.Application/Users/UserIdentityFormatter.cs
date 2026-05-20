@@ -6,7 +6,7 @@ public static class UserIdentityFormatter
 {
     public static string MaskPhone(string phoneNumber)
     {
-        if (!PhoneAuthCode.IsValidPhoneNumber(phoneNumber))
+        if (!PhoneNumber.IsValidNormalized(phoneNumber))
             return phoneNumber;
 
         var suffix = phoneNumber[^4..];

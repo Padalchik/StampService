@@ -37,6 +37,8 @@ public static class DependencyInjection
         services.AddScoped<ITelegramValidationService, TelegramValidationService>();
         services.AddScoped<ICustomerCodeGenerator, CustomerCodeGenerator>();
         services.AddScoped<IPhoneAuthCodeGenerator, PhoneAuthCodeGenerator>();
+        services.AddScoped<IPhoneAuthCodeService, PhoneAuthCodeService>();
+        services.AddScoped<IPhoneAccountService, PhoneAccountService>();
         services.AddScoped<IRedemptionCodeGenerator, RedemptionCodeGenerator>();
         services.AddScoped<IRecipientResolver, RecipientResolver>();
         services.AddSingleton(TimeProvider.System);

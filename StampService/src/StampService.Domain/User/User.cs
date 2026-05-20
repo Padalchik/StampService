@@ -75,6 +75,21 @@ public class User : BaseEntity
         return Result.Ok(identity);
     }
 
+    public bool HasActiveIdentity(IdentityType type)
+    {
+        return _identities.Any(identity =>
+            identity.DeletedAt is null && identity.Type == type);
+    }
+
+    public void Deactivate(DateTime deactivatedAtUtc)
+    {
+        if (DeletedAt is not null)
+            return;
+
+        ((ISoftDelete)this).DeletedAt = deactivatedAtUtc;
+        Touch();
+    }
+
     public static bool IsValidCustomerCode(string? customerCode)
     {
         return customerCode is not null

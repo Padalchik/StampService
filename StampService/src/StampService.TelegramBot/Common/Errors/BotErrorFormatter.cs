@@ -56,6 +56,7 @@ public static class BotErrorFormatter
             AppErrorCodes.RedemptionCode.PoolExhausted => "сейчас нет свободных кодов списания, попробуйте позже",
             AppErrorCodes.User.IdentityAlreadyLinked => "уже привязано к вашему профилю",
             AppErrorCodes.User.IdentityLinkedToAnotherUser => "уже привязано к другому пользователю",
+            AppErrorCodes.User.TelegramIdentityNotLinked => "сначала подтвердите телефон",
             AppErrorCodes.User.NotFound => context == BotErrorContext.IssueMetric
                 ? "получатель не найден"
                 : "пользователь не найден",

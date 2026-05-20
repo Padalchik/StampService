@@ -1,11 +1,16 @@
 using Microsoft.Extensions.Logging;
+using FluentResults;
 using StampService.Application.Abstractions;
+using StampService.Application.Auth;
+using StampService.Application.Users;
 using StampService.Application.Users.Commands.ConfirmPhoneLinkCode;
+using StampService.Application.Users.Commands.ConfirmTelegramPhoneCode;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Application.Users.Commands.RequestPhoneLinkCode;
 using StampService.Contracts.DTOs.Profile;
 using StampService.TelegramBot.Common.Errors;
 using StampService.TelegramBot.Common.Routing;
+using StampService.TelegramBot.Features.MainMenu.Screens;
 using StampService.TelegramBot.Features.Profile.Actions;
 using StampService.TelegramBot.Features.Profile.Screens;
 using TelegramBotFlow.Core.Context;
@@ -18,6 +23,9 @@ namespace StampService.TelegramBot.Features.Profile.Endpoints;
 
 public sealed class ProfileEndpoint : IBotEndpoint
 {
+    private const string AuthenticatedPhoneLinkMode = "authenticated";
+    private const string TelegramPhoneOnboardingMode = "telegram_phone_onboarding";
+
     public void MapEndpoint(BotApplication app)
     {
         app.MapAction<StartLinkPhoneAction>(StartLinkPhoneAsync);
@@ -34,32 +42,55 @@ public sealed class ProfileEndpoint : IBotEndpoint
     private static async Task<IEndpointResult> EnterPhoneAsync(
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
+        IPhoneAuthCodeService phoneAuthCodeService,
         ICommandHandler<RequestPhoneLinkCodeResponse, RequestPhoneLinkCodeCommand> requestCodeHandler,
         ILogger<ProfileEndpoint> logger)
     {
         var userResult = await BotEndpointHelpers.EnsureUserAsync(ctx, ensureUserHandler);
-        if (userResult.IsFailed)
-            return BotResults.ShowView(new ScreenView("Не удалось определить пользователя.").BackButton());
-
         var phoneNumber = ctx.MessageText?.Trim() ?? string.Empty;
-        var result = await requestCodeHandler.Handle(
-            new RequestPhoneLinkCodeCommand(userResult.Value.UserId, phoneNumber),
-            ctx.CancellationToken);
+        Result<RequestPhoneLinkCodeResponse> result;
+        if (userResult.IsSuccess)
+        {
+            result = await requestCodeHandler.Handle(
+                new RequestPhoneLinkCodeCommand(userResult.Value.UserId, phoneNumber),
+                ctx.CancellationToken);
+        }
+        else
+        {
+            var requestResult = await phoneAuthCodeService.RequestCodeAsync(
+                phoneNumber,
+                invalidField: null,
+                cancellationToken: ctx.CancellationToken);
+            result = requestResult.IsFailed
+                ? Result.Fail<RequestPhoneLinkCodeResponse>(requestResult.Errors)
+                : Result.Ok(new RequestPhoneLinkCodeResponse(
+                    requestResult.Value.ExpiresAtUtc,
+                    requestResult.Value.AuthCodeId));
+        }
 
         if (result.IsFailed)
         {
             logger.LogWarning(
                 "Phone link code request failed from Telegram. TelegramUserId={TelegramUserId} UserId={UserId} Errors={Errors}",
                 ctx.UserId,
-                userResult.Value.UserId,
+                userResult.IsSuccess ? userResult.Value.UserId : (Guid?)null,
                 string.Join("; ", result.Errors.Select(error => error.Message)));
 
             return await BotEndpointHelpers.RetryInput<ProfilePhoneNumberScreen, EnterProfilePhoneAction>(
                 $"Не удалось отправить код: {BotErrorFormatter.Format(result.Errors)}");
         }
 
-        ctx.Session?.Data.Set(ProfileSessionKeys.PhoneNumber, phoneNumber);
-        ctx.Session?.Data.Set(ProfileSessionKeys.PhoneAuthCodeId, result.Value.AuthCodeId);
+        ctx.Session?.Data.Set(ProfileSessionKeys.PhoneNumber, PhoneNumberNormalizer.Normalize(phoneNumber));
+        if (userResult.IsSuccess)
+        {
+            ctx.Session?.Data.Set(ProfileSessionKeys.PhoneAuthCodeId, result.Value.AuthCodeId);
+            ctx.Session?.Data.Set(ProfileSessionKeys.PhoneLinkMode, AuthenticatedPhoneLinkMode);
+        }
+        else
+        {
+            ctx.Session?.Data.Remove(ProfileSessionKeys.PhoneAuthCodeId);
+            ctx.Session?.Data.Set(ProfileSessionKeys.PhoneLinkMode, TelegramPhoneOnboardingMode);
+        }
 
         return BotInputResults.DeleteInputThen(BotResults.NavigateTo<ProfilePhoneCodeScreen>());
     }
@@ -68,28 +99,54 @@ public sealed class ProfileEndpoint : IBotEndpoint
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
         ICommandHandler<ConfirmPhoneLinkCodeResponse, ConfirmPhoneLinkCodeCommand> confirmCodeHandler,
+        ICommandHandler<EnsureTelegramUserResponse, ConfirmTelegramPhoneCodeCommand> confirmTelegramPhoneCodeHandler,
         ILogger<ProfileEndpoint> logger)
     {
         var phoneNumber = ctx.Session?.Data.GetString(ProfileSessionKeys.PhoneNumber) ?? string.Empty;
         var authCodeId = ctx.Session?.Data.Get<Guid>(ProfileSessionKeys.PhoneAuthCodeId);
-        if (string.IsNullOrWhiteSpace(phoneNumber) || authCodeId is null || authCodeId == Guid.Empty)
+        var phoneLinkMode = ctx.Session?.Data.GetString(ProfileSessionKeys.PhoneLinkMode);
+        if (string.IsNullOrWhiteSpace(phoneNumber))
             return BotResults.ShowView(new ScreenView("Сценарий привязки устарел. Начните заново.").BackButton());
 
         var userResult = await BotEndpointHelpers.EnsureUserAsync(ctx, ensureUserHandler);
-        if (userResult.IsFailed)
-            return BotResults.ShowView(new ScreenView("Не удалось определить пользователя.").BackButton());
-
         var code = ctx.MessageText?.Trim() ?? string.Empty;
-        var result = await confirmCodeHandler.Handle(
-            new ConfirmPhoneLinkCodeCommand(userResult.Value.UserId, phoneNumber, code, authCodeId),
-            ctx.CancellationToken);
+        var isAuthenticatedPhoneLink = phoneLinkMode == AuthenticatedPhoneLinkMode
+            || (phoneLinkMode is null && userResult.IsSuccess);
+        Result<ConfirmPhoneLinkCodeResponse> result;
+        if (isAuthenticatedPhoneLink && userResult.IsSuccess)
+        {
+            if (authCodeId is null || authCodeId == Guid.Empty)
+                return BotResults.ShowView(new ScreenView("Сценарий привязки устарел. Начните заново.").BackButton());
+
+            result = await confirmCodeHandler.Handle(
+                new ConfirmPhoneLinkCodeCommand(userResult.Value.UserId, phoneNumber, code, authCodeId),
+                ctx.CancellationToken);
+        }
+        else
+        {
+            var from = ctx.Update.Message?.From ?? ctx.Update.CallbackQuery?.From;
+            var confirmResult = await confirmTelegramPhoneCodeHandler.Handle(
+                new ConfirmTelegramPhoneCodeCommand(
+                    ctx.UserId,
+                    from?.FirstName,
+                    from?.LastName,
+                    from?.Username,
+                    phoneNumber,
+                    code),
+                ctx.CancellationToken);
+            result = confirmResult.IsFailed
+                ? Result.Fail<ConfirmPhoneLinkCodeResponse>(confirmResult.Errors)
+                : Result.Ok(new ConfirmPhoneLinkCodeResponse(
+                    phoneNumber,
+                    UserIdentityFormatter.MaskPhone(phoneNumber)));
+        }
 
         if (result.IsFailed)
         {
             logger.LogWarning(
                 "Phone link code confirmation failed from Telegram. TelegramUserId={TelegramUserId} UserId={UserId} AuthCodeId={AuthCodeId} Errors={Errors}",
                 ctx.UserId,
-                userResult.Value.UserId,
+                userResult.IsSuccess ? userResult.Value.UserId : (Guid?)null,
                 authCodeId,
                 string.Join("; ", result.Errors.Select(error => error.Message)));
 
@@ -103,12 +160,13 @@ public sealed class ProfileEndpoint : IBotEndpoint
             new ScreenView(
                 "<b>Телефон привязан</b>\n\n" +
                 $"К вашему профилю привязан номер {result.Value.MaskedPhoneNumber}.")
-                .BackButton()));
+                .NavigateButton<MainMenuScreen>("Продолжить")));
     }
 
     private static void ClearLinkSession(UpdateContext ctx)
     {
         ctx.Session?.Data.Remove(ProfileSessionKeys.PhoneNumber);
         ctx.Session?.Data.Remove(ProfileSessionKeys.PhoneAuthCodeId);
+        ctx.Session?.Data.Remove(ProfileSessionKeys.PhoneLinkMode);
     }
 }

@@ -30,6 +30,11 @@ public static class UserErrors
             AppErrorCodes.User.IdentityLinkedToAnotherUser,
             "Identity is already linked to another user");
 
+    public static AppError TelegramIdentityNotLinked() =>
+        AppError.Authentication(
+            AppErrorCodes.User.TelegramIdentityNotLinked,
+            "Telegram identity is not linked to a phone account");
+
     public static AppError TelegramUserIdMustBePositive() =>
         AppError.Validation(
             AppErrorCodes.Telegram.UserIdInvalid,

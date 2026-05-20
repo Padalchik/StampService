@@ -28,6 +28,23 @@ public class PhoneAuthServiceTests
         Assert.Equal(("+79991234567", "123456"), Assert.Single(fixture.Sender.SentCodes));
     }
 
+    [Theory]
+    [InlineData("79991234567")]
+    [InlineData("+7abc9991234567")]
+    [InlineData("++79991234567")]
+    public async Task RequestPhoneCode_WhenPhoneIsInvalid_ShouldFail(string phoneNumber)
+    {
+        var fixture = CreateFixture();
+
+        var result = await fixture.Service.RequestPhoneCodeAsync(
+            new RequestPhoneAuthCodeRequest(phoneNumber),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Empty(fixture.PhoneCodes.Codes);
+        Assert.Empty(fixture.Sender.SentCodes);
+    }
+
     [Fact]
     public async Task VerifyPhoneCode_WhenCodeIsValidAndUserDoesNotExist_ShouldCreatePhoneUser()
     {
@@ -74,15 +91,20 @@ public class PhoneAuthServiceTests
         var users = new FakeUserRepository();
         var phoneCodes = new FakePhoneAuthCodeRepository();
         var sender = new FakePhoneAuthCodeSender();
+        var timeProvider = new FixedTimeProvider(now);
+        var customerCodeGenerator = new CustomerCodeGenerator(users);
+        var phoneAuthCodeService = new PhoneAuthCodeService(
+            phoneCodes,
+            new FixedPhoneAuthCodeGenerator(),
+            sender,
+            timeProvider);
+        var phoneAccountService = new PhoneAccountService(users, customerCodeGenerator);
         var service = new AuthService(
             users,
             new FakeJwtTokenService(),
             new AlwaysValidTelegramValidationService(),
-            new CustomerCodeGenerator(users),
-            phoneCodes,
-            new FixedPhoneAuthCodeGenerator(),
-            sender,
-            new FixedTimeProvider(now));
+            phoneAuthCodeService,
+            phoneAccountService);
 
         return new Fixture(service, users, phoneCodes, sender, now);
     }
