@@ -1,6 +1,6 @@
 # StampService Web UI: рабочие договорённости
 
-Актуально на 2026-05-18, Europe/Moscow.
+Актуально на 2026-05-20, Europe/Moscow.
 
 Этот файл фиксирует договорённости по разработке полноценного web-интерфейса StampService, чтобы не переобсуждать базовые решения в новых задачах.
 
@@ -135,7 +135,7 @@ Web UI должен быть полноценным frontend-проектом н
 - если пользователь является сотрудником или владельцем бренда, показывать разделы рабочих брендов;
 - действия в бренде показывать с учётом роли и feature toggles;
 - недоступные действия лучше скрывать, как сейчас в Telegram UX, если нет отдельной причины показывать disabled-состояние.
-- Основные web labels сейчас: `Мой кошелек` и `Настройки аккаунта`. `Настройки аккаунта` располагаются внизу основной навигации.
+- Основные web labels сейчас: `Мой кошелек`, `Рабочие бренды` и `Настройки аккаунта`. Повторяемые labels хранятся в `src/StampService.Web/src/app/navigationLabels.ts`. `Настройки аккаунта` располагаются внизу основной навигации.
 
 ## Telegram parity и API
 
@@ -155,6 +155,49 @@ Telegram parity не означает буквальное совпадение 
 
 Нельзя дублировать бизнес-логику из Telegram-бота во frontend.
 
+## Web: рабочие бренды и клиентские операции
+
+Раздел `Рабочие бренды` реализован как первая web-поверхность для сотрудника/owner. Цель раздела - дать web-аналог Telegram-механизма выдачи и списания метрик, монеток и товаров.
+
+Архитектурная модель:
+
+- frontend показывает список рабочих брендов текущего пользователя;
+- открытие бренда загружает workspace: роль, permissions и feature toggles;
+- UI скрывает действия, которые недоступны по роли или отключены настройками бренда;
+- frontend не знает бизнес-правил балансов и не меняет их напрямую;
+- API endpoints остаются тонким слоем поверх Application use cases;
+- все операции с балансами проходят через существующие Application handlers и ledger-сервисы.
+
+Текущие web-сценарии:
+
+- выдача метрики по 4-значному коду клиента;
+- списание метрики по одноразовому коду списания клиента;
+- начисление монеток по 4-значному коду клиента;
+- ручное списание монеток по одноразовому коду списания;
+- выдача товара за монетки по одноразовому коду списания.
+
+Важное отличие web от Telegram: Telegram flow хранит промежуточное состояние в bot session, а web делает обычные HTTP-запросы из React state. Поэтому для web добавлены endpoints, которые принимают web-friendly входные данные. Например, выдача метрики принимает публичный код клиента, резолвит его на backend через `IRecipientResolver` и только потом вызывает `IssueMetricCommand`. Web не должен принимать или показывать внутренний `UserId` клиента.
+
+Ключевые API endpoints:
+
+- `GET /api/brands/mine`;
+- `GET /api/brands/{brandId}/workspace`;
+- `GET /api/brands/{brandId}/metrics/issue-options`;
+- `GET /api/brands/{brandId}/metrics/redeem-options?redemptionCode=...`;
+- `POST /api/metrics/{metricDefinitionId}/issue-by-customer-code`;
+- `POST /api/metrics/{metricDefinitionId}/redeem`;
+- `POST /api/brands/{brandId}/coins/issue`;
+- `POST /api/brands/{brandId}/coins/redeem`;
+- `GET /api/brands/{brandId}/coin-products/purchase-options?redemptionCode=...`;
+- `POST /api/brands/{brandId}/coin-products/{productId}/purchase`.
+
+Ключевые frontend места:
+
+- `src/StampService.Web/src/brands/BrandWorkspacePage.tsx` - экран рабочих брендов, workspace и формы операций;
+- `src/StampService.Web/src/brands/brandWorkspaceApi.ts` - typed API calls;
+- `src/StampService.Web/src/app/App.tsx` - подключение раздела в основной layout;
+- `src/StampService.Web/src/styles.css` - стили раздела.
+
 ## MVP-порядок
 
 Согласованный порядок развития web-приложения:
@@ -163,7 +206,7 @@ Telegram parity не означает буквальное совпадение 
 2. Телефонный вход.
 3. Профиль, первичная привязка телефона при необходимости и привязка Telegram.
 4. Кошелёк клиента с кодом списания, наградами и историей.
-5. Brand workspace для сотрудника/owner.
+5. Brand workspace для сотрудника/owner. Базовая клиентская работа уже добавлена: выдача/списание метрик, монеток и товаров через thin API + Application use cases.
 6. Управление метриками, товарами, сотрудниками и настройками бренда.
 
 ## Web: личный кабинет

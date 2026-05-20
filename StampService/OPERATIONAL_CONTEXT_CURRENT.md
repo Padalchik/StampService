@@ -1,6 +1,6 @@
 # StampService: текущий операционный контекст
 
-Актуально на 2026-05-18, Europe/Moscow.
+Актуально на 2026-05-20, Europe/Moscow.
 
 Этот файл нужен для быстрого старта нового чата. Это не changelog и не детальная карта всех файлов. Здесь зафиксированы цель проекта, архитектурные границы, ключевые доменные решения и рабочие договоренности.
 
@@ -156,6 +156,34 @@ Web/API сценарии профиля не должны перепривязы
 Web UI сейчас является вспомогательной и будущей поверхностью. При развитии полноценного web UI важно не дублировать бизнес-логику во frontend/backend controllers: логика должна оставаться в Application use cases.
 
 Web и Telegram могут иметь разные UI labels для одного сценария: Telegram допускает emoji и более короткие кнопки, web должен оставаться спокойным рабочим интерфейсом без emoji в навигации. Повторяемые web labels держать в одном локальном frontend-источнике.
+
+### Web brand workspace и операции с клиентами
+
+В web добавлен первый рабочий сценарий для сотрудника/владельца бренда: раздел `Рабочие бренды` в React-приложении. Он концептуально повторяет Telegram-сценарии работы с клиентами, но остается web-native UI без Telegram session/navigation.
+
+Ключевое правило: web не реализует бизнес-логику выдачи/списания сам. Он вызывает тонкие HTTP endpoints, а те используют существующие Application commands/queries и ledger-сервисы. Балансы метрик и монет нельзя менять напрямую из frontend или controllers.
+
+Основные backend endpoints для web workspace:
+
+- `GET /api/brands/mine` - список брендов текущего пользователя через `GetMyBrandsQuery`;
+- `GET /api/brands/{brandId}/workspace` - рабочий контекст бренда, роли, permissions и feature toggles через `GetBrandWorkspaceQuery`;
+- `GET /api/brands/{brandId}/metrics/issue-options` - активные метрики, доступные для выдачи, через `GetBrandIssueMetricsQuery`;
+- `GET /api/brands/{brandId}/metrics/redeem-options?redemptionCode=...` - варианты списания метрик по коду списания через `GetRedeemMetricOptionsQuery`;
+- `POST /api/metrics/{metricDefinitionId}/issue-by-customer-code` - web-friendly выдача метрики по публичному 4-значному коду клиента. Endpoint резолвит клиента через `IRecipientResolver`, затем вызывает `IssueMetricCommand`;
+- `POST /api/metrics/{metricDefinitionId}/redeem` - списание метрики через существующий `RedeemMetricCommand`;
+- `POST /api/brands/{brandId}/coins/issue` - начисление монеток через `IssueCoinsCommand`;
+- `POST /api/brands/{brandId}/coins/redeem` - ручное списание монеток через `RedeemCoinsCommand`;
+- `GET /api/brands/{brandId}/coin-products/purchase-options?redemptionCode=...` и `POST /api/brands/{brandId}/coin-products/{productId}/purchase` - выдача товара за монетки через существующие CoinProduct use cases.
+
+Ключевые frontend места:
+
+- `src/StampService.Web/src/app/App.tsx` - раздел `Рабочие бренды` включен в основную навигацию;
+- `src/StampService.Web/src/app/navigationLabels.ts` - повторяемые web labels навигации;
+- `src/StampService.Web/src/brands/BrandWorkspacePage.tsx` - рабочий UI бренда и формы клиентских операций;
+- `src/StampService.Web/src/brands/brandWorkspaceApi.ts` - typed API client для brand workspace;
+- `src/StampService.Web/src/styles.css` - стили рабочего интерфейса.
+
+Действия в web workspace скрываются по `CanIssue`, `CanRedeem` и feature toggles бренда: `IsMetricsEnabled`, `IsCoinsEnabled`, `IsCoinProductRedemptionEnabled`, `IsManualCoinRedemptionEnabled`. Backend всё равно остается авторитетным источником проверок доступа.
 
 ## Бренды, роли и доступы
 
