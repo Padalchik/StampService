@@ -13,7 +13,7 @@ public sealed class IssueMetricRecipientScreen : IScreen
         return ValueTask.FromResult(new ScreenView(
             "<b>Выдать метрику</b>\n\n" +
             $"Метрика: {metricName}\n\n" +
-            "Введите 4-значный код пользователя получателя.")
+            "Введите телефон клиента в международном формате, например +7 999 123-45-67.")
             .AwaitInput<EnterIssueRecipientAction>()
             .BackButton());
     }

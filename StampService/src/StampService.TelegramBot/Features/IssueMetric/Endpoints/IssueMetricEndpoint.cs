@@ -1,4 +1,5 @@
 using StampService.Application.Abstractions;
+using StampService.Application.Auth;
 using StampService.Application.Metrics.Commands.IssueMetric;
 using StampService.Application.Users;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
@@ -42,20 +43,22 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         UpdateContext ctx,
         IRecipientResolver recipientResolver)
     {
-        var recipientResult = await recipientResolver.ResolveAsync(
+        var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(
             ctx.MessageText ?? string.Empty,
+            "phoneNumber");
+
+        if (phoneNumberResult.IsFailed)
+            return await RetryRecipientInputAsync("Введите телефон клиента в международном формате, например +7 999 123-45-67.");
+
+        var recipientResult = await recipientResolver.ResolveByPhoneAsync(
+            phoneNumberResult.Value,
             ctx.CancellationToken);
 
         if (recipientResult.IsFailed)
-        {
-            return BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                "Код пользователя должен состоять из 4 цифр и принадлежать существующему пользователю. Попробуйте еще раз.")
-                .AwaitInput<EnterIssueRecipientAction>()
-                .BackButton()));
-        }
+            return await RetryRecipientInputAsync("Клиент с таким телефоном не найден. Проверьте номер и попробуйте еще раз.");
 
         ctx.Session?.Data.Set(IssueMetricSessionKeys.RecipientUserId, recipientResult.Value.UserId);
-        ctx.Session?.Data.Set(IssueMetricSessionKeys.RecipientCustomerCode, recipientResult.Value.PublicIdentifier);
+        ctx.Session?.Data.Set(IssueMetricSessionKeys.RecipientPhoneNumber, phoneNumberResult.Value);
 
         return BotInputResults.DeleteInputThen(BotResults.NavigateTo<IssueMetricAmountScreen>());
     }
@@ -151,7 +154,12 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.MetricDefinitionId);
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.MetricName);
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.RecipientUserId);
-        ctx.Session?.Data.Remove(IssueMetricSessionKeys.RecipientCustomerCode);
+        ctx.Session?.Data.Remove(IssueMetricSessionKeys.RecipientPhoneNumber);
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.Amount);
+    }
+
+    private static Task<IEndpointResult> RetryRecipientInputAsync(string message)
+    {
+        return BotEndpointHelpers.RetryInput<IssueMetricRecipientScreen, EnterIssueRecipientAction>(message);
     }
 }

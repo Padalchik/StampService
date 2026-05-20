@@ -166,6 +166,36 @@ public class MetricsController : ApiControllerBase
         return await handler.Handle(command, cancellationToken);
     }
 
+    [HttpPost("metrics/{metricDefinitionId:guid}/issue-by-phone")]
+    public async Task<EndpointResult<IssueMetricResponse>> IssueByPhone(
+        Guid metricDefinitionId,
+        IssueMetricByPhoneRequest request,
+        [FromServices] IRecipientResolver recipientResolver,
+        [FromServices] ICommandHandler<IssueMetricResponse, IssueMetricCommand> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<IssueMetricResponse>();
+
+        var recipientResult = await recipientResolver.ResolveByPhoneAsync(
+            request.PhoneNumber,
+            cancellationToken);
+
+        if (recipientResult.IsFailed)
+            return Result.Fail<IssueMetricResponse>(recipientResult.Errors);
+
+        var command = new IssueMetricCommand(
+            metricDefinitionId,
+            userIdResult.Value,
+            new IssueMetricRequest(
+                recipientResult.Value.UserId,
+                request.Amount,
+                string.IsNullOrWhiteSpace(request.Comment) ? "Issue metric" : request.Comment.Trim()));
+
+        return await handler.Handle(command, cancellationToken);
+    }
+
     [HttpPost("metrics/{metricDefinitionId:guid}/redeem")]
     public async Task<EndpointResult<RedeemMetricResponse>> Redeem(
         Guid metricDefinitionId,

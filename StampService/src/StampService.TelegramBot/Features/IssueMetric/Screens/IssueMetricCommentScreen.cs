@@ -9,13 +9,13 @@ public sealed class IssueMetricCommentScreen : IScreen
     public ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
     {
         var metricName = ctx.Session?.Data.GetString(IssueMetricSessionKeys.MetricName) ?? "метрика";
-        var recipientCustomerCode = ctx.Session?.Data.GetString(IssueMetricSessionKeys.RecipientCustomerCode);
+        var recipientPhoneNumber = ctx.Session?.Data.GetString(IssueMetricSessionKeys.RecipientPhoneNumber);
         var amount = ctx.Session?.Data.Get<int>(IssueMetricSessionKeys.Amount) ?? 0;
 
         return ValueTask.FromResult(new ScreenView(
             "<b>Выдать метрику</b>\n\n" +
             $"Метрика: {metricName}\n" +
-            $"Код пользователя: {recipientCustomerCode}\n" +
+            $"Телефон клиента: {recipientPhoneNumber}\n" +
             $"Количество: {amount}\n\n" +
             "Введите комментарий.")
             .AwaitInput<EnterIssueCommentAction>()

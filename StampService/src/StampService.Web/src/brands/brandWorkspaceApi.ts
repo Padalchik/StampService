@@ -124,11 +124,11 @@ export function getRedeemMetricOptions(
   );
 }
 
-export function issueMetricByCustomerCode(
+export function issueMetricByPhone(
   metricDefinitionId: string,
-  request: { customerCode: string; amount: number; comment?: string }
+  request: { phoneNumber: string; amount: number; comment?: string }
 ): Promise<IssueMetricResponse> {
-  return apiRequest<IssueMetricResponse>(`/api/metrics/${metricDefinitionId}/issue-by-customer-code`, {
+  return apiRequest<IssueMetricResponse>(`/api/metrics/${metricDefinitionId}/issue-by-phone`, {
     method: 'POST',
     body: request
   });
@@ -144,11 +144,11 @@ export function redeemMetric(
   });
 }
 
-export function issueCoins(
+export function issueCoinsByPhone(
   brandId: string,
-  request: { customerCode: string; amount: number; comment?: string }
+  request: { phoneNumber: string; amount: number; comment?: string }
 ): Promise<CoinOperationResponse> {
-  return apiRequest<CoinOperationResponse>(`/api/brands/${brandId}/coins/issue`, {
+  return apiRequest<CoinOperationResponse>(`/api/brands/${brandId}/coins/issue-by-phone`, {
     method: 'POST',
     body: request
   });

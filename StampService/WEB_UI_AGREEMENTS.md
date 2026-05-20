@@ -170,13 +170,13 @@ Telegram parity не означает буквальное совпадение 
 
 Текущие web-сценарии:
 
-- выдача метрики по 4-значному коду клиента;
+- выдача метрики по номеру телефона клиента;
 - списание метрики по одноразовому коду списания клиента;
-- начисление монеток по 4-значному коду клиента;
+- начисление монеток по номеру телефона клиента;
 - ручное списание монеток по одноразовому коду списания;
 - выдача товара за монетки по одноразовому коду списания.
 
-Важное отличие web от Telegram: Telegram flow хранит промежуточное состояние в bot session, а web делает обычные HTTP-запросы из React state. Поэтому для web добавлены endpoints, которые принимают web-friendly входные данные. Например, выдача метрики принимает публичный код клиента, резолвит его на backend через `IRecipientResolver` и только потом вызывает `IssueMetricCommand`. Web не должен принимать или показывать внутренний `UserId` клиента.
+Важное отличие web от Telegram: Telegram flow хранит промежуточное состояние в bot session, а web делает обычные HTTP-запросы из React state. Поэтому для web добавлены endpoints, которые принимают web-friendly входные данные. Например, выдача метрики принимает номер телефона клиента, резолвит его на backend через активную `Phone` identity в `IRecipientResolver` и только потом вызывает `IssueMetricCommand`. Web не должен принимать или показывать внутренний `UserId` клиента.
 
 Ключевые API endpoints:
 
@@ -184,9 +184,9 @@ Telegram parity не означает буквальное совпадение 
 - `GET /api/brands/{brandId}/workspace`;
 - `GET /api/brands/{brandId}/metrics/issue-options`;
 - `GET /api/brands/{brandId}/metrics/redeem-options?redemptionCode=...`;
-- `POST /api/metrics/{metricDefinitionId}/issue-by-customer-code`;
+- `POST /api/metrics/{metricDefinitionId}/issue-by-phone`;
 - `POST /api/metrics/{metricDefinitionId}/redeem`;
-- `POST /api/brands/{brandId}/coins/issue`;
+- `POST /api/brands/{brandId}/coins/issue-by-phone`;
 - `POST /api/brands/{brandId}/coins/redeem`;
 - `GET /api/brands/{brandId}/coin-products/purchase-options?redemptionCode=...`;
 - `POST /api/brands/{brandId}/coin-products/{productId}/purchase`.

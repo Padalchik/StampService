@@ -16,8 +16,8 @@ import {
   getIssueMetricOptions,
   getMyBrands,
   getRedeemMetricOptions,
-  issueCoins,
-  issueMetricByCustomerCode,
+  issueCoinsByPhone,
+  issueMetricByPhone,
   purchaseCoinProduct,
   redeemCoins,
   redeemMetric,
@@ -225,7 +225,7 @@ function IssueMetricPanel({
   onReloadMetrics: () => Promise<void>;
 }) {
   const [metricId, setMetricId] = useState('');
-  const [customerCode, setCustomerCode] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [amount, setAmount] = useState('');
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -240,8 +240,8 @@ function IssueMetricPanel({
 
   async function submit() {
     const parsedAmount = Number(amount);
-    if (!metricId || !customerCode.trim() || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
-      setError('Выберите метрику, укажите код клиента и положительное количество.');
+    if (!metricId || !phoneNumber.trim() || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+      setError('Выберите метрику, укажите телефон клиента и положительное количество.');
       return;
     }
 
@@ -250,8 +250,8 @@ function IssueMetricPanel({
     setResult(null);
 
     try {
-      const response = await issueMetricByCustomerCode(metricId, {
-        customerCode: customerCode.trim(),
+      const response = await issueMetricByPhone(metricId, {
+        phoneNumber: phoneNumber.trim(),
         amount: parsedAmount,
         comment: comment.trim() || undefined
       });
@@ -280,8 +280,13 @@ function IssueMetricPanel({
           </select>
         </label>
         <label>
-          Код клиента
-          <input value={customerCode} inputMode="numeric" onChange={(event) => setCustomerCode(event.target.value)} />
+          Телефон клиента
+          <input
+            value={phoneNumber}
+            inputMode="tel"
+            placeholder="+7 999 123-45-67"
+            onChange={(event) => setPhoneNumber(event.target.value)}
+          />
         </label>
         <label>
           Количество
@@ -396,7 +401,7 @@ function RedeemMetricPanel({ brandId }: { brandId: string }) {
 }
 
 function IssueCoinsPanel({ brandId }: { brandId: string }) {
-  const [customerCode, setCustomerCode] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [amount, setAmount] = useState('');
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -405,8 +410,8 @@ function IssueCoinsPanel({ brandId }: { brandId: string }) {
 
   async function submit() {
     const parsedAmount = Number(amount);
-    if (!customerCode.trim() || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
-      setError('Укажите код клиента и положительное количество монеток.');
+    if (!phoneNumber.trim() || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+      setError('Укажите телефон клиента и положительное количество монеток.');
       return;
     }
 
@@ -415,8 +420,8 @@ function IssueCoinsPanel({ brandId }: { brandId: string }) {
     setResult(null);
 
     try {
-      const response = await issueCoins(brandId, {
-        customerCode: customerCode.trim(),
+      const response = await issueCoinsByPhone(brandId, {
+        phoneNumber: phoneNumber.trim(),
         amount: parsedAmount,
         comment: comment.trim() || undefined
       });
@@ -434,8 +439,13 @@ function IssueCoinsPanel({ brandId }: { brandId: string }) {
     <OperationPanel icon={<Coins size={20} />} title="Начислить монетки">
       <div className="work-form">
         <label>
-          Код клиента
-          <input value={customerCode} inputMode="numeric" onChange={(event) => setCustomerCode(event.target.value)} />
+          Телефон клиента
+          <input
+            value={phoneNumber}
+            inputMode="tel"
+            placeholder="+7 999 123-45-67"
+            onChange={(event) => setPhoneNumber(event.target.value)}
+          />
         </label>
         <label>
           Количество
@@ -634,9 +644,7 @@ function OperationFeedback({ error, result }: { error: string; result: Operation
     return (
       <div className="operation-result">
         <strong>{result.title}</strong>
-        <span>
-          Клиент: {result.response.userName} · {result.response.customerCode}
-        </span>
+        <span>Клиент: {result.response.userName}</span>
         <span>Количество: {result.response.amount}</span>
         <span>Баланс: {result.response.balanceValue}</span>
       </div>

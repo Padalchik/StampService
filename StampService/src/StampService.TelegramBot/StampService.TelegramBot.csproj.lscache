@@ -175,7 +175,7 @@ Features/Coins/Actions/
  ConfirmRedeemCoinsAction.cs
  EnterCoinAmountAction.cs
  EnterCoinCommentAction.cs
- EnterCoinCustomerCodeAction.cs
+ EnterCoinCustomerPhoneAction.cs
  EnterCoinRedemptionCodeAction.cs
  StartIssueCoinsAction.cs
  StartRedeemCoinsAction.cs
@@ -188,7 +188,7 @@ Features/Coins/
   CoinAmountScreen.cs
   CoinCommentScreen.cs
   CoinConfirmScreen.cs
-  CoinCustomerCodeScreen.cs
+  CoinCustomerPhoneScreen.cs
   CoinRedeemAmountScreen.cs
   CoinRedeemConfirmScreen.cs
   CoinRedemptionCodeScreen.cs
