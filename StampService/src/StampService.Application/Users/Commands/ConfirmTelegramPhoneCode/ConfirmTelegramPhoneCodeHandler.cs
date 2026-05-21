@@ -123,7 +123,7 @@ public class ConfirmTelegramPhoneCodeHandler
         {
             await _userRepository.SaveAsync(cancellationToken);
         }
-        catch (ConcurrencyConflictException ex)
+        catch (ConcurrencyConflictException)
         {
             return Result.Fail(AuthErrors.PhoneCodeInvalid());
         }

@@ -1,93 +1,128 @@
 using Microsoft.EntityFrameworkCore;
-using StampService.API.Middlewares;
+using Serilog;
+using Serilog.Events;
 using StampService.API.Extensions;
+using StampService.API.Middlewares;
 using StampService.Application;
 using StampService.Application.Services;
 using StampService.Infrastructure;
 using StampService.Infrastructure.Seeding;
 
-var seedDemo = args.Any(arg => string.Equals(arg, "--seed-demo", StringComparison.OrdinalIgnoreCase));
-var builder = WebApplication.CreateBuilder(args);
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
 
-if (seedDemo)
+try
 {
-    var botSettingsPath = Path.GetFullPath(Path.Combine(
-        builder.Environment.ContentRootPath,
-        "..",
-        "StampService.TelegramBot",
-        "appsettings.json"));
-    var botEnvironmentSettingsPath = Path.GetFullPath(Path.Combine(
-        builder.Environment.ContentRootPath,
-        "..",
-        "StampService.TelegramBot",
-        $"appsettings.{builder.Environment.EnvironmentName}.json"));
+    var seedDemo = args.Any(arg => string.Equals(arg, "--seed-demo", StringComparison.OrdinalIgnoreCase));
+    var builder = WebApplication.CreateBuilder(args);
 
-    builder.Configuration.AddJsonFile(botSettingsPath, optional: true, reloadOnChange: false);
-    builder.Configuration.AddJsonFile(botEnvironmentSettingsPath, optional: true, reloadOnChange: false);
-}
-else if (IsAdminConfigurationMissing(builder.Configuration))
-{
-    ImportAdminTelegramUserIdsFromBotSettings(builder.Configuration, builder.Environment);
-}
-
-builder.Services.AddControllers();
-builder.Services.AddApiOpenApi();
-builder.Services.AddJwtAuthentication(builder.Configuration);
-builder.Services.Configure<TelegramOptions>(builder.Configuration.GetSection("Telegram"));
-
-builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
-
-var app = builder.Build();
-
-await using (var scope = app.Services.CreateAsyncScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-    if (app.Environment.IsDevelopment())
-        await dbContext.Database.MigrateAsync();
+    builder.Host.UseSerilog((context, services, loggerConfiguration) => loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext());
 
     if (seedDemo)
     {
-        var adminTelegramUserIds = app.Configuration
-            .GetSection("Admin:TelegramUserIds")
-            .GetChildren()
-            .Select(item => long.TryParse(item.Value, out var value) ? value : 0)
-            .Where(value => value > 0)
-            .ToArray();
-        if (adminTelegramUserIds.Length != 1)
-        {
-            throw new InvalidOperationException(
-                "Для заполнения демо-данными должен быть задан ровно один Admin:TelegramUserIds.");
-        }
+        var botSettingsPath = Path.GetFullPath(Path.Combine(
+            builder.Environment.ContentRootPath,
+            "..",
+            "StampService.TelegramBot",
+            "appsettings.json"));
+        var botEnvironmentSettingsPath = Path.GetFullPath(Path.Combine(
+            builder.Environment.ContentRootPath,
+            "..",
+            "StampService.TelegramBot",
+            $"appsettings.{builder.Environment.EnvironmentName}.json"));
 
-        await DemoDataSeeder.SeedAsync(dbContext, adminTelegramUserIds[0]);
-        return;
+        builder.Configuration.AddJsonFile(botSettingsPath, optional: true, reloadOnChange: false);
+        builder.Configuration.AddJsonFile(botEnvironmentSettingsPath, optional: true, reloadOnChange: false);
+    }
+    else if (IsAdminConfigurationMissing(builder.Configuration))
+    {
+        ImportAdminTelegramUserIdsFromBotSettings(builder.Configuration, builder.Environment);
     }
 
-    await RoleSeeder.SeedSystemRolesAsync(dbContext);
-}
+    builder.Services.AddControllers();
+    builder.Services.AddApiOpenApi();
+    builder.Services.AddJwtAuthentication(builder.Configuration);
+    builder.Services.Configure<TelegramOptions>(builder.Configuration.GetSection("Telegram"));
 
-app.UseCustomExceptionHandling();
+    builder.Services.AddApplication();
+    builder.Services.AddInfrastructure(builder.Configuration);
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.UseSwaggerUI(options =>
+    var app = builder.Build();
+
+    await using (var scope = app.Services.CreateAsyncScope())
     {
-        options.SwaggerEndpoint("/openapi/v1.json", "StampService API v1");
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        if (app.Environment.IsDevelopment())
+            await dbContext.Database.MigrateAsync();
+
+        if (seedDemo)
+        {
+            var adminTelegramUserIds = app.Configuration
+                .GetSection("Admin:TelegramUserIds")
+                .GetChildren()
+                .Select(item => long.TryParse(item.Value, out var value) ? value : 0)
+                .Where(value => value > 0)
+                .ToArray();
+            if (adminTelegramUserIds.Length != 1)
+            {
+                throw new InvalidOperationException(
+                    "Для заполнения демо-данными должен быть задан ровно один Admin:TelegramUserIds.");
+            }
+
+            await DemoDataSeeder.SeedAsync(dbContext, adminTelegramUserIds[0]);
+            return;
+        }
+
+        await RoleSeeder.SeedSystemRolesAsync(dbContext);
+    }
+
+    app.UseSerilogRequestLogging(options =>
+    {
+        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+        {
+            diagnosticContext.Set("TraceId", httpContext.TraceIdentifier);
+            diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
+            diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
+        };
     });
+
+    app.UseCustomExceptionHandling();
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapOpenApi();
+        app.UseSwaggerUI(options =>
+        {
+            options.SwaggerEndpoint("/openapi/v1.json", "StampService API v1");
+        });
+    }
+
+    app.UseHttpsRedirection();
+    app.UseStaticFiles();
+    app.UseAuthentication();
+    app.UseAuthorization();
+    app.MapGet("/app", () => Results.Redirect("/app.html"));
+    app.MapGet("/phone-auth-test", () => Results.Redirect("/phone-auth-test.html"));
+    app.MapControllers();
+
+    await app.RunAsync();
 }
-
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-app.UseAuthentication();
-app.UseAuthorization();
-app.MapGet("/app", () => Results.Redirect("/app.html"));
-app.MapGet("/phone-auth-test", () => Results.Redirect("/phone-auth-test.html"));
-app.MapControllers();
-
-app.Run();
+catch (Exception ex)
+{
+    Log.Fatal(ex, "StampService API terminated unexpectedly");
+    throw;
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
 static bool IsAdminConfigurationMissing(IConfiguration configuration)
 {
