@@ -1,3 +1,4 @@
+using System.Text.Json;
 using StampService.Application.Users;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.User;
@@ -42,11 +43,14 @@ public class PhoneAccountServiceTests
         Assert.Equal("Business customer", user.Name);
         Assert.Equal("4321", user.CustomerCode);
         Assert.Equal(user.Id, result.Value.Id);
-        Assert.Contains(
+        var phoneIdentity = Assert.Single(
             user.Identities,
             identity => identity.Type == IdentityType.Phone
-                && identity.Key == "+79991234567"
-                && identity.Metadata.Contains("+79991234567", StringComparison.Ordinal));
+                && identity.Key == "+79991234567");
+        using var metadata = JsonDocument.Parse(phoneIdentity.Metadata);
+        Assert.Equal(
+            "+79991234567",
+            metadata.RootElement.GetProperty("PhoneNumber").GetString());
         Assert.Equal(0, repository.SaveCount);
     }
 
