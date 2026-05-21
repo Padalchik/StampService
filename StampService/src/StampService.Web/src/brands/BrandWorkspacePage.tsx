@@ -9,7 +9,7 @@ import {
   Store,
   TicketMinus
 } from 'lucide-react';
-import { ApiRequestError } from '../api/apiClient';
+import { getApiErrorMessage } from '../api/errorMessages';
 import {
   getBrandWorkspace,
   getCoinProductPurchaseOptions,
@@ -662,9 +662,5 @@ function OperationFeedback({ error, result }: { error: string; result: Operation
 }
 
 function getUserMessage(error: unknown): string {
-  if (error instanceof ApiRequestError) {
-    return error.message;
-  }
-
-  return 'Не удалось выполнить запрос.';
+  return getApiErrorMessage(error, 'Не удалось выполнить запрос.');
 }

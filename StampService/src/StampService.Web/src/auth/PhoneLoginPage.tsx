@@ -4,6 +4,7 @@ import { ApiRequestError } from '../api/apiClient';
 import { useAuth } from './AuthContext';
 import { requestPhoneAuthCode, verifyPhoneAuthCode } from './authApi';
 import { formatRuPhoneInput, isRuPhoneInputComplete, normalizePhoneNumber } from '../validation/phoneNumber';
+import { formatRuTime } from '../format/dateTime';
 
 type LoginStep = 'phone' | 'code';
 
@@ -22,11 +23,7 @@ export function PhoneLoginPage() {
       return null;
     }
 
-    return new Intl.DateTimeFormat('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }).format(new Date(expiresAt));
+    return formatRuTime(expiresAt);
   }, [expiresAt]);
 
   async function handleRequestCode(event: FormEvent<HTMLFormElement>) {

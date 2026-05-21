@@ -1,3 +1,4 @@
 .dotnet-cli/
+*.lscache
 src/StampService.Web/node_modules/
 src/StampService.Web/dist/

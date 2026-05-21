@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, MessageSquareText, Phone, RefreshCw, Send, UserRound } from 'lucide-react';
 import { ApiRequestError } from '../api/apiClient';
 import { formatRuPhoneInput, isRuPhoneInputComplete, normalizePhoneNumber } from '../validation/phoneNumber';
+import { formatRuTime } from '../format/dateTime';
 import {
   confirmPhoneLinkCode,
   getMyProfile,
@@ -276,11 +277,7 @@ function useFormattedTime(value: string | null): string | null {
       return null;
     }
 
-    return new Intl.DateTimeFormat('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }).format(new Date(value));
+    return formatRuTime(value);
   }, [value]);
 }
 
