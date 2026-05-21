@@ -10,11 +10,11 @@ public sealed class CoinConfirmScreen : IScreen
     public ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
     {
         var amount = ctx.Session?.Data.Get<int>(CoinSessionKeys.Amount) ?? 0;
-        var customerCode = ctx.Session?.Data.GetString(CoinSessionKeys.CustomerCode);
+        var customerPhoneNumber = ctx.Session?.Data.GetString(CoinSessionKeys.CustomerPhoneNumber);
 
         var view = new ScreenView(
             "<b>Подтвердите начисление</b>\n\n" +
-            $"Код пользователя: <code>{Html(customerCode ?? "-")}</code>\n" +
+            $"Телефон клиента: <code>{Html(customerPhoneNumber ?? "-")}</code>\n" +
             $"Количество: {amount}");
 
         view.Button<ConfirmIssueCoinsAction>("✅ Подтвердить");

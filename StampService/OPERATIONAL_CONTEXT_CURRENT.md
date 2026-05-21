@@ -1,6 +1,6 @@
 # StampService: текущий операционный контекст
 
-Актуально на 2026-05-18, Europe/Moscow.
+Актуально на 2026-05-21, Europe/Moscow.
 
 Этот файл нужен для быстрого старта нового чата. Это не changelog и не детальная карта всех файлов. Здесь зафиксированы цель проекта, архитектурные границы, ключевые доменные решения и рабочие договоренности.
 
@@ -20,9 +20,9 @@
 
 StampService - loyalty-сервис для брендов. Основной интерфейс сейчас Telegram-бот, HTTP API и простой web UI используются как backend/API и тестовая/будущая пользовательская поверхность.
 
-Ключевая идея: пользователь имеет один аккаунт (`User.Id`), к которому могут быть привязаны разные способы входа (`UserIdentity`): телефон, Telegram и потенциально другие. Все бизнес-данные, балансы, роли, бренды и история принадлежат `User.Id`, а не конкретному телефону или Telegram id.
+Ключевая идея: пользователь имеет один аккаунт (`User.Id`), к которому могут быть привязаны разные внешние идентификаторы/способы входа (`UserIdentity`): телефон, Telegram и потенциально другие. Все бизнес-данные, балансы, роли, бренды и история принадлежат `User.Id`, а не конкретному телефону или Telegram id.
 
-Архитектурное правило авторизации: активный пользовательский аккаунт должен иметь подтвержденную активную `Phone` identity. Первичная регистрация/авторизация пользователя происходит по телефону через OTP. Telegram не является первичным аккаунтом и не должен создавать полноценный `User` сам по себе; Telegram identity привязывается к уже существующему или создаваемому через телефон аккаунту как дополнительный способ входа/связи.
+Архитектурное правило авторизации: телефон является первичным внешним идентификатором клиента, а факт входа подтверждается OTP в момент авторизации. Наличие активной `Phone` identity само по себе не является отдельным доказательством текущего входа; OTP подтверждает право получить сессию по этому номеру. Telegram не является первичным аккаунтом и не должен создавать полноценный `User` сам по себе; Telegram identity привязывается к уже существующему или создаваемому через телефон аккаунту как дополнительный способ входа/связи.
 
 Архитектурный стиль - modular monolith.
 
@@ -42,7 +42,7 @@ StampService - loyalty-сервис для брендов. Основной ин
 Пользователи:
 
 - `User` - аккаунт пользователя и владелец бизнес-данных.
-- `UserIdentity` - внешний способ идентификации пользователя.
+- `UserIdentity` - внешний идентификатор/способ входа пользователя. `Phone` identity может быть создана как при OTP-входе, так и бизнес-сценарием начисления по телефону; вход все равно требует OTP.
 - `IdentityType` сейчас включает Telegram и Phone.
 - `RedemptionCode` - одноразовый код пользователя для операций сотрудника.
 
@@ -66,10 +66,10 @@ StampService - loyalty-сервис для брендов. Основной ин
 Текущая модель identity:
 
 - Аккаунт пользователя стабилен по `User.Id`.
-- Подтвержденный телефон является обязательной первичной identity активного пользовательского аккаунта.
+- Телефон является первичной `Phone` identity активного пользовательского аккаунта и основным внешним ключом клиента в loyalty-сценариях.
 - Telegram является вторичной identity: способом входа/связи/уведомлений после привязки к телефонному аккаунту.
 - Telegram и телефон не являются владельцами данных.
-- Новые полноценные пользовательские аккаунты создаются только после подтверждения телефона через OTP.
+- Новые полноценные пользовательские аккаунты могут создаваться двумя штатными путями: после успешного OTP по телефону или при бизнес-операции начисления по телефону сотрудником. Во втором случае создается обычный `User` с активной `Phone` identity, а клиент позже получает доступ к этому аккаунту через OTP по тому же номеру.
 - Telegram-only аккаунты не должны создаваться новыми сценариями. Если нужен переходный сценарий для старых данных, он должен быть явно выделен как legacy/migration flow.
 - Штатной пользовательской перепривязки телефона или Telegram нет: если у пользователя уже есть активная identity этого типа, обычный сценарий профиля должен отказать, а не заменять её.
 - `UserIdentity` не переносится между пользователями. Если внешний ключ уже принадлежит другому `User`, операция запрещается.
@@ -86,6 +86,16 @@ StampService - loyalty-сервис для брендов. Основной ин
 - Нельзя создавать нового пользователя только по Telegram id.
 - Нельзя использовать legacy Telegram-only аккаунт как источник для автоматического переноса Telegram identity на телефонный аккаунт.
 - Нельзя отвязывать последний способ входа без отдельного бизнес-решения и UX-подтверждения.
+
+## Идентификация клиента в операциях бренда
+
+Для операций начисления метрик и монеток основной внешний идентификатор клиента - номер телефона. Сотрудник в web или Telegram вводит телефон клиента, backend/Application нормализует его и выполняет единый Application flow: найти пользователя по активной `Phone` identity или создать полноценного `User` с этой `Phone` identity, если клиента еще нет. После этого начисление проводится сразу на `User.Id` через ledger. Внутренним владельцем данных остается `User.Id`; телефон не становится primary key и не является владельцем балансов.
+
+Auto-create клиента по телефону применяется только к начислениям. Списание метрик, ручное списание монеток и выдача товаров за монетки остаются по одноразовому `RedemptionCode`, потому что этот код подтверждает конкретную операцию клиента. Телефон используется для идентификации клиента при начислении, а не как подтверждение списания.
+
+4-значный `CustomerCode` не является основным способом начисления. Он сохраняется как legacy/совместимость и может временно использоваться как внутренний мост для старых Application-сценариев, пока они еще принимают код. Новые UI-сценарии начисления не должны просить сотрудника вводить `CustomerCode`.
+
+Ключевые Application use cases для нового flow: `IssueMetricByPhoneCommand` / `IssueMetricByPhoneHandler` и `IssueCoinsByPhoneCommand` / `IssueCoinsByPhoneHandler`. Web controllers и Telegram endpoints должны вызывать эти сценарии, а не делать предварительный `ResolveByPhoneAsync` в UI/API слое.
 
 ## Телефонная авторизация и привязка
 
@@ -135,6 +145,8 @@ Telegram bot - основной рабочий UI.
 Ключевые места:
 
 - `src/StampService.TelegramBot/Features/Profile` - личный кабинет и первичная привязка телефона.
+- `src/StampService.TelegramBot/Features/IssueMetric` - выдача метрик сотрудником; бот собирает телефон/количество и вызывает `IssueMetricByPhoneCommand`, без предварительного отказа при отсутствии клиента.
+- `src/StampService.TelegramBot/Features/Coins` - начисление/списание монеток; начисление идет через `IssueCoinsByPhoneCommand` по телефону клиента, списание остается по одноразовому коду списания.
 - `src/StampService.TelegramBot/Common/Errors/BotErrorFormatter.cs` - перевод application errors в пользовательские сообщения.
 - `external/telegram-bot-flow` - смотреть перед изменениями navigation/callback/input flow.
 
@@ -156,6 +168,37 @@ Web/API сценарии профиля не должны перепривязы
 Web UI сейчас является вспомогательной и будущей поверхностью. При развитии полноценного web UI важно не дублировать бизнес-логику во frontend/backend controllers: логика должна оставаться в Application use cases.
 
 Web и Telegram могут иметь разные UI labels для одного сценария: Telegram допускает emoji и более короткие кнопки, web должен оставаться спокойным рабочим интерфейсом без emoji в навигации. Повторяемые web labels держать в одном локальном frontend-источнике.
+
+### Web brand workspace и операции с клиентами
+
+В web добавлен первый рабочий сценарий для сотрудника/владельца бренда: раздел `Рабочие бренды` в React-приложении. Он концептуально повторяет Telegram-сценарии работы с клиентами, но остается web-native UI без Telegram session/navigation.
+
+Ключевое правило: web не реализует бизнес-логику выдачи/списания сам. Он вызывает тонкие HTTP endpoints, а те используют существующие Application commands/queries и ledger-сервисы. Балансы метрик и монет нельзя менять напрямую из frontend или controllers.
+
+Основные backend endpoints для web workspace:
+
+- `GET /api/brands/mine` - список брендов текущего пользователя через `GetMyBrandsQuery`;
+- `GET /api/brands/{brandId}/workspace` - рабочий контекст бренда, роли, permissions и feature toggles через `GetBrandWorkspaceQuery`;
+- `GET /api/brands/{brandId}/metrics/issue-options` - активные метрики, доступные для выдачи, через `GetBrandIssueMetricsQuery`;
+- `GET /api/brands/{brandId}/metrics/redeem-options?redemptionCode=...` - варианты списания метрик по коду списания через `GetRedeemMetricOptionsQuery`;
+- `POST /api/metrics/{metricDefinitionId}/issue-by-phone` - основной web-friendly сценарий выдачи метрики по номеру телефона клиента через `IssueMetricByPhoneCommand`; Application находит или создает `User` по `Phone` identity и проводит ledger-начисление;
+- `POST /api/metrics/{metricDefinitionId}/issue-by-customer-code` - legacy/совместимый сценарий выдачи метрики по публичному 4-значному коду клиента;
+- `POST /api/metrics/{metricDefinitionId}/redeem` - списание метрики через существующий `RedeemMetricCommand`;
+- `POST /api/brands/{brandId}/coins/issue-by-phone` - основной web-friendly сценарий начисления монеток по номеру телефона клиента через `IssueCoinsByPhoneCommand`; Application находит или создает `User` по `Phone` identity и проводит ledger-начисление;
+- `POST /api/brands/{brandId}/coins/issue` - legacy/совместимый сценарий начисления монеток по коду клиента через `IssueCoinsCommand`;
+- `POST /api/brands/{brandId}/coins/redeem` - ручное списание монеток через `RedeemCoinsCommand`;
+- `GET /api/brands/{brandId}/coin-products/purchase-options?redemptionCode=...` и `POST /api/brands/{brandId}/coin-products/{productId}/purchase` - выдача товара за монетки через существующие CoinProduct use cases.
+
+Ключевые frontend места:
+
+- `src/StampService.Web/src/app/App.tsx` - раздел `Рабочие бренды` включен в основную навигацию;
+- `src/StampService.Web/src/app/navigationLabels.ts` - повторяемые web labels навигации;
+- `src/StampService.Web/src/brands/BrandWorkspacePage.tsx` - рабочий UI бренда и формы клиентских операций;
+- `src/StampService.Web/src/brands/brandWorkspaceApi.ts` - typed API client для brand workspace;
+- `src/StampService.Web/src/validation/phoneNumber.ts` - единая frontend-нормализация и маска телефона для web-полей;
+- `src/StampService.Web/src/styles.css` - стили рабочего интерфейса.
+
+Действия в web workspace скрываются по `CanIssue`, `CanRedeem` и feature toggles бренда: `IsMetricsEnabled`, `IsCoinsEnabled`, `IsCoinProductRedemptionEnabled`, `IsManualCoinRedemptionEnabled`. Backend всё равно остается авторитетным источником проверок доступа.
 
 ## Бренды, роли и доступы
 
@@ -239,3 +282,52 @@ Outbox сейчас не вводился. Текущая модель - direct 
 5. Для identity помнить: `User.Id` - владелец данных, `Phone` identity обязательна для активного пользовательского аккаунта, остальные `UserIdentity` - дополнительные способы входа/связи.
 6. Для любых изменений identity помнить: обычные сценарии только добавляют отсутствующую identity или отказывают при конфликте; перенос/замена identity допустимы только как отдельный согласованный flow.
 7. В финальном ответе кратко указать изменения и явно сказать, какие проверки запускались.
+
+## Логирование и диагностика
+
+В проект подключены Serilog и Seq для структурированного логирования и диагностики проблем без попыток чинить поведение "наугад".
+
+Архитектурное решение:
+
+- Serilog подключается на уровне host-проектов `src/StampService.API` и `src/StampService.TelegramBot`, а не в `Infrastructure`.
+- `Application` и `Infrastructure` используют стандартный `ILogger<T>` и не знают, куда физически пишутся логи.
+- Host-проекты решают, какие sinks включены, как называется приложение в логах и какие lifecycle/request/update события логируются.
+- Seq поднят как инфраструктурный сервис в `compose.yaml`.
+
+Текущая конфигурация:
+
+- `src/StampService.API/Program.cs` - bootstrap logger, Serilog provider, HTTP request logging, fatal startup/shutdown logging.
+- `src/StampService.TelegramBot/Program.cs` - bootstrap logger, Serilog provider, logging для webhost части TelegramBot.
+- `src/StampService.API/appsettings*.json` и `src/StampService.TelegramBot/appsettings*.json` - уровни логирования, sinks Console/Seq, свойство `Application`.
+- `compose.yaml` - сервис `seq`, UI доступен локально на `http://localhost:5441`; first-run admin password сейчас `secure`.
+
+В Seq логи разделяются по свойству `Application`: `StampService.API` и `StampService.TelegramBot`.
+
+Что уже логируется:
+
+- старт/остановка host-процессов;
+- fatal-ошибки запуска;
+- HTTP request logs API;
+- ошибки из `ExceptionHandlingMiddleware`;
+- существующие события `ILogger<T>` в Application/TelegramBot;
+- EF Core SQL-команды в Development по настроенным уровням;
+- TelegramBotFlow pipeline logs.
+
+Что важно для следующих задач:
+
+- Не логировать JWT, bot token, OTP, raw auth payloads и чувствительные персональные данные.
+- Для бизнес-диагностики постепенно добавлять структурированные события в ключевые Application use cases: OTP, phone/Telegram linking, wallet open, issue/redeem metrics, issue/redeem coins, purchase coin product.
+- В логах предпочитать стабильные идентификаторы и контекст операции: `UserId`, `BrandId`, `MetricDefinitionId`, `ProductId`, `TraceId`, результат операции и доменную причину отказа.
+
+## Startup-уведомления TelegramBot
+
+В `src/StampService.TelegramBot` добавлен `BotStartupNotificationHostedService`.
+
+Назначение: после фактического старта TelegramBot отправить администраторам из `Admin:TelegramUserIds` два сообщения:
+
+- ссылка на web UI;
+- ссылка на Seq.
+
+Настройки находятся в `StartupNotifications` в `src/StampService.TelegramBot/appsettings.json` и `appsettings.Development.json`: `Enabled`, `WebInterfaceUrl`, `SeqUrl`.
+
+Это host-level диагностическая удобность для локального стенда. Она не должна попадать в Domain/Application и не должна использоваться как бизнес-уведомление пользователям.

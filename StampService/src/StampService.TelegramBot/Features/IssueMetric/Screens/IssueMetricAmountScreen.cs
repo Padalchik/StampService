@@ -9,12 +9,12 @@ public sealed class IssueMetricAmountScreen : IScreen
     public ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
     {
         var metricName = ctx.Session?.Data.GetString(IssueMetricSessionKeys.MetricName) ?? "метрика";
-        var recipientCustomerCode = ctx.Session?.Data.GetString(IssueMetricSessionKeys.RecipientCustomerCode);
+        var recipientPhoneNumber = ctx.Session?.Data.GetString(IssueMetricSessionKeys.RecipientPhoneNumber);
 
         return ValueTask.FromResult(new ScreenView(
             "<b>Выдать метрику</b>\n\n" +
             $"Метрика: {metricName}\n" +
-            $"Код пользователя: {recipientCustomerCode}\n\n" +
+            $"Телефон клиента: {recipientPhoneNumber}\n\n" +
             "Введите количество.")
             .AwaitInput<EnterIssueAmountAction>()
             .BackButton());

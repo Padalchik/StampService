@@ -10,5 +10,10 @@ public interface IPhoneAccountService
         DateTime verifiedAtUtc,
         CancellationToken cancellationToken);
 
+    Task<Result<User>> GetOrCreateForBusinessOperationAsync(
+        string phoneNumber,
+        string? invalidField,
+        CancellationToken cancellationToken);
+
     bool HasActivePhoneIdentity(User user);
 }

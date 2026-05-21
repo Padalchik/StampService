@@ -8,6 +8,13 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+      <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
+      <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+      <PackageReference Include="Serilog.Sinks.Seq" Version="9.1.0" />
+    </ItemGroup>
+
+    <ItemGroup>
       <ProjectReference Include="..\..\external\telegram-bot-flow\src\TelegramBotFlow.Core\TelegramBotFlow.Core.csproj" />
       <ProjectReference Include="..\StampService.Application\StampService.Application.csproj" />
       <ProjectReference Include="..\StampService.Infrastructure\StampService.Infrastructure.csproj" />

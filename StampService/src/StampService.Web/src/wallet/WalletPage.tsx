@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, BarChart3, ChevronRight, Gift, History, RefreshCw, Ticket, WalletCards } from 'lucide-react';
-import { ApiRequestError } from '../api/apiClient';
+import { getApiErrorMessage } from '../api/errorMessages';
+import { formatRuDateTime, formatRuTime } from '../format/dateTime';
 import {
   getBrandDetails,
   openUserWallet,
@@ -89,7 +90,7 @@ export function WalletPage() {
             <div className="redemption-code">{wallet?.redemptionCode.code ?? '----'}</div>
             {wallet?.redemptionCode.expiresAtUtc ? (
               <div className="wallet-code-panel__expires">
-                Действует до {formatTime(wallet.redemptionCode.expiresAtUtc)}
+                Действует до {formatRuTime(wallet.redemptionCode.expiresAtUtc)}
               </div>
             ) : null}
           </div>
@@ -327,7 +328,7 @@ function HistorySection({ group }: { group: UserWalletBrandHistoryGroupResponse 
               <div>
                 <strong>{item.amountText}</strong>
                 <p>
-                  {formatDateTime(item.createdAt)}
+                  {formatRuDateTime(item.createdAt)}
                   {item.hasVisibleComment && item.comment ? ` - ${item.comment}` : ''}
                 </p>
               </div>
@@ -339,28 +340,6 @@ function HistorySection({ group }: { group: UserWalletBrandHistoryGroupResponse 
   );
 }
 
-function formatTime(value: string): string {
-  return new Intl.DateTimeFormat('ru-RU', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  }).format(new Date(value));
-}
-
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(new Date(value));
-}
-
 function getUserMessage(error: unknown): string {
-  if (error instanceof ApiRequestError) {
-    return error.message;
-  }
-
-  return 'Не удалось загрузить кошелёк.';
+  return getApiErrorMessage(error, 'Не удалось загрузить кошелёк.');
 }

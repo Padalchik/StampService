@@ -1,0 +1,185 @@
+import { apiRequest } from '../api/apiClient';
+
+export type MyBrandResponse = {
+  brandId: string;
+  brandName: string;
+  roleSystemName: string;
+};
+
+export type MyBrandsResponse = {
+  userId: string;
+  brands: MyBrandResponse[];
+};
+
+export type BrandWorkspaceResponse = {
+  brandId: string;
+  brandName: string;
+  roleSystemName: string;
+  isMetricsEnabled: boolean;
+  isCoinsEnabled: boolean;
+  isCoinProductRedemptionEnabled: boolean;
+  isManualCoinRedemptionEnabled: boolean;
+  canIssue: boolean;
+  canRedeem: boolean;
+  canViewBalances: boolean;
+  canManageBrand: boolean;
+  canManageMetrics: boolean;
+  canManageStaff: boolean;
+};
+
+export type MetricResponse = {
+  id: string;
+  brandId: string;
+  name: string;
+  redemptionAmount: number;
+  isActive: boolean;
+  createdAt: string;
+};
+
+export type IssueMetricResponse = {
+  transactionId: string;
+  balanceId: string;
+  brandId: string;
+  metricDefinitionId: string;
+  userId: string;
+  transactionType: string;
+  amount: number;
+  balanceValue: number;
+  createdAt: string;
+};
+
+export type RedeemMetricOptionResponse = {
+  metricDefinitionId: string;
+  metricName: string;
+  currentBalance: number;
+  requiredAmount: number;
+  canRedeem: boolean;
+};
+
+export type RedeemMetricOptionsResponse = {
+  customerUserId: string;
+  customerName: string;
+  redemptionCode: string;
+  metrics: RedeemMetricOptionResponse[];
+};
+
+export type RedeemMetricResponse = {
+  transactionId: string;
+  balanceId: string;
+  brandId: string;
+  metricDefinitionId: string;
+  userId: string;
+  transactionType: string;
+  amount: number;
+  balanceValue: number;
+  createdAt: string;
+};
+
+export type CoinOperationResponse = {
+  transactionId: string;
+  walletId: string;
+  brandId: string;
+  userId: string;
+  userName: string;
+  customerCode: string;
+  transactionType: string;
+  amount: number;
+  balanceValue: number;
+  createdAt: string;
+};
+
+export type CoinProductPurchaseOptionResponse = {
+  productId: string;
+  productName: string;
+  price: number;
+  currentBalance: number;
+  canPurchase: boolean;
+};
+
+export type CoinProductPurchaseOptionsResponse = {
+  customerUserId: string;
+  customerName: string;
+  redemptionCode: string;
+  products: CoinProductPurchaseOptionResponse[];
+};
+
+export function getMyBrands(): Promise<MyBrandsResponse> {
+  return apiRequest<MyBrandsResponse>('/api/brands/mine');
+}
+
+export function getBrandWorkspace(brandId: string): Promise<BrandWorkspaceResponse> {
+  return apiRequest<BrandWorkspaceResponse>(`/api/brands/${brandId}/workspace`);
+}
+
+export function getIssueMetricOptions(brandId: string): Promise<MetricResponse[]> {
+  return apiRequest<MetricResponse[]>(`/api/brands/${brandId}/metrics/issue-options`);
+}
+
+export function getRedeemMetricOptions(
+  brandId: string,
+  redemptionCode: string
+): Promise<RedeemMetricOptionsResponse> {
+  return apiRequest<RedeemMetricOptionsResponse>(
+    `/api/brands/${brandId}/metrics/redeem-options?redemptionCode=${encodeURIComponent(redemptionCode)}`
+  );
+}
+
+export function issueMetricByPhone(
+  metricDefinitionId: string,
+  request: { phoneNumber: string; amount: number; comment?: string }
+): Promise<IssueMetricResponse> {
+  return apiRequest<IssueMetricResponse>(`/api/metrics/${metricDefinitionId}/issue-by-phone`, {
+    method: 'POST',
+    body: request
+  });
+}
+
+export function redeemMetric(
+  metricDefinitionId: string,
+  request: { redemptionCode: string; comment: string }
+): Promise<RedeemMetricResponse> {
+  return apiRequest<RedeemMetricResponse>(`/api/metrics/${metricDefinitionId}/redeem`, {
+    method: 'POST',
+    body: request
+  });
+}
+
+export function issueCoinsByPhone(
+  brandId: string,
+  request: { phoneNumber: string; amount: number; comment?: string }
+): Promise<CoinOperationResponse> {
+  return apiRequest<CoinOperationResponse>(`/api/brands/${brandId}/coins/issue-by-phone`, {
+    method: 'POST',
+    body: request
+  });
+}
+
+export function redeemCoins(
+  brandId: string,
+  request: { redemptionCode: string; amount: number; comment: string }
+): Promise<CoinOperationResponse> {
+  return apiRequest<CoinOperationResponse>(`/api/brands/${brandId}/coins/redeem`, {
+    method: 'POST',
+    body: request
+  });
+}
+
+export function getCoinProductPurchaseOptions(
+  brandId: string,
+  redemptionCode: string
+): Promise<CoinProductPurchaseOptionsResponse> {
+  return apiRequest<CoinProductPurchaseOptionsResponse>(
+    `/api/brands/${brandId}/coin-products/purchase-options?redemptionCode=${encodeURIComponent(redemptionCode)}`
+  );
+}
+
+export function purchaseCoinProduct(
+  brandId: string,
+  productId: string,
+  redemptionCode: string
+): Promise<CoinOperationResponse> {
+  return apiRequest<CoinOperationResponse>(`/api/brands/${brandId}/coin-products/${productId}/purchase`, {
+    method: 'POST',
+    body: { redemptionCode }
+  });
+}

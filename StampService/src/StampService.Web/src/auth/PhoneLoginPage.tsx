@@ -3,14 +3,15 @@ import { CheckCircle2, LogIn, MessageSquareText, ShieldCheck } from 'lucide-reac
 import { ApiRequestError } from '../api/apiClient';
 import { useAuth } from './AuthContext';
 import { requestPhoneAuthCode, verifyPhoneAuthCode } from './authApi';
-import { normalizePhoneNumber } from '../validation/phoneNumber';
+import { formatRuPhoneInput, isRuPhoneInputComplete, normalizePhoneNumber } from '../validation/phoneNumber';
+import { formatRuTime } from '../format/dateTime';
 
 type LoginStep = 'phone' | 'code';
 
 export function PhoneLoginPage() {
   const { signIn } = useAuth();
   const [step, setStep] = useState<LoginStep>('phone');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(formatRuPhoneInput(''));
   const [code, setCode] = useState('');
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [status, setStatus] = useState<string>('');
@@ -22,11 +23,7 @@ export function PhoneLoginPage() {
       return null;
     }
 
-    return new Intl.DateTimeFormat('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }).format(new Date(expiresAt));
+    return formatRuTime(expiresAt);
   }, [expiresAt]);
 
   async function handleRequestCode(event: FormEvent<HTMLFormElement>) {
@@ -43,7 +40,7 @@ export function PhoneLoginPage() {
       }
 
       const response = await requestPhoneAuthCode(normalizedPhone.value);
-      setPhoneNumber(normalizedPhone.value);
+      setPhoneNumber(formatRuPhoneInput(normalizedPhone.value));
       setExpiresAt(response.expiresAt);
       setStep('code');
       setStatus('Код подтверждения отправлен.');
@@ -98,13 +95,13 @@ export function PhoneLoginPage() {
               type="tel"
               inputMode="tel"
               autoComplete="tel"
-              placeholder="+7 999 123-45-67"
+              placeholder="+7 (999) 123-45-67"
               value={phoneNumber}
-              onChange={(event) => setPhoneNumber(event.target.value)}
+              onChange={(event) => setPhoneNumber(formatRuPhoneInput(event.target.value))}
               required
             />
 
-            <button type="submit" disabled={isSubmitting || !phoneNumber.trim()}>
+            <button type="submit" disabled={isSubmitting || !isRuPhoneInputComplete(phoneNumber)}>
               <MessageSquareText size={18} />
               Получить код
             </button>
@@ -143,6 +140,7 @@ export function PhoneLoginPage() {
                 disabled={isSubmitting}
                 onClick={() => {
                   setStep('phone');
+                  setPhoneNumber(formatRuPhoneInput(phoneNumber));
                   setCode('');
                   setStatus('');
                   setError('');
@@ -164,7 +162,7 @@ export function PhoneLoginPage() {
 function getUserMessage(error: unknown): string {
   if (error instanceof ApiRequestError) {
     if (error.errors.some((item) => item.code === 'auth.phone_invalid')) {
-      return 'Введите телефон в международном формате, например +7 999 123-45-67.';
+      return 'Введите телефон в формате +7 (999) 123-45-67.';
     }
 
     if (error.errors.some((item) => item.code === 'auth.phone_code_invalid')) {

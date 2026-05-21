@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using StampService.Application.Abstractions;
+using StampService.Application.Auth;
 using StampService.Application.Coins.Commands.IssueCoins;
 using StampService.Application.Coins.Commands.RedeemCoins;
 using StampService.Application.Coins.Queries.GetCoinHistory;
@@ -18,7 +19,6 @@ using TelegramBotFlow.Core.Hosting;
 using TelegramBotFlow.Core.Routing;
 using TelegramBotFlow.Core.Screens;
 using DomainRedemptionCode = StampService.Domain.User.RedemptionCode;
-using UserEntity = StampService.Domain.User.User;
 
 namespace StampService.TelegramBot.Features.Coins.Endpoints;
 
@@ -28,7 +28,7 @@ public sealed class CoinEndpoint : IBotEndpoint
     {
         app.MapAction<StartIssueCoinsAction>(StartIssueAsync);
         app.MapAction<StartRedeemCoinsAction>(StartRedeemAsync);
-        app.MapInput<EnterCoinCustomerCodeAction>(EnterCustomerCodeAsync);
+        app.MapInput<EnterCoinCustomerPhoneAction>(EnterCustomerPhoneAsync);
         app.MapInput<EnterCoinRedemptionCodeAction>(EnterRedemptionCodeAsync);
         app.MapInput<EnterCoinAmountAction>(EnterAmountAsync);
         app.MapInput<EnterCoinCommentAction>(EnterCommentAsync);
@@ -41,7 +41,7 @@ public sealed class CoinEndpoint : IBotEndpoint
     private static Task<IEndpointResult> StartIssueAsync(UpdateContext ctx)
     {
         ClearOperation(ctx);
-        return Task.FromResult(BotResults.NavigateTo<CoinCustomerCodeScreen>());
+        return Task.FromResult(BotResults.NavigateTo<CoinCustomerPhoneScreen>());
     }
 
     private static Task<IEndpointResult> StartRedeemAsync(UpdateContext ctx)
@@ -50,13 +50,16 @@ public sealed class CoinEndpoint : IBotEndpoint
         return Task.FromResult(BotResults.NavigateTo<CoinRedemptionCodeScreen>());
     }
 
-    private static async Task<IEndpointResult> EnterCustomerCodeAsync(UpdateContext ctx)
+    private static async Task<IEndpointResult> EnterCustomerPhoneAsync(UpdateContext ctx)
     {
-        var customerCode = ctx.MessageText?.Trim() ?? string.Empty;
-        if (!UserEntity.IsValidCustomerCode(customerCode))
-            return await Retry<CoinCustomerCodeScreen, EnterCoinCustomerCodeAction>("Код пользователя должен состоять из 4 цифр.");
+        var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(
+            ctx.MessageText ?? string.Empty,
+            "phoneNumber");
 
-        ctx.Session?.Data.Set(CoinSessionKeys.CustomerCode, customerCode);
+        if (phoneNumberResult.IsFailed)
+            return await Retry<CoinCustomerPhoneScreen, EnterCoinCustomerPhoneAction>("Введите телефон клиента в международном формате, например +7 999 123-45-67.");
+
+        ctx.Session?.Data.Set(CoinSessionKeys.CustomerPhoneNumber, phoneNumberResult.Value);
         return BotInputResults.DeleteInputThen(BotResults.NavigateTo<CoinAmountScreen>());
     }
 
@@ -97,15 +100,17 @@ public sealed class CoinEndpoint : IBotEndpoint
     private static async Task<IEndpointResult> ConfirmIssueAsync(
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        ICommandHandler<CoinOperationResponse, IssueCoinsCommand> issueHandler,
+        ICommandHandler<CoinOperationResponse, IssueCoinsByPhoneCommand> issueHandler,
         ICustomerNotificationService customerNotificationService)
     {
         var brandId = GetBrandId(ctx);
-        var customerCode = ctx.Session?.Data.GetString(CoinSessionKeys.CustomerCode) ?? string.Empty;
+        var customerPhoneNumber = ctx.Session?.Data.GetString(CoinSessionKeys.CustomerPhoneNumber) ?? string.Empty;
         var amount = ctx.Session?.Data.Get<int>(CoinSessionKeys.Amount) ?? 0;
         const string comment = "Issue coins";
 
-        if (brandId == Guid.Empty || !UserEntity.IsValidCustomerCode(customerCode) || amount <= 0)
+        if (brandId == Guid.Empty
+            || !PhoneNumberNormalizer.NormalizeForAuth(customerPhoneNumber).IsSuccess
+            || amount <= 0)
             return BotResults.ShowView(new ScreenView("Сценарий начисления монеток устарел. Начните заново.").BackButton());
 
         var actorUserId = await GetActorUserIdAsync(ctx, ensureUserHandler);
@@ -113,7 +118,10 @@ public sealed class CoinEndpoint : IBotEndpoint
             return BotResults.ShowView(new ScreenView("Не удалось определить пользователя.").BackButton());
 
         var result = await issueHandler.Handle(
-            new IssueCoinsCommand(brandId, actorUserId.Value, customerCode, amount, comment),
+            new IssueCoinsByPhoneCommand(
+                brandId,
+                actorUserId.Value,
+                new IssueCoinsByPhoneRequest(customerPhoneNumber, amount, comment)),
             ctx.CancellationToken);
 
         if (result.IsFailed)
@@ -222,7 +230,7 @@ public sealed class CoinEndpoint : IBotEndpoint
     {
         return new ScreenView(
             $"<b>{title}</b>\n\n" +
-            $"Клиент: {Html(response.UserName)} · <code>{Html(response.CustomerCode)}</code>\n" +
+            $"Клиент: {Html(response.UserName)}\n" +
             $"Количество: {response.Amount}\n" +
             $"Баланс: {response.BalanceValue}")
             .NavigateButton<ClientWorkScreen>("К работе с клиентами");
@@ -252,6 +260,7 @@ public sealed class CoinEndpoint : IBotEndpoint
     private static void ClearOperation(UpdateContext ctx)
     {
         ctx.Session?.Data.Remove(CoinSessionKeys.CustomerCode);
+        ctx.Session?.Data.Remove(CoinSessionKeys.CustomerPhoneNumber);
         ctx.Session?.Data.Remove(CoinSessionKeys.RedemptionCode);
         ctx.Session?.Data.Remove(CoinSessionKeys.Amount);
         ctx.Session?.Data.Remove(CoinSessionKeys.Comment);
