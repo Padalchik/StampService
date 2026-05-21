@@ -1,6 +1,6 @@
 # StampService Web UI: рабочие договорённости
 
-Актуально на 2026-05-20, Europe/Moscow.
+Актуально на 2026-05-21, Europe/Moscow.
 
 Этот файл фиксирует договорённости по разработке полноценного web-интерфейса StampService, чтобы не переобсуждать базовые решения в новых задачах.
 
@@ -27,7 +27,7 @@
 Авторизация должна следовать существующим правилам приложения:
 
 - вход по телефону через OTP;
-- первичная регистрация/авторизация пользователя происходит только по подтвержденному телефону;
+- первичный вход/авторизация пользователя происходит только через OTP по телефону; сам аккаунт также может быть заранее создан бизнес-сценарием начисления по телефону;
 - активный пользовательский аккаунт должен иметь активную `Phone` identity;
 - OTP создаётся существующими Application-сценариями;
 - доставка кода идёт через текущую реализацию `IPhoneAuthCodeSender`;
@@ -147,7 +147,9 @@ Web UI должен быть полноценным frontend-проектом н
 
 Telegram parity не означает буквальное совпадение подписей кнопок. UI-copy может отличаться по каналу: Telegram может использовать emoji, web - нет. При этом внутри каждого UI названия должны быть централизованы локально.
 
-Для клиентских операций начисления web и Telegram следуют одной продуктовой модели: метрики и монетки начисляются по номеру телефона клиента, который резолвится через активную `Phone` identity. 4-значный `CustomerCode` не должен быть основным вводом в новых UI-сценариях начисления; он остается совместимостью/legacy и может временно использоваться внутри старых Application-сценариев.
+Для клиентских операций начисления web и Telegram следуют одной продуктовой модели: метрики и монетки начисляются по номеру телефона клиента. Если клиент с такой активной `Phone` identity уже есть, начисление идет существующему `User`; если клиента еще нет, Application создает полноценного `User` с `Phone` identity и сразу проводит начисление через ledger. 4-значный `CustomerCode` не должен быть основным вводом в новых UI-сценариях начисления; он остается совместимостью/legacy для старых сценариев.
+
+Важная граница: решение “найти или создать клиента по телефону” живет в Application use cases (`IssueMetricByPhoneCommand`, `IssueCoinsByPhoneCommand`), а не в React, API controller или Telegram endpoint. UI-слои только собирают телефон, количество и комментарий, затем вызывают общий сценарий. Это нужно, чтобы web и Telegram не расходились в поведении.
 
 Списание остается отдельной моделью: метрики, ручное списание монеток и выдача товаров за монетки выполняются по одноразовому коду списания клиента, а не по телефону.
 
@@ -182,9 +184,9 @@ Telegram parity не означает буквальное совпадение 
 - ручное списание монеток по одноразовому коду списания;
 - выдача товара за монетки по одноразовому коду списания.
 
-Важное отличие web от Telegram: Telegram flow хранит промежуточное состояние в bot session, а web делает обычные HTTP-запросы из React state. Поэтому для web добавлены endpoints, которые принимают web-friendly входные данные. Например, выдача метрики принимает номер телефона клиента, резолвит его на backend через активную `Phone` identity в `IRecipientResolver` и только потом вызывает `IssueMetricCommand`. Web не должен принимать или показывать внутренний `UserId` клиента.
+Важное отличие web от Telegram: Telegram flow хранит промежуточное состояние в bot session, а web делает обычные HTTP-запросы из React state. Поэтому для web добавлены endpoints, которые принимают web-friendly входные данные. Например, выдача метрики принимает номер телефона клиента и передает его в `IssueMetricByPhoneCommand`; Application сам нормализует телефон, находит или создает клиента и проводит начисление. Web не должен принимать или показывать внутренний `UserId` клиента.
 
-Для web-форм начисления телефонная маска используется как UX-помощник, а не как источник бизнес-правил. Frontend отправляет нормализованный телефонный номер в thin endpoint, backend повторно валидирует и резолвит клиента.
+Для web-форм начисления телефонная маска используется как UX-помощник, а не как источник бизнес-правил. Frontend отправляет нормализованный телефонный номер в thin endpoint, backend/Application повторно валидирует номер и выполняет общий issue-by-phone flow.
 
 Ключевые API endpoints:
 
@@ -192,9 +194,9 @@ Telegram parity не означает буквальное совпадение 
 - `GET /api/brands/{brandId}/workspace`;
 - `GET /api/brands/{brandId}/metrics/issue-options`;
 - `GET /api/brands/{brandId}/metrics/redeem-options?redemptionCode=...`;
-- `POST /api/metrics/{metricDefinitionId}/issue-by-phone`;
+- `POST /api/metrics/{metricDefinitionId}/issue-by-phone` - web-friendly thin endpoint поверх `IssueMetricByPhoneCommand`;
 - `POST /api/metrics/{metricDefinitionId}/redeem`;
-- `POST /api/brands/{brandId}/coins/issue-by-phone`;
+- `POST /api/brands/{brandId}/coins/issue-by-phone` - web-friendly thin endpoint поверх `IssueCoinsByPhoneCommand`;
 - `POST /api/brands/{brandId}/coins/redeem`;
 - `GET /api/brands/{brandId}/coin-products/purchase-options?redemptionCode=...`;
 - `POST /api/brands/{brandId}/coin-products/{productId}/purchase`.
