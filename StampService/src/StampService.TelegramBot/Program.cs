@@ -53,9 +53,12 @@ try
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("Admin"));
+    builder.Services.Configure<BotStartupNotificationOptions>(
+        builder.Configuration.GetSection(BotStartupNotificationOptions.SectionName));
     builder.Services.Configure<RewardDigestOptions>(builder.Configuration.GetSection(RewardDigestOptions.SectionName));
     builder.Services.AddScoped<ICustomerNotificationService, CustomerNotificationService>();
     builder.Services.AddScoped<CustomerRewardDigestSender>();
+    builder.Services.AddHostedService<BotStartupNotificationHostedService>();
     builder.Services.AddHostedService<CustomerRewardDigestHostedService>();
     builder.Services.AddBotEndpoints(typeof(Program).Assembly);
     builder.Services.AddScreens(typeof(Program).Assembly);

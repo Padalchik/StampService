@@ -280,3 +280,52 @@ Outbox сейчас не вводился. Текущая модель - direct 
 5. Для identity помнить: `User.Id` - владелец данных, `Phone` identity обязательна для активного пользовательского аккаунта, остальные `UserIdentity` - дополнительные способы входа/связи.
 6. Для любых изменений identity помнить: обычные сценарии только добавляют отсутствующую identity или отказывают при конфликте; перенос/замена identity допустимы только как отдельный согласованный flow.
 7. В финальном ответе кратко указать изменения и явно сказать, какие проверки запускались.
+
+## Логирование и диагностика
+
+В проект подключены Serilog и Seq для структурированного логирования и диагностики проблем без попыток чинить поведение "наугад".
+
+Архитектурное решение:
+
+- Serilog подключается на уровне host-проектов `src/StampService.API` и `src/StampService.TelegramBot`, а не в `Infrastructure`.
+- `Application` и `Infrastructure` используют стандартный `ILogger<T>` и не знают, куда физически пишутся логи.
+- Host-проекты решают, какие sinks включены, как называется приложение в логах и какие lifecycle/request/update события логируются.
+- Seq поднят как инфраструктурный сервис в `compose.yaml`.
+
+Текущая конфигурация:
+
+- `src/StampService.API/Program.cs` - bootstrap logger, Serilog provider, HTTP request logging, fatal startup/shutdown logging.
+- `src/StampService.TelegramBot/Program.cs` - bootstrap logger, Serilog provider, logging для webhost части TelegramBot.
+- `src/StampService.API/appsettings*.json` и `src/StampService.TelegramBot/appsettings*.json` - уровни логирования, sinks Console/Seq, свойство `Application`.
+- `compose.yaml` - сервис `seq`, UI доступен локально на `http://localhost:5441`; first-run admin password сейчас `secure`.
+
+В Seq логи разделяются по свойству `Application`: `StampService.API` и `StampService.TelegramBot`.
+
+Что уже логируется:
+
+- старт/остановка host-процессов;
+- fatal-ошибки запуска;
+- HTTP request logs API;
+- ошибки из `ExceptionHandlingMiddleware`;
+- существующие события `ILogger<T>` в Application/TelegramBot;
+- EF Core SQL-команды в Development по настроенным уровням;
+- TelegramBotFlow pipeline logs.
+
+Что важно для следующих задач:
+
+- Не логировать JWT, bot token, OTP, raw auth payloads и чувствительные персональные данные.
+- Для бизнес-диагностики постепенно добавлять структурированные события в ключевые Application use cases: OTP, phone/Telegram linking, wallet open, issue/redeem metrics, issue/redeem coins, purchase coin product.
+- В логах предпочитать стабильные идентификаторы и контекст операции: `UserId`, `BrandId`, `MetricDefinitionId`, `ProductId`, `TraceId`, результат операции и доменную причину отказа.
+
+## Startup-уведомления TelegramBot
+
+В `src/StampService.TelegramBot` добавлен `BotStartupNotificationHostedService`.
+
+Назначение: после фактического старта TelegramBot отправить администраторам из `Admin:TelegramUserIds` два сообщения:
+
+- ссылка на web UI;
+- ссылка на Seq.
+
+Настройки находятся в `StartupNotifications` в `src/StampService.TelegramBot/appsettings.json` и `appsettings.Development.json`: `Enabled`, `WebInterfaceUrl`, `SeqUrl`.
+
+Это host-level диагностическая удобность для локального стенда. Она не должна попадать в Domain/Application и не должна использоваться как бизнес-уведомление пользователям.
