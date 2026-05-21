@@ -1,7 +1,6 @@
 using StampService.Application.Abstractions;
 using StampService.Application.Auth;
 using StampService.Application.Metrics.Commands.IssueMetric;
-using StampService.Application.Users;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.TelegramBot.Common.Errors;
@@ -39,9 +38,7 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         return Task.FromResult(BotResults.NavigateTo<IssueMetricRecipientScreen>());
     }
 
-    private static async Task<IEndpointResult> EnterRecipientAsync(
-        UpdateContext ctx,
-        IRecipientResolver recipientResolver)
+    private static async Task<IEndpointResult> EnterRecipientAsync(UpdateContext ctx)
     {
         var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(
             ctx.MessageText ?? string.Empty,
@@ -50,14 +47,6 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         if (phoneNumberResult.IsFailed)
             return await RetryRecipientInputAsync("Введите телефон клиента в международном формате, например +7 999 123-45-67.");
 
-        var recipientResult = await recipientResolver.ResolveByPhoneAsync(
-            phoneNumberResult.Value,
-            ctx.CancellationToken);
-
-        if (recipientResult.IsFailed)
-            return await RetryRecipientInputAsync("Клиент с таким телефоном не найден. Проверьте номер и попробуйте еще раз.");
-
-        ctx.Session?.Data.Set(IssueMetricSessionKeys.RecipientUserId, recipientResult.Value.UserId);
         ctx.Session?.Data.Set(IssueMetricSessionKeys.RecipientPhoneNumber, phoneNumberResult.Value);
 
         return BotInputResults.DeleteInputThen(BotResults.NavigateTo<IssueMetricAmountScreen>());
@@ -81,16 +70,16 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
     private static async Task<IEndpointResult> ConfirmAsync(
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        ICommandHandler<IssueMetricResponse, IssueMetricCommand> issueMetricHandler,
+        ICommandHandler<IssueMetricResponse, IssueMetricByPhoneCommand> issueMetricHandler,
         ICustomerNotificationService customerNotificationService)
     {
         var metricDefinitionId = ctx.Session?.Data.Get<Guid>(IssueMetricSessionKeys.MetricDefinitionId) ?? Guid.Empty;
-        var recipientUserId = ctx.Session?.Data.Get<Guid>(IssueMetricSessionKeys.RecipientUserId) ?? Guid.Empty;
+        var recipientPhoneNumber = ctx.Session?.Data.GetString(IssueMetricSessionKeys.RecipientPhoneNumber) ?? string.Empty;
         var amount = ctx.Session?.Data.Get<int>(IssueMetricSessionKeys.Amount) ?? 0;
         const string comment = "Issue metric";
 
         if (metricDefinitionId == Guid.Empty
-            || recipientUserId == Guid.Empty
+            || !PhoneNumberNormalizer.NormalizeForAuth(recipientPhoneNumber).IsSuccess
             || amount <= 0)
         {
             return BotResults.ShowView(new ScreenView("Сценарий выдачи устарел. Начните заново.").BackButton());
@@ -106,11 +95,11 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
         }
 
         var issueResult = await issueMetricHandler.Handle(
-            new IssueMetricCommand(
+            new IssueMetricByPhoneCommand(
                 metricDefinitionId,
                 issuerResult.Value.UserId,
-                new IssueMetricRequest(
-                    recipientUserId,
+                new IssueMetricByPhoneRequest(
+                    recipientPhoneNumber,
                     amount,
                     comment)),
             ctx.CancellationToken);
@@ -153,7 +142,6 @@ public sealed class IssueMetricEndpoint : IBotEndpoint
     {
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.MetricDefinitionId);
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.MetricName);
-        ctx.Session?.Data.Remove(IssueMetricSessionKeys.RecipientUserId);
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.RecipientPhoneNumber);
         ctx.Session?.Data.Remove(IssueMetricSessionKeys.Amount);
     }

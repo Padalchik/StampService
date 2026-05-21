@@ -170,28 +170,17 @@ public class MetricsController : ApiControllerBase
     public async Task<EndpointResult<IssueMetricResponse>> IssueByPhone(
         Guid metricDefinitionId,
         IssueMetricByPhoneRequest request,
-        [FromServices] IRecipientResolver recipientResolver,
-        [FromServices] ICommandHandler<IssueMetricResponse, IssueMetricCommand> handler,
+        [FromServices] ICommandHandler<IssueMetricResponse, IssueMetricByPhoneCommand> handler,
         CancellationToken cancellationToken)
     {
         var userIdResult = GetUserId();
         if (userIdResult.IsFailed)
             return userIdResult.ToResult<IssueMetricResponse>();
 
-        var recipientResult = await recipientResolver.ResolveByPhoneAsync(
-            request.PhoneNumber,
-            cancellationToken);
-
-        if (recipientResult.IsFailed)
-            return Result.Fail<IssueMetricResponse>(recipientResult.Errors);
-
-        var command = new IssueMetricCommand(
+        var command = new IssueMetricByPhoneCommand(
             metricDefinitionId,
             userIdResult.Value,
-            new IssueMetricRequest(
-                recipientResult.Value.UserId,
-                request.Amount,
-                string.IsNullOrWhiteSpace(request.Comment) ? "Issue metric" : request.Comment.Trim()));
+            request);
 
         return await handler.Handle(command, cancellationToken);
     }
