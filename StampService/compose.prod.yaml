@@ -24,7 +24,7 @@ services:
     environment:
       ACCEPT_EULA: "Y"
     ports:
-      - "127.0.0.1:${SEQ_HTTP_PORT:-5441}:80"
+      - "${SEQ_HTTP_PORT:-5441}:80"
     volumes:
       - seq-data:/data
 
