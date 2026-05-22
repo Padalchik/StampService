@@ -2,7 +2,7 @@ name: stampservice-prod
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres
     container_name: stampservice-prod-postgres
     restart: unless-stopped
     env_file:
