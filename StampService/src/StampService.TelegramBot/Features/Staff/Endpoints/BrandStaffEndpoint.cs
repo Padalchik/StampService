@@ -1,6 +1,7 @@
 using System.Net;
 using StampService.Application.Abstractions;
-using StampService.Application.Brands.Commands.AddBrandStaffByCustomerCode;
+using StampService.Application.Auth;
+using StampService.Application.Brands.Commands.AddBrandStaffByPhone;
 using StampService.Application.Brands.Commands.RemoveBrandStaff;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Brands;
@@ -13,7 +14,6 @@ using TelegramBotFlow.Core.Endpoints;
 using TelegramBotFlow.Core.Hosting;
 using TelegramBotFlow.Core.Routing;
 using TelegramBotFlow.Core.Screens;
-using UserEntity = StampService.Domain.User.User;
 
 namespace StampService.TelegramBot.Features.Staff.Endpoints;
 
@@ -23,7 +23,7 @@ public sealed class BrandStaffEndpoint : IBotEndpoint
     {
         app.MapAction<OpenBrandStaffAction, OpenBrandStaffPayload>(OpenBrandStaffAsync);
         app.MapAction<StartAddStaffAction>(StartAddStaffAsync);
-        app.MapInput<EnterAddStaffCustomerCodeAction>(EnterAddStaffCustomerCodeAsync);
+        app.MapInput<EnterAddStaffPhoneAction>(EnterAddStaffPhoneAsync);
         app.MapAction<ConfirmAddStaffAction>(ConfirmAddStaffAsync);
         app.MapAction<CancelAddStaffAction>(CancelAddStaffAsync);
         app.MapAction<OpenStaffDetailsAction, OpenStaffDetailsPayload>(OpenStaffDetailsAsync);
@@ -39,41 +39,41 @@ public sealed class BrandStaffEndpoint : IBotEndpoint
         ctx.Session?.Data.Set(StaffSessionKeys.BrandId, payload.BrandId);
         ctx.Session?.Data.Set(StaffSessionKeys.BrandName, payload.BrandName);
         ClearSelectedStaff(ctx);
-        ctx.Session?.Data.Remove(StaffSessionKeys.AddCustomerCode);
+        ctx.Session?.Data.Remove(StaffSessionKeys.AddPhoneNumber);
 
         return Task.FromResult(BotResults.NavigateTo<BrandStaffListScreen>());
     }
 
     private static Task<IEndpointResult> StartAddStaffAsync(UpdateContext ctx)
     {
-        ctx.Session?.Data.Remove(StaffSessionKeys.AddCustomerCode);
-        return Task.FromResult(BotResults.NavigateTo<AddStaffCustomerCodeScreen>());
+        ctx.Session?.Data.Remove(StaffSessionKeys.AddPhoneNumber);
+        return Task.FromResult(BotResults.NavigateTo<AddStaffPhoneScreen>());
     }
 
-    private static Task<IEndpointResult> EnterAddStaffCustomerCodeAsync(UpdateContext ctx)
+    private static Task<IEndpointResult> EnterAddStaffPhoneAsync(UpdateContext ctx)
     {
-        var customerCode = ctx.MessageText?.Trim() ?? string.Empty;
-        if (!UserEntity.IsValidCustomerCode(customerCode))
+        var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(ctx.MessageText, "PhoneNumber");
+        if (phoneNumberResult.IsFailed)
         {
             return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                "Код пользователя должен состоять из 4 цифр.")
-                .AwaitInput<EnterAddStaffCustomerCodeAction>()
+                "Введите корректный номер телефона.")
+                .AwaitInput<EnterAddStaffPhoneAction>()
                 .BackButton())));
         }
 
-        ctx.Session?.Data.Set(StaffSessionKeys.AddCustomerCode, customerCode);
+        ctx.Session?.Data.Set(StaffSessionKeys.AddPhoneNumber, phoneNumberResult.Value);
         return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<AddStaffConfirmScreen>()));
     }
 
     private static async Task<IEndpointResult> ConfirmAddStaffAsync(
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        ICommandHandler<AddBrandStaffByCustomerCodeResponse, AddBrandStaffByCustomerCodeCommand> addStaffHandler)
+        ICommandHandler<AddBrandStaffByPhoneResponse, AddBrandStaffByPhoneCommand> addStaffHandler)
     {
         var brandId = StaffBrandContext.GetBrandId(ctx);
-        var customerCode = ctx.Session?.Data.GetString(StaffSessionKeys.AddCustomerCode) ?? string.Empty;
+        var phoneNumber = ctx.Session?.Data.GetString(StaffSessionKeys.AddPhoneNumber) ?? string.Empty;
 
-        if (brandId == Guid.Empty || !UserEntity.IsValidCustomerCode(customerCode))
+        if (brandId == Guid.Empty || PhoneNumberNormalizer.NormalizeForAuth(phoneNumber).IsFailed)
             return BotResults.ShowView(new ScreenView("Сценарий добавления сотрудника устарел. Начните заново.").BackButton());
 
         var actorUserId = await GetActorUserIdAsync(ctx, ensureUserHandler);
@@ -81,25 +81,25 @@ public sealed class BrandStaffEndpoint : IBotEndpoint
             return BotResults.ShowView(new ScreenView("Не удалось определить пользователя.").BackButton());
 
         var result = await addStaffHandler.Handle(
-            new AddBrandStaffByCustomerCodeCommand(actorUserId.Value, brandId, customerCode),
+            new AddBrandStaffByPhoneCommand(actorUserId.Value, brandId, phoneNumber),
             ctx.CancellationToken);
 
         if (result.IsFailed)
             return BotResults.ShowView(new ScreenView($"Не удалось добавить сотрудника: {BotErrorFormatter.Format(result.Errors)}").BackButton());
 
-        ctx.Session?.Data.Remove(StaffSessionKeys.AddCustomerCode);
+        ctx.Session?.Data.Remove(StaffSessionKeys.AddPhoneNumber);
         ClearSelectedStaff(ctx);
 
         return BotResults.ShowView(new ScreenView(
             "<b>Сотрудник добавлен</b>\n\n" +
-            $"{Html(result.Value.UserName)} · <code>{Html(result.Value.CustomerCode)}</code>")
+            $"{Html(result.Value.UserName)} · <code>{Html(result.Value.PhoneNumber)}</code>")
             .NavigateButton<BrandStaffListScreen>("К сотрудникам")
             .BackButton());
     }
 
     private static Task<IEndpointResult> CancelAddStaffAsync(UpdateContext ctx)
     {
-        ctx.Session?.Data.Remove(StaffSessionKeys.AddCustomerCode);
+        ctx.Session?.Data.Remove(StaffSessionKeys.AddPhoneNumber);
         return Task.FromResult(BotResults.NavigateTo<BrandStaffListScreen>());
     }
 
@@ -109,7 +109,7 @@ public sealed class BrandStaffEndpoint : IBotEndpoint
     {
         ctx.Session?.Data.Set(StaffSessionKeys.SelectedStaffUserId, payload.UserId);
         ctx.Session?.Data.Set(StaffSessionKeys.SelectedStaffName, payload.UserName);
-        ctx.Session?.Data.Set(StaffSessionKeys.SelectedStaffCustomerCode, payload.CustomerCode);
+        SetOrRemove(ctx, StaffSessionKeys.SelectedStaffPhoneNumber, payload.PhoneNumber);
 
         return Task.FromResult(BotResults.NavigateTo<StaffDetailsScreen>());
     }
@@ -145,12 +145,12 @@ public sealed class BrandStaffEndpoint : IBotEndpoint
         if (result.IsFailed)
             return BotResults.ShowView(new ScreenView($"Не удалось удалить сотрудника: {BotErrorFormatter.Format(result.Errors)}").BackButton());
 
-        ctx.Session?.Data.Remove(StaffSessionKeys.AddCustomerCode);
+        ctx.Session?.Data.Remove(StaffSessionKeys.AddPhoneNumber);
         ClearSelectedStaff(ctx);
 
         return BotResults.ShowView(new ScreenView(
             "<b>Сотрудник удалён</b>\n\n" +
-            $"{Html(result.Value.UserName)} · <code>{Html(result.Value.CustomerCode)}</code>")
+            $"{Html(result.Value.UserName)} · <code>{Html(DisplayPhone(result.Value.PhoneNumber))}</code>")
             .NavigateButton<BrandStaffListScreen>("К сотрудникам")
             .BackButton());
     }
@@ -180,8 +180,18 @@ public sealed class BrandStaffEndpoint : IBotEndpoint
     {
         ctx.Session?.Data.Remove(StaffSessionKeys.SelectedStaffUserId);
         ctx.Session?.Data.Remove(StaffSessionKeys.SelectedStaffName);
-        ctx.Session?.Data.Remove(StaffSessionKeys.SelectedStaffCustomerCode);
+        ctx.Session?.Data.Remove(StaffSessionKeys.SelectedStaffPhoneNumber);
     }
+
+    private static void SetOrRemove(UpdateContext ctx, string key, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            ctx.Session?.Data.Remove(key);
+        else
+            ctx.Session?.Data.Set(key, value);
+    }
+
+    private static string DisplayPhone(string? phoneNumber) => string.IsNullOrWhiteSpace(phoneNumber) ? "-" : phoneNumber;
 
     private static string Html(string value) => WebUtility.HtmlEncode(value);
 }

@@ -1,5 +1,5 @@
 using StampService.Application.Access;
-using StampService.Application.Brands.Commands.AddBrandStaffByCustomerCode;
+using StampService.Application.Brands.Commands.AddBrandStaffByPhone;
 using StampService.Application.Brands.Commands.RemoveBrandStaff;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.Access;
@@ -10,11 +10,13 @@ namespace StampService.ApplicationTests.Brands;
 public class BrandStaffHandlerTests
 {
     [Fact]
-    public async Task AddStaffByCustomerCode_WhenActorIsOwner_ShouldCreateStaffMembership()
+    public async Task AddStaffByPhone_WhenActorIsOwner_ShouldCreateStaffMembership()
     {
         var brandId = Guid.NewGuid();
         var owner = User.Create("Owner", "1111").Value;
         var staff = User.Create("Staff", "1234").Value;
+        var staffPhoneNumber = "+79991234567";
+        staff.AddIdentity(IdentityType.Phone, staffPhoneNumber, "{}");
         var userRepository = new FakeUserRepository();
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
@@ -23,13 +25,13 @@ public class BrandStaffHandlerTests
         brandRepository.AddExisting(brandId);
         membershipRepository.SetRole(owner.Id, brandId, SystemRoles.Owner);
 
-        var handler = new AddBrandStaffByCustomerCodeHandler(
+        var handler = new AddBrandStaffByPhoneHandler(
             new BrandAccessService(membershipRepository),
             new BrandMembershipService(brandRepository, membershipRepository, userRepository),
             userRepository);
 
         var result = await handler.Handle(
-            new AddBrandStaffByCustomerCodeCommand(owner.Id, brandId, staff.CustomerCode),
+            new AddBrandStaffByPhoneCommand(owner.Id, brandId, staffPhoneNumber),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);

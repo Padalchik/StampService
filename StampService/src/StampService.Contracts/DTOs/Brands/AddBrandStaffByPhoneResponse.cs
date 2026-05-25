@@ -1,9 +1,9 @@
 namespace StampService.Contracts.DTOs.Brands;
 
-public record AddBrandStaffByCustomerCodeResponse(
+public record AddBrandStaffByPhoneResponse(
     Guid BrandId,
     Guid UserId,
     string UserName,
-    string CustomerCode,
+    string PhoneNumber,
     Guid MembershipId,
     DateTime MembershipCreatedAt);

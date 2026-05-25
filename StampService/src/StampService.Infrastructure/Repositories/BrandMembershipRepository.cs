@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using StampService.Application.Access;
 using StampService.Application.Brands;
 using StampService.Domain.Access;
+using StampService.Domain.User;
 
 namespace StampService.Infrastructure.Repositories;
 
@@ -59,11 +60,17 @@ public class BrandMembershipRepository : IBrandMembershipRepository
             .Where(membership => membership.BrandId == brandId
                 && membership.Role.SystemName == SystemRoles.Staff)
             .OrderBy(membership => membership.User.Name)
-            .ThenBy(membership => membership.User.CustomerCode)
+            .ThenBy(membership => membership.User.Identities
+                .Where(identity => identity.Type == IdentityType.Phone)
+                .Select(identity => identity.Key)
+                .FirstOrDefault())
             .Select(membership => new BrandStaffReadModel(
                 membership.UserId,
                 membership.User.Name,
-                membership.User.CustomerCode,
+                membership.User.Identities
+                    .Where(identity => identity.Type == IdentityType.Phone)
+                    .Select(identity => identity.Key)
+                    .FirstOrDefault(),
                 membership.CreatedAt))
             .ToArrayAsync(cancellationToken);
     }

@@ -10,11 +10,11 @@ public sealed class RemoveStaffConfirmScreen : IScreen
     public ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
     {
         var name = ctx.Session?.Data.GetString(StaffSessionKeys.SelectedStaffName) ?? "сотрудник";
-        var customerCode = ctx.Session?.Data.GetString(StaffSessionKeys.SelectedStaffCustomerCode) ?? "-";
+        var phoneNumber = ctx.Session?.Data.GetString(StaffSessionKeys.SelectedStaffPhoneNumber) ?? "-";
 
         return ValueTask.FromResult(new ScreenView(
             "<b>Удалить сотрудника?</b>\n\n" +
-            $"{Html(name)} · <code>{Html(customerCode)}</code>\n\n" +
+            $"{Html(name)} · <code>{Html(phoneNumber)}</code>\n\n" +
             "Пользователь потеряет доступ к этому бренду как сотрудник.")
             .Button<ConfirmRemoveStaffAction>("✅ Подтвердить")
             .Row()

@@ -9,12 +9,12 @@ public sealed class AddStaffConfirmScreen : IScreen
 {
     public ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
     {
-        var customerCode = ctx.Session?.Data.GetString(StaffSessionKeys.AddCustomerCode) ?? "-";
+        var phoneNumber = ctx.Session?.Data.GetString(StaffSessionKeys.AddPhoneNumber) ?? "-";
 
         return ValueTask.FromResult(new ScreenView(
             "<b>Добавить сотрудника?</b>\n\n" +
             $"Бренд: {Html(StaffBrandContext.GetBrandName(ctx))}\n" +
-            $"Код пользователя: <code>{Html(customerCode)}</code>\n" +
+            $"Телефон: <code>{Html(phoneNumber)}</code>\n" +
             "Роль: Сотрудник")
             .Button<ConfirmAddStaffAction>("✅ Подтвердить")
             .Row()

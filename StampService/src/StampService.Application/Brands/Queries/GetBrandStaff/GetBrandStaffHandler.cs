@@ -48,7 +48,7 @@ public class GetBrandStaffHandler : IQueryHandler<IReadOnlyCollection<BrandStaff
             .Select(item => new BrandStaffResponse(
                 item.UserId,
                 item.UserName,
-                item.CustomerCode,
+                item.PhoneNumber,
                 item.MembershipCreatedAt))
             .ToArray();
 

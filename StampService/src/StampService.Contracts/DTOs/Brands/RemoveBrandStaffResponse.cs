@@ -4,4 +4,4 @@ public record RemoveBrandStaffResponse(
     Guid BrandId,
     Guid UserId,
     string UserName,
-    string CustomerCode);
+    string? PhoneNumber);
