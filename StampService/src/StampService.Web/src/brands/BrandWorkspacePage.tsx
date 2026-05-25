@@ -31,6 +31,7 @@ import {
   type RedeemMetricResponse
 } from './brandWorkspaceApi';
 import { formatRuPhoneInput, isRuPhoneInputComplete } from '../validation/phoneNumber';
+import { RuPhoneInput } from '../components/RuPhoneInput';
 
 type OperationResult =
   | { kind: 'metric'; title: string; response: IssueMetricResponse | RedeemMetricResponse }
@@ -282,11 +283,9 @@ function IssueMetricPanel({
         </label>
         <label>
           Телефон клиента
-          <input
+          <RuPhoneInput
             value={phoneNumber}
-            inputMode="tel"
-            placeholder="+7 (999) 123-45-67"
-            onChange={(event) => setPhoneNumber(formatRuPhoneInput(event.target.value))}
+            onValueChange={setPhoneNumber}
           />
         </label>
         <label>
@@ -441,11 +440,9 @@ function IssueCoinsPanel({ brandId }: { brandId: string }) {
       <div className="work-form">
         <label>
           Телефон клиента
-          <input
+          <RuPhoneInput
             value={phoneNumber}
-            inputMode="tel"
-            placeholder="+7 (999) 123-45-67"
-            onChange={(event) => setPhoneNumber(formatRuPhoneInput(event.target.value))}
+            onValueChange={setPhoneNumber}
           />
         </label>
         <label>

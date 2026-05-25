@@ -3,12 +3,31 @@ const maxDigitsLength = 15;
 const maxInputLength = 32;
 const countryCodeSevenDigitsLength = 11;
 
+export type RuPhoneInputFormatOptions = {
+  previousValue?: string;
+  inputType?: string | null;
+  selectionStart?: number | null;
+};
+
 export type PhoneNumberValidationResult =
   | { ok: true; value: string }
   | { ok: false; message: string };
 
-export function formatRuPhoneInput(input: string): string {
+export function formatRuPhoneInput(input: string, options: RuPhoneInputFormatOptions = {}): string {
   const localDigits = getRuLocalDigits(input);
+
+  if (isDeletionInput(options.inputType) && options.previousValue) {
+    const previousLocalDigits = getRuLocalDigits(options.previousValue);
+    if (previousLocalDigits.length > 0 && localDigits.length === previousLocalDigits.length) {
+      const digitIndex = getDeletedLocalDigitIndex(input, previousLocalDigits, options);
+      return formatRuLocalDigits(removeDigitAt(previousLocalDigits, digitIndex));
+    }
+  }
+
+  return formatRuLocalDigits(localDigits);
+}
+
+function formatRuLocalDigits(localDigits: string): string {
   const operator = localDigits.slice(0, 3);
   const firstPart = localDigits.slice(3, 6);
   const secondPart = localDigits.slice(6, 8);
@@ -118,6 +137,31 @@ function getRuLocalDigits(input: string): string {
   }
 
   return localDigits.slice(0, 10);
+}
+
+function isDeletionInput(inputType: string | null | undefined): boolean {
+  return typeof inputType === 'string' && inputType.startsWith('delete');
+}
+
+function getDeletedLocalDigitIndex(
+  input: string,
+  previousLocalDigits: string,
+  options: RuPhoneInputFormatOptions
+): number {
+  if (options.selectionStart === null || options.selectionStart === undefined) {
+    return previousLocalDigits.length - 1;
+  }
+
+  const localDigitsBeforeCursor = getRuLocalDigits(input.slice(0, options.selectionStart)).length;
+  if (options.inputType === 'deleteContentForward') {
+    return Math.min(localDigitsBeforeCursor, previousLocalDigits.length - 1);
+  }
+
+  return Math.max(localDigitsBeforeCursor - 1, 0);
+}
+
+function removeDigitAt(value: string, index: number): string {
+  return `${value.slice(0, index)}${value.slice(index + 1)}`;
 }
 
 function invalid(): PhoneNumberValidationResult {
