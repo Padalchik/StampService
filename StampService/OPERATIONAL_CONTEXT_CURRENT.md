@@ -95,6 +95,8 @@ Auto-create клиента по телефону применяется толь
 
 4-значный `CustomerCode` больше не используется в сценариях начисления метрик/монеток и в просмотре клиентских балансов. Старые HTTP/Application ветки начисления по `CustomerCode` удалены (`IssueCoinsCommand`, `IssueCoinsRequest`, `POST /api/brands/{brandId}/coins/issue`, `POST /api/metrics/{metricDefinitionId}/issue-by-customer-code`, `RecipientResolver`). Новые UI-сценарии не должны просить сотрудника вводить `CustomerCode`.
 
+Публичные DTO операций с монетками также не должны возвращать `CustomerCode`. `CoinOperationResponse` используется API, web brand workspace, Telegram coin flows, Telegram coin-product purchase flow и customer notifications как результат ledger-операции; он содержит технические ids операции/кошелька/пользователя, имя клиента, тип операции, сумму, баланс и дату, но не старый клиентский код. Если UI нужно показать внешний идентификатор клиента, использовать телефонную identity в сценариях начисления или одноразовый `RedemptionCode` в сценариях списания, а не `CustomerCode`.
+
 Ключевые Application use cases для нового flow: `IssueMetricByPhoneCommand` / `IssueMetricByPhoneHandler` и `IssueCoinsByPhoneCommand` / `IssueCoinsByPhoneHandler`. Web controllers и Telegram endpoints должны вызывать эти сценарии, а не делать предварительный resolve клиента по телефону в UI/API слое.
 
 Просмотр балансов и истории клиента сотрудником также использует телефон как внешний идентификатор, но без auto-create: Application нормализует номер, ищет существующего пользователя по активной `Phone` identity и возвращает отказ, если клиент не найден. Это касается `GetBrandCustomerMetricBalancesQuery`, `GetCoinBalanceQuery` и `GetCoinHistoryQuery`. Auto-create по телефону остается только для начислений.
@@ -141,7 +143,7 @@ Telegram bot - основной рабочий UI.
 - Если `User` уже создан через web-вход по телефону, Telegram phone-first onboarding должен после успешного OTP найти этот `User` по активной `Phone` identity и добавить к нему новую `Telegram` identity. Новая `UserIdentity` должна сохраняться как `Added`/`INSERT`, а не как `Modified`/`UPDATE`; иначе EF получает `DbUpdateConcurrencyException` по несуществующей строке и пользователь видит ложную ошибку OTP.
 - Если Telegram id уже принадлежит другому `User`, включая legacy Telegram-only аккаунт, phone-first onboarding должен отказать. Автоматического переноса Telegram identity между пользователями нет.
 - Если у телефонного `User` уже есть активная Telegram identity, новая Telegram identity не добавляется и старая не заменяется.
-- `EnsureTelegramUser`-подобные сценарии не должны создавать нового `User` только по Telegram id; они должны либо находить уже привязанную Telegram identity, либо переводить пользователя в phone-first onboarding.
+- `EnsureTelegramUser`-подобные сценарии не должны создавать нового `User` только по Telegram id; они должны либо находить уже привязанную Telegram identity, либо переводить пользователя в phone-first onboarding. Их response-модель не должна возвращать `CustomerCode`: Telegram actor определяется внутренним `User.Id` и display name, а не старым клиентским кодом.
 - Не показывать пользователю технические поля, ids, internal codes и debug-информацию.
 - Тексты должны быть пользовательскими и на русском.
 - Для Telegram допустимы emoji в названиях основных кнопок и экранов, если они помогают навигации. Текущие основные labels: `🛍️ Мой кошелек` и `⚙️ Настройки аккаунта`.
@@ -156,6 +158,7 @@ Telegram bot - основной рабочий UI.
 - `src/StampService.TelegramBot/Features/Wallet` - кошелек клиента; показывает код списания, балансы и награды, но не `CustomerCode`.
 - `src/StampService.TelegramBot/Features/IssueMetric` - выдача метрик сотрудником; бот собирает телефон/количество и вызывает `IssueMetricByPhoneCommand`, без предварительного отказа при отсутствии клиента.
 - `src/StampService.TelegramBot/Features/Coins` - начисление/списание монеток; начисление идет через `IssueCoinsByPhoneCommand` по телефону клиента, списание остается по одноразовому коду списания.
+- `src/StampService.TelegramBot/Features/CoinProducts` - выдача товара за монетки; сотрудник вводит одноразовый `RedemptionCode`, выбирает доступный товар, Application списывает монетки через ledger, а финальный Telegram-экран показывает имя клиента, списание и баланс без `CustomerCode`.
 - `src/StampService.TelegramBot/Features/CustomerBalances` - просмотр балансов клиента; бот собирает телефон клиента, Application ищет существующую активную `Phone` identity и не создает нового пользователя.
 - `src/StampService.TelegramBot/Features/Staff` - управление сотрудниками бренда; добавление сотрудника идет по телефону через `AddBrandStaffByPhoneCommand`, без auto-create и без `CustomerCode` в UI.
 - `src/StampService.TelegramBot/Features/Admin` - системная админка; создание бренда с владельцем и смена владельца идут по телефону существующего пользователя через `CreateBrandWithOwnerCommand` и `ReassignBrandOwnerCommand`, без auto-create и без `CustomerCode` в UI.

@@ -86,7 +86,6 @@ public class IssueCoinsByPhoneHandler : ICommandHandler<CoinOperationResponse, I
             operation.Wallet.BrandId,
             customer.Id,
             customer.Name,
-            customer.CustomerCode,
             operation.Transaction.Type.ToString(),
             operation.Transaction.Amount,
             operation.Wallet.Value,

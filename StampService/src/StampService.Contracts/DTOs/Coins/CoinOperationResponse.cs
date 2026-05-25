@@ -6,7 +6,6 @@ public record CoinOperationResponse(
     Guid BrandId,
     Guid UserId,
     string UserName,
-    string CustomerCode,
     string TransactionType,
     int Amount,
     int BalanceValue,

@@ -81,7 +81,6 @@ export type CoinOperationResponse = {
   brandId: string;
   userId: string;
   userName: string;
-  customerCode: string;
   transactionType: string;
   amount: number;
   balanceValue: number;

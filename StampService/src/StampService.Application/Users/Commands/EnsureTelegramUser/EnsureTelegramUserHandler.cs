@@ -41,8 +41,7 @@ public class EnsureTelegramUserHandler
             return Result.Ok(new EnsureTelegramUserResponse(
                 user.Id,
                 Created: false,
-                user.Name,
-                user.CustomerCode));
+                user.Name));
         }
 
         return Result.Fail(UserErrors.TelegramIdentityNotLinked());

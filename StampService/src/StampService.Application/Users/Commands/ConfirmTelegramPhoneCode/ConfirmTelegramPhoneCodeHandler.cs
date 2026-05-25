@@ -115,8 +115,7 @@ public class ConfirmTelegramPhoneCodeHandler
             return Result.Ok(new EnsureTelegramUserResponse(
                 user.Id,
                 Created: false,
-                user.Name,
-                user.CustomerCode));
+                user.Name));
         }
 
         try
@@ -131,8 +130,7 @@ public class ConfirmTelegramPhoneCodeHandler
         return Result.Ok(new EnsureTelegramUserResponse(
             user.Id,
             Created: false,
-            user.Name,
-            user.CustomerCode));
+            user.Name));
     }
 
     private static string GetDisplayName(ConfirmTelegramPhoneCodeCommand command)
