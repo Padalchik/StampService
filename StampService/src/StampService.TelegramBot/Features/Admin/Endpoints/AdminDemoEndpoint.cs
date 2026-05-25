@@ -1,9 +1,9 @@
 using System.Net;
 using StampService.Application.Abstractions;
+using StampService.Application.Auth;
 using StampService.Application.Demo.Commands.CreateDemoBrands;
 using StampService.Application.Demo.Commands.CreateUserDemoData;
 using StampService.Application.Demo.Commands.ResetDemoDatabase;
-using StampService.Domain.User;
 using StampService.TelegramBot.Common.Errors;
 using StampService.TelegramBot.Common.Routing;
 using StampService.TelegramBot.Features.Admin.Actions;
@@ -25,7 +25,7 @@ public sealed class AdminDemoEndpoint : IBotEndpoint
         app.MapAction<CancelDemoResetAction>(CancelResetAsync);
         app.MapAction<CreateDemoBrandsAction>(CreateDemoBrandsAsync);
         app.MapAction<StartCreateUserDemoDataAction>(StartCreateUserDemoDataAsync);
-        app.MapInput<EnterDemoCustomerCodeAction>(EnterCustomerCodeAsync);
+        app.MapInput<EnterDemoPhoneAction>(EnterPhoneAsync);
         app.MapAction<SelectDemoBrandAction, SelectDemoBrandPayload>(SelectBrandAsync);
     }
 
@@ -77,22 +77,22 @@ public sealed class AdminDemoEndpoint : IBotEndpoint
 
     private static Task<IEndpointResult> StartCreateUserDemoDataAsync(UpdateContext ctx)
     {
-        ctx.Session?.Data.Remove(AdminSessionKeys.DemoCustomerCode);
-        return Task.FromResult(BotResults.NavigateTo<DemoCustomerCodeScreen>());
+        ctx.Session?.Data.Remove(AdminSessionKeys.DemoPhoneNumber);
+        return Task.FromResult(BotResults.NavigateTo<DemoPhoneScreen>());
     }
 
-    private static Task<IEndpointResult> EnterCustomerCodeAsync(UpdateContext ctx)
+    private static Task<IEndpointResult> EnterPhoneAsync(UpdateContext ctx)
     {
-        var customerCode = ctx.MessageText?.Trim() ?? string.Empty;
-        if (!User.IsValidCustomerCode(customerCode))
+        var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(ctx.MessageText, "PhoneNumber");
+        if (phoneNumberResult.IsFailed)
         {
             return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                    "Код пользователя должен состоять из 4 цифр.")
-                .AwaitInput<EnterDemoCustomerCodeAction>()
+                    "Введите корректный номер телефона.")
+                .AwaitInput<EnterDemoPhoneAction>()
                 .BackButton())));
         }
 
-        ctx.Session?.Data.Set(AdminSessionKeys.DemoCustomerCode, customerCode);
+        ctx.Session?.Data.Set(AdminSessionKeys.DemoPhoneNumber, phoneNumberResult.Value);
         return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<DemoBrandSelectScreen>()));
     }
 
@@ -101,22 +101,22 @@ public sealed class AdminDemoEndpoint : IBotEndpoint
         SelectDemoBrandPayload payload,
         ICommandHandler<bool, CreateUserDemoDataCommand> handler)
     {
-        var customerCode = ctx.Session?.Data.GetString(AdminSessionKeys.DemoCustomerCode) ?? string.Empty;
-        if (!User.IsValidCustomerCode(customerCode))
+        var phoneNumber = ctx.Session?.Data.GetString(AdminSessionKeys.DemoPhoneNumber) ?? string.Empty;
+        if (PhoneNumberNormalizer.NormalizeForAuth(phoneNumber).IsFailed)
             return BotResults.ShowView(new ScreenView("Сценарий создания демо-данных устарел. Начните заново.").BackButton());
 
         var result = await handler.Handle(
-            new CreateUserDemoDataCommand(ctx.UserId, customerCode, payload.BrandId),
+            new CreateUserDemoDataCommand(ctx.UserId, phoneNumber, payload.BrandId),
             ctx.CancellationToken);
 
         if (result.IsFailed)
             return BotResults.ShowView(new ScreenView($"Не удалось создать демо-данные: {BotErrorFormatter.Format(result.Errors)}").BackButton());
 
-        ctx.Session?.Data.Remove(AdminSessionKeys.DemoCustomerCode);
+        ctx.Session?.Data.Remove(AdminSessionKeys.DemoPhoneNumber);
 
         return BotResults.ShowView(new ScreenView(
             "<b>Демо-данные созданы</b>\n\n" +
-            $"Пользователь: <code>{Html(customerCode)}</code>\n" +
+            $"Пользователь: <code>{Html(phoneNumber)}</code>\n" +
             $"Бренд: {Html(payload.BrandName)}\n\n" +
             "Добавлены товары, метрики, балансы и история начислений/списаний.")
             .MenuButton("В главное меню"));

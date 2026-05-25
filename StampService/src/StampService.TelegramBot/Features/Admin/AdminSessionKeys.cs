@@ -18,5 +18,5 @@ public static class AdminSessionKeys
     public const string RewardDigestEditSettingKey = "admin.reward_digest.edit_setting_key";
     public const string RewardDigestEditSettingLabel = "admin.reward_digest.edit_setting_label";
 
-    public const string DemoCustomerCode = "admin.demo.customer_code";
+    public const string DemoPhoneNumber = "admin.demo.phone_number";
 }

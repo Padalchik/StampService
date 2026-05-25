@@ -54,10 +54,10 @@ public sealed class DemoBrandSelectScreen : IScreen
                 .MenuButton("В главное меню");
         }
 
-        var customerCode = ctx.Session?.Data.GetString(AdminSessionKeys.DemoCustomerCode) ?? "-";
+        var phoneNumber = ctx.Session?.Data.GetString(AdminSessionKeys.DemoPhoneNumber) ?? "-";
         var view = new ScreenView(
             "<b>Выберите бренд</b>\n\n" +
-            $"Пользователь: <code>{customerCode}</code>");
+            $"Пользователь: <code>{phoneNumber}</code>");
 
         foreach (var brand in ownedBrands)
         {
