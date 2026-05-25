@@ -93,9 +93,11 @@ StampService - loyalty-сервис для брендов. Основной ин
 
 Auto-create клиента по телефону применяется только к начислениям. Списание метрик, ручное списание монеток и выдача товаров за монетки остаются по одноразовому `RedemptionCode`, потому что этот код подтверждает конкретную операцию клиента. Телефон используется для идентификации клиента при начислении, а не как подтверждение списания.
 
-4-значный `CustomerCode` не является основным способом начисления. Он сохраняется как legacy/совместимость и может временно использоваться как внутренний мост для старых Application-сценариев, пока они еще принимают код. Новые UI-сценарии начисления не должны просить сотрудника вводить `CustomerCode`.
+4-значный `CustomerCode` больше не используется в сценариях начисления метрик/монеток и в просмотре клиентских балансов. Старые HTTP/Application ветки начисления по `CustomerCode` удалены (`IssueCoinsCommand`, `IssueCoinsRequest`, `POST /api/brands/{brandId}/coins/issue`, `POST /api/metrics/{metricDefinitionId}/issue-by-customer-code`, `RecipientResolver`). Новые UI-сценарии не должны просить сотрудника вводить `CustomerCode`.
 
 Ключевые Application use cases для нового flow: `IssueMetricByPhoneCommand` / `IssueMetricByPhoneHandler` и `IssueCoinsByPhoneCommand` / `IssueCoinsByPhoneHandler`. Web controllers и Telegram endpoints должны вызывать эти сценарии, а не делать предварительный resolve клиента по телефону в UI/API слое.
+
+Просмотр балансов и истории клиента сотрудником также использует телефон как внешний идентификатор, но без auto-create: Application нормализует номер, ищет существующего пользователя по активной `Phone` identity и возвращает отказ, если клиент не найден. Это касается `GetBrandCustomerMetricBalancesQuery`, `GetCoinBalanceQuery` и `GetCoinHistoryQuery`. Auto-create по телефону остается только для начислений.
 
 ## Телефонная авторизация и привязка
 
@@ -147,6 +149,7 @@ Telegram bot - основной рабочий UI.
 - `src/StampService.TelegramBot/Features/Profile` - личный кабинет и первичная привязка телефона.
 - `src/StampService.TelegramBot/Features/IssueMetric` - выдача метрик сотрудником; бот собирает телефон/количество и вызывает `IssueMetricByPhoneCommand`, без предварительного отказа при отсутствии клиента.
 - `src/StampService.TelegramBot/Features/Coins` - начисление/списание монеток; начисление идет через `IssueCoinsByPhoneCommand` по телефону клиента, списание остается по одноразовому коду списания.
+- `src/StampService.TelegramBot/Features/CustomerBalances` - просмотр балансов клиента; бот собирает телефон клиента, Application ищет существующую активную `Phone` identity и не создает нового пользователя.
 - `src/StampService.TelegramBot/Common/Errors/BotErrorFormatter.cs` - перевод application errors в пользовательские сообщения.
 - `external/telegram-bot-flow` - смотреть перед изменениями navigation/callback/input flow.
 
