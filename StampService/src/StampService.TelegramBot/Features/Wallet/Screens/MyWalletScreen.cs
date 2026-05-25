@@ -52,7 +52,7 @@ public sealed class MyWalletScreen : IScreen
         var wallet = walletResult.Value;
         var view = new ScreenView(
             $"<b>{BotMenuLabels.MyWallet}</b>\n\n" +
-            $"Код для списания: <code>{Html(wallet.RedemptionCode.Code)}</code>\n" +
+            $"Код списания: <code>{Html(wallet.RedemptionCode.Code)}</code>\n" +
             $"Действует до: {FormatLocalTime(wallet.RedemptionCode.ExpiresAtUtc)}\n\n" +
             BuildOverviewText(wallet));
 

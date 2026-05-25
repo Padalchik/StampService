@@ -64,7 +64,7 @@ public sealed class RedeemMetricSelectScreen : IScreen
         var view = new ScreenView(
             "<b>Списать метрику</b>\n\n" +
             $"Клиент: {Html(optionsResult.Value.CustomerName)}\n" +
-            $"Код: <code>{Html(optionsResult.Value.RedemptionCode)}</code>\n\n" +
+            $"Код списания клиента: <code>{Html(optionsResult.Value.RedemptionCode)}</code>\n\n" +
             "Выберите метрику:");
 
         foreach (var metric in optionsResult.Value.Metrics)

@@ -21,7 +21,7 @@ public sealed class RedeemMetricConfirmScreen : IScreen
             $"Бренд: {Html(brandName)}\n" +
             $"Клиент: {Html(customerName)}\n" +
             $"Метрика: {Html(metricName)}\n" +
-            $"Код списания: <code>{Html(redemptionCode)}</code>\n" +
+            $"Код списания клиента: <code>{Html(redemptionCode)}</code>\n" +
             $"Баланс: {currentBalance}/{redemptionAmount}")
             .Button<ConfirmRedeemMetricAction>("✅ Подтвердить")
             .Row()

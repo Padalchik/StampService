@@ -23,7 +23,7 @@ public sealed class PurchaseCoinProductConfirmScreen : IScreen
             $"Бренд: {Html(brandName)}\n" +
             $"Клиент: {Html(customerName)}\n" +
             $"Товар: {Html(productName)}\n" +
-            $"Код списания: <code>{Html(redemptionCode)}</code>\n" +
+            $"Код списания клиента: <code>{Html(redemptionCode)}</code>\n" +
             $"Монетки: {currentBalance}/{price}")
             .Button<PurchaseCoinProductAction, PurchaseCoinProductPayload>(
                 "✅ Подтвердить",

@@ -10,7 +10,7 @@ public sealed class RedeemMetricCodeScreen : IScreen
     {
         return ValueTask.FromResult(new ScreenView(
             "<b>Списание метрики</b>\n\n" +
-            "Введите одноразовый код клиента для списания:")
+            "Введите код списания клиента:")
             .AwaitInput<EnterRedeemCodeAction>()
             .BackButton());
     }
