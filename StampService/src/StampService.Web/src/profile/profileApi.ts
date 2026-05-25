@@ -8,7 +8,6 @@ export type IdentityStatusResponse = {
 export type MyProfileResponse = {
   userId: string;
   displayName: string;
-  customerCode: string;
   telegram: IdentityStatusResponse;
   phone: IdentityStatusResponse;
 };

@@ -47,9 +47,8 @@ public sealed class ProfileScreen : IScreen
         var view = new ScreenView(
             $"<b>{BotMenuLabels.AccountSettings}</b>\n\n" +
             $"Имя: {Html(profile.DisplayName)}\n" +
-            $"Код пользователя: <code>{Html(profile.CustomerCode)}</code>\n" +
-            $"Telegram: {telegramText}\n" +
-            $"Телефон: {phoneText}");
+            $"Телефон: {phoneText}\n" +
+            $"Telegram: {telegramText}");
 
         if (!profile.Phone.Linked)
         {

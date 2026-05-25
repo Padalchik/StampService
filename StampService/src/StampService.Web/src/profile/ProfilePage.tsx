@@ -143,16 +143,12 @@ export function ProfilePage() {
               <dd>{profile.displayName}</dd>
             </div>
             <div>
-              <dt>Код пользователя</dt>
-              <dd>{profile.customerCode}</dd>
+              <dt>Телефон</dt>
+              <dd>{profile.phone.linked ? profile.phone.value ?? 'привязан' : 'не привязан'}</dd>
             </div>
             <div>
               <dt>Telegram</dt>
               <dd>{profile.telegram.linked ? profile.telegram.value ?? 'привязан' : 'не привязан'}</dd>
-            </div>
-            <div>
-              <dt>Телефон</dt>
-              <dd>{profile.phone.linked ? profile.phone.value ?? 'привязан' : 'не привязан'}</dd>
             </div>
           </dl>
         ) : null}

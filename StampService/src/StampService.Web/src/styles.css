@@ -370,12 +370,6 @@ p {
   letter-spacing: 0;
 }
 
-.customer-code {
-  margin-bottom: 10px;
-  color: #526171;
-  font-weight: 700;
-}
-
 .section-heading {
   display: flex;
   align-items: center;

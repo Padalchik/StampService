@@ -37,7 +37,6 @@ export type UserWalletBrandOverviewResponse = {
 
 export type UserWalletResponse = {
   userId: string;
-  customerCode: string;
   redemptionCode: UserWalletRedemptionCodeResponse;
   brands: UserWalletBrandOverviewResponse[];
 };
