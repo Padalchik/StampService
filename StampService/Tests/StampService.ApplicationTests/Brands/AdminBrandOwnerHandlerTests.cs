@@ -16,9 +16,11 @@ public class AdminBrandOwnerHandlerTests
     private const long AdminTelegramUserId = 278225388;
 
     [Fact]
-    public async Task CreateBrandWithOwner_WhenAdminProvidesCustomerCode_ShouldCreateOwnerMembership()
+    public async Task CreateBrandWithOwner_WhenAdminProvidesPhone_ShouldCreateOwnerMembership()
     {
         var owner = User.Create("Owner", "1234").Value;
+        var ownerPhoneNumber = "+79991234567";
+        owner.AddIdentity(IdentityType.Phone, ownerPhoneNumber, "{}");
         var userRepository = new FakeUserRepository();
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
@@ -31,7 +33,7 @@ public class AdminBrandOwnerHandlerTests
             userRepository);
 
         var result = await handler.Handle(
-            new CreateBrandWithOwnerCommand(AdminTelegramUserId, "Coffee", owner.CustomerCode),
+            new CreateBrandWithOwnerCommand(AdminTelegramUserId, "Coffee", ownerPhoneNumber),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -48,6 +50,8 @@ public class AdminBrandOwnerHandlerTests
         var brandId = Guid.NewGuid();
         var oldOwner = User.Create("Old owner", "1111").Value;
         var newOwner = User.Create("New owner", "2222").Value;
+        var newOwnerPhoneNumber = "+79997654321";
+        newOwner.AddIdentity(IdentityType.Phone, newOwnerPhoneNumber, "{}");
         var userRepository = new FakeUserRepository();
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
@@ -65,7 +69,7 @@ public class AdminBrandOwnerHandlerTests
             userRepository);
 
         var result = await handler.Handle(
-            new ReassignBrandOwnerCommand(AdminTelegramUserId, brandId, newOwner.CustomerCode),
+            new ReassignBrandOwnerCommand(AdminTelegramUserId, brandId, newOwnerPhoneNumber),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);

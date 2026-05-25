@@ -1,9 +1,9 @@
 using System.Net;
 using StampService.Application.Abstractions;
+using StampService.Application.Auth;
 using StampService.Application.Brands.Commands.CreateBrandWithOwner;
 using StampService.Application.Brands.Commands.ReassignBrandOwner;
 using StampService.Contracts.DTOs.Brands;
-using StampService.Domain.User;
 using StampService.TelegramBot.Common.Errors;
 using StampService.TelegramBot.Common.Routing;
 using StampService.TelegramBot.Features.Admin.Actions;
@@ -23,11 +23,11 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
         app.MapAction<OpenAdminBrandAction, OpenAdminBrandPayload>(OpenBrandAsync);
         app.MapAction<StartCreateBrandAction>(StartCreateBrandAsync);
         app.MapInput<EnterCreateBrandNameAction>(EnterCreateBrandNameAsync);
-        app.MapInput<EnterCreateBrandOwnerCodeAction>(EnterCreateBrandOwnerCodeAsync);
+        app.MapInput<EnterCreateBrandOwnerPhoneAction>(EnterCreateBrandOwnerPhoneAsync);
         app.MapAction<ConfirmCreateBrandAction>(ConfirmCreateBrandAsync);
         app.MapAction<CancelCreateBrandAction>(CancelCreateBrandAsync);
         app.MapAction<StartReassignOwnerAction>(StartReassignOwnerAsync);
-        app.MapInput<EnterReassignOwnerCodeAction>(EnterReassignOwnerCodeAsync);
+        app.MapInput<EnterReassignOwnerPhoneAction>(EnterReassignOwnerPhoneAsync);
         app.MapAction<ConfirmReassignOwnerAction>(ConfirmReassignOwnerAsync);
         app.MapAction<CancelReassignOwnerAction>(CancelReassignOwnerAsync);
     }
@@ -47,7 +47,7 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
             ctx.Session?.Data.Remove(AdminSessionKeys.SelectedOwnerUserId);
 
         SetOrRemove(ctx, AdminSessionKeys.SelectedOwnerName, payload.OwnerName);
-        SetOrRemove(ctx, AdminSessionKeys.SelectedOwnerCustomerCode, payload.OwnerCustomerCode);
+        SetOrRemove(ctx, AdminSessionKeys.SelectedOwnerPhoneNumber, payload.OwnerPhoneNumber);
 
         return Task.FromResult(BotResults.NavigateTo<AdminBrandDetailsScreen>());
     }
@@ -65,16 +65,16 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
             return Retry<CreateBrandNameScreen, EnterCreateBrandNameAction>("Название бренда обязательно.");
 
         ctx.Session?.Data.Set(AdminSessionKeys.CreateBrandName, brandName);
-        return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<CreateBrandOwnerCodeScreen>()));
+        return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<CreateBrandOwnerPhoneScreen>()));
     }
 
-    private static Task<IEndpointResult> EnterCreateBrandOwnerCodeAsync(UpdateContext ctx)
+    private static Task<IEndpointResult> EnterCreateBrandOwnerPhoneAsync(UpdateContext ctx)
     {
-        var ownerCode = ctx.MessageText?.Trim() ?? string.Empty;
-        if (!User.IsValidCustomerCode(ownerCode))
-            return Retry<CreateBrandOwnerCodeScreen, EnterCreateBrandOwnerCodeAction>("Код пользователя должен состоять из 4 цифр.");
+        var ownerPhoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(ctx.MessageText, "OwnerPhoneNumber");
+        if (ownerPhoneNumberResult.IsFailed)
+            return Retry<CreateBrandOwnerPhoneScreen, EnterCreateBrandOwnerPhoneAction>("Введите корректный номер телефона.");
 
-        ctx.Session?.Data.Set(AdminSessionKeys.CreateOwnerCustomerCode, ownerCode);
+        ctx.Session?.Data.Set(AdminSessionKeys.CreateOwnerPhoneNumber, ownerPhoneNumberResult.Value);
         return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<CreateBrandConfirmScreen>()));
     }
 
@@ -83,13 +83,13 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
         ICommandHandler<CreateBrandWithOwnerResponse, CreateBrandWithOwnerCommand> handler)
     {
         var brandName = ctx.Session?.Data.GetString(AdminSessionKeys.CreateBrandName) ?? string.Empty;
-        var ownerCode = ctx.Session?.Data.GetString(AdminSessionKeys.CreateOwnerCustomerCode) ?? string.Empty;
+        var ownerPhoneNumber = ctx.Session?.Data.GetString(AdminSessionKeys.CreateOwnerPhoneNumber) ?? string.Empty;
 
-        if (string.IsNullOrWhiteSpace(brandName) || !User.IsValidCustomerCode(ownerCode))
+        if (string.IsNullOrWhiteSpace(brandName) || PhoneNumberNormalizer.NormalizeForAuth(ownerPhoneNumber).IsFailed)
             return BotResults.ShowView(new ScreenView("Сценарий создания бренда устарел. Начните заново.").BackButton());
 
         var result = await handler.Handle(
-            new CreateBrandWithOwnerCommand(ctx.UserId, brandName, ownerCode),
+            new CreateBrandWithOwnerCommand(ctx.UserId, brandName, ownerPhoneNumber),
             ctx.CancellationToken);
 
         if (result.IsFailed)
@@ -104,12 +104,12 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
             result.Value.IsCoinsEnabled,
             result.Value.OwnerUserId,
             result.Value.OwnerName,
-            result.Value.OwnerCustomerCode);
+            result.Value.OwnerPhoneNumber);
 
         return BotResults.ShowView(new ScreenView(
             "<b>Бренд создан</b>\n\n" +
             $"{Html(result.Value.BrandName)}\n" +
-            $"Владелец: {Html(result.Value.OwnerName)} · <code>{Html(result.Value.OwnerCustomerCode)}</code>")
+            $"Владелец: {Html(result.Value.OwnerName)} · <code>{Html(result.Value.OwnerPhoneNumber)}</code>")
             .MenuButton("В главное меню"));
     }
 
@@ -125,17 +125,17 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
         if (brandId == Guid.Empty)
             return Task.FromResult(BotResults.ShowView(new ScreenView("Бренд не выбран.").BackButton()));
 
-        ctx.Session?.Data.Remove(AdminSessionKeys.ReassignOwnerCustomerCode);
-        return Task.FromResult(BotResults.NavigateTo<ReassignOwnerCodeScreen>());
+        ctx.Session?.Data.Remove(AdminSessionKeys.ReassignOwnerPhoneNumber);
+        return Task.FromResult(BotResults.NavigateTo<ReassignOwnerPhoneScreen>());
     }
 
-    private static Task<IEndpointResult> EnterReassignOwnerCodeAsync(UpdateContext ctx)
+    private static Task<IEndpointResult> EnterReassignOwnerPhoneAsync(UpdateContext ctx)
     {
-        var ownerCode = ctx.MessageText?.Trim() ?? string.Empty;
-        if (!User.IsValidCustomerCode(ownerCode))
-            return Retry<ReassignOwnerCodeScreen, EnterReassignOwnerCodeAction>("Код пользователя должен состоять из 4 цифр.");
+        var ownerPhoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(ctx.MessageText, "NewOwnerPhoneNumber");
+        if (ownerPhoneNumberResult.IsFailed)
+            return Retry<ReassignOwnerPhoneScreen, EnterReassignOwnerPhoneAction>("Введите корректный номер телефона.");
 
-        ctx.Session?.Data.Set(AdminSessionKeys.ReassignOwnerCustomerCode, ownerCode);
+        ctx.Session?.Data.Set(AdminSessionKeys.ReassignOwnerPhoneNumber, ownerPhoneNumberResult.Value);
         return Task.FromResult(BotInputResults.DeleteInputThen(BotResults.NavigateTo<ReassignOwnerConfirmScreen>()));
     }
 
@@ -145,19 +145,19 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
     {
         var brandId = ctx.Session?.Data.Get<Guid>(AdminSessionKeys.SelectedBrandId) ?? Guid.Empty;
         var brandName = ctx.Session?.Data.GetString(AdminSessionKeys.SelectedBrandName) ?? "бренд";
-        var ownerCode = ctx.Session?.Data.GetString(AdminSessionKeys.ReassignOwnerCustomerCode) ?? string.Empty;
+        var ownerPhoneNumber = ctx.Session?.Data.GetString(AdminSessionKeys.ReassignOwnerPhoneNumber) ?? string.Empty;
 
-        if (brandId == Guid.Empty || !User.IsValidCustomerCode(ownerCode))
+        if (brandId == Guid.Empty || PhoneNumberNormalizer.NormalizeForAuth(ownerPhoneNumber).IsFailed)
             return BotResults.ShowView(new ScreenView("Сценарий смены владельца устарел. Начните заново.").BackButton());
 
         var result = await handler.Handle(
-            new ReassignBrandOwnerCommand(ctx.UserId, brandId, ownerCode),
+            new ReassignBrandOwnerCommand(ctx.UserId, brandId, ownerPhoneNumber),
             ctx.CancellationToken);
 
         if (result.IsFailed)
             return BotResults.ShowView(new ScreenView($"Не удалось сменить владельца: {BotErrorFormatter.Format(result.Errors)}").BackButton());
 
-        ctx.Session?.Data.Remove(AdminSessionKeys.ReassignOwnerCustomerCode);
+        ctx.Session?.Data.Remove(AdminSessionKeys.ReassignOwnerPhoneNumber);
         StoreSelectedBrand(
             ctx,
             brandId,
@@ -166,7 +166,7 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
             ctx.Session?.Data.Get<bool>(AdminSessionKeys.SelectedBrandCoinsEnabled) ?? true,
             result.Value.NewOwnerUserId,
             result.Value.NewOwnerName,
-            result.Value.NewOwnerCustomerCode);
+            result.Value.NewOwnerPhoneNumber);
 
         var removedOwnerText = result.Value.RemovedOwnerUserId is null
             ? string.Empty
@@ -174,14 +174,14 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
 
         return BotResults.ShowView(new ScreenView(
             "<b>Владелец обновлён</b>\n\n" +
-            $"Новый владелец: {Html(result.Value.NewOwnerName)} · <code>{Html(result.Value.NewOwnerCustomerCode)}</code>" +
+            $"Новый владелец: {Html(result.Value.NewOwnerName)} · <code>{Html(result.Value.NewOwnerPhoneNumber)}</code>" +
             removedOwnerText)
             .MenuButton("В главное меню"));
     }
 
     private static Task<IEndpointResult> CancelReassignOwnerAsync(UpdateContext ctx)
     {
-        ctx.Session?.Data.Remove(AdminSessionKeys.ReassignOwnerCustomerCode);
+        ctx.Session?.Data.Remove(AdminSessionKeys.ReassignOwnerPhoneNumber);
         return Task.FromResult(BotResults.NavigateTo<AdminBrandDetailsScreen>());
     }
 
@@ -202,12 +202,12 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
         bool isCoinsEnabled,
         Guid ownerUserId,
         string ownerName,
-        string ownerCustomerCode)
+        string ownerPhoneNumber)
     {
         StoreSelectedBrandSettings(ctx, brandId, brandName, isMetricsEnabled, isCoinsEnabled);
         ctx.Session?.Data.Set(AdminSessionKeys.SelectedOwnerUserId, ownerUserId);
         ctx.Session?.Data.Set(AdminSessionKeys.SelectedOwnerName, ownerName);
-        ctx.Session?.Data.Set(AdminSessionKeys.SelectedOwnerCustomerCode, ownerCustomerCode);
+        ctx.Session?.Data.Set(AdminSessionKeys.SelectedOwnerPhoneNumber, ownerPhoneNumber);
     }
 
     private static void StoreSelectedBrandSettings(
@@ -226,7 +226,7 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
     private static void ClearCreateSession(UpdateContext ctx)
     {
         ctx.Session?.Data.Remove(AdminSessionKeys.CreateBrandName);
-        ctx.Session?.Data.Remove(AdminSessionKeys.CreateOwnerCustomerCode);
+        ctx.Session?.Data.Remove(AdminSessionKeys.CreateOwnerPhoneNumber);
     }
 
     private static void SetOrRemove(UpdateContext ctx, string key, string? value)

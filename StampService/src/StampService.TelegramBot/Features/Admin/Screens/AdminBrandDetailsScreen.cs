@@ -13,11 +13,11 @@ public sealed class AdminBrandDetailsScreen : IScreen
         var isMetricsEnabled = ctx.Session?.Data.Get<bool>(AdminSessionKeys.SelectedBrandMetricsEnabled) ?? true;
         var isCoinsEnabled = ctx.Session?.Data.Get<bool>(AdminSessionKeys.SelectedBrandCoinsEnabled) ?? true;
         var ownerName = ctx.Session?.Data.GetString(AdminSessionKeys.SelectedOwnerName);
-        var ownerCode = ctx.Session?.Data.GetString(AdminSessionKeys.SelectedOwnerCustomerCode);
+        var ownerPhoneNumber = ctx.Session?.Data.GetString(AdminSessionKeys.SelectedOwnerPhoneNumber);
 
-        var ownerText = string.IsNullOrWhiteSpace(ownerCode)
-            ? "не назначен"
-            : $"{Html(ownerName ?? "пользователь")} · <code>{Html(ownerCode)}</code>";
+        var ownerText = string.IsNullOrWhiteSpace(ownerPhoneNumber)
+            ? string.IsNullOrWhiteSpace(ownerName) ? "не назначен" : Html(ownerName)
+            : $"{Html(ownerName ?? "пользователь")} · <code>{Html(ownerPhoneNumber)}</code>";
 
         return ValueTask.FromResult(new ScreenView(
             $"<b>{Html(brandName)}</b>\n\n" +

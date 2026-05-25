@@ -9,4 +9,4 @@ public record AdminBrandReadModel(
     bool IsManualCoinRedemptionEnabled,
     Guid? OwnerUserId,
     string? OwnerName,
-    string? OwnerCustomerCode);
+    string? OwnerPhoneNumber);

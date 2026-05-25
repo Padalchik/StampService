@@ -2,12 +2,13 @@ using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
 using StampService.Application.Administration;
+using StampService.Application.Auth;
 using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Brands;
 using StampService.Domain.Access;
+using StampService.Domain.User;
 using BrandEntity = StampService.Domain.Brand.Brand;
-using UserEntity = StampService.Domain.User.User;
 
 namespace StampService.Application.Brands.Commands.CreateBrandWithOwner;
 
@@ -37,11 +38,17 @@ public class CreateBrandWithOwnerHandler : ICommandHandler<CreateBrandWithOwnerR
         if (!_adminAccessService.IsAdmin(command.AdminTelegramUserId))
             return Result.Fail(AccessErrors.AdminRequired());
 
-        var ownerCustomerCode = command.OwnerCustomerCode.Trim();
-        if (!UserEntity.IsValidCustomerCode(ownerCustomerCode))
-            return Result.Fail(UserErrors.CustomerCodeInvalid());
+        var ownerPhoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(
+            command.OwnerPhoneNumber,
+            nameof(command.OwnerPhoneNumber));
+        if (ownerPhoneNumberResult.IsFailed)
+            return Result.Fail(ownerPhoneNumberResult.Errors);
 
-        var owner = await _userRepository.GetByCustomerCodeAsync(ownerCustomerCode, cancellationToken);
+        var ownerPhoneNumber = ownerPhoneNumberResult.Value;
+        var owner = await _userRepository.GetByIdentityAsync(
+            IdentityType.Phone,
+            ownerPhoneNumber,
+            cancellationToken);
         if (owner is null)
             return Result.Fail(UserErrors.RecipientNotFound());
 
@@ -77,7 +84,7 @@ public class CreateBrandWithOwnerHandler : ICommandHandler<CreateBrandWithOwnerR
             brand.IsManualCoinRedemptionEnabled,
             owner.Id,
             owner.Name,
-            owner.CustomerCode,
+            ownerPhoneNumber,
             membership.Id,
             brand.CreatedAt));
     }

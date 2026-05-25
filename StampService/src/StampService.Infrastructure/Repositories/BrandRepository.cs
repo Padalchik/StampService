@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using StampService.Application.Brands;
 using StampService.Domain.Access;
 using StampService.Domain.Brand;
+using StampService.Domain.User;
 
 namespace StampService.Infrastructure.Repositories;
 
@@ -67,7 +68,10 @@ public class BrandRepository : IBrandRepository
                 _dbContext.BrandMemberships
                     .Where(membership => membership.BrandId == brand.Id
                         && membership.Role.SystemName == SystemRoles.Owner)
-                    .Select(membership => membership.User.CustomerCode)
+                    .Select(membership => membership.User.Identities
+                        .Where(identity => identity.Type == IdentityType.Phone)
+                        .Select(identity => identity.Key)
+                        .FirstOrDefault())
                     .FirstOrDefault()))
             .ToArrayAsync(cancellationToken);
     }

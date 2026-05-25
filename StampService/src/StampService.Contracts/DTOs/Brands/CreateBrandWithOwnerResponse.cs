@@ -9,6 +9,6 @@ public record CreateBrandWithOwnerResponse(
     bool IsManualCoinRedemptionEnabled,
     Guid OwnerUserId,
     string OwnerName,
-    string OwnerCustomerCode,
+    string OwnerPhoneNumber,
     Guid MembershipId,
     DateTime CreatedAt);

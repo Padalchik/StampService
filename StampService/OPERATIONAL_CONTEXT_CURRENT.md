@@ -101,6 +101,8 @@ Auto-create клиента по телефону применяется толь
 
 Управление сотрудниками бренда также переведено на phone-first модель. Добавление сотрудника выполняется через `AddBrandStaffByPhoneCommand`: Application нормализует номер телефона, ищет существующего пользователя по активной `Phone` identity и добавляет ему роль `STAFF` в бренде. Auto-create здесь не применяется: если телефонный пользователь не найден, сценарий должен отказать, потому что добавление сотрудника является управлением доступом, а не клиентским начислением. Telegram staff-flow больше не просит и не показывает `CustomerCode`; список, детали, подтверждение добавления и удаления сотрудника используют телефон как внешний идентификатор. Внутренние операции по-прежнему работают с `User.Id` и `BrandMembership`.
 
+Админские операции назначения владельца бренда также больше не используют `CustomerCode`. `CreateBrandWithOwnerCommand` принимает телефон владельца, а `ReassignBrandOwnerCommand` - телефон нового владельца; Application нормализует номер и ищет существующий `User` по активной `Phone` identity. Auto-create не выполняется: создание бренда с владельцем и смена владельца являются управлением доступом, поэтому владелец должен уже иметь телефонный аккаунт. Telegram admin-flow ввода/подтверждения владельца показывает телефон; внутренним владельцем роли остается `User.Id` через `BrandMembership`.
+
 ## Телефонная авторизация и привязка
 
 Реализованы два связанных сценария:
@@ -153,6 +155,7 @@ Telegram bot - основной рабочий UI.
 - `src/StampService.TelegramBot/Features/Coins` - начисление/списание монеток; начисление идет через `IssueCoinsByPhoneCommand` по телефону клиента, списание остается по одноразовому коду списания.
 - `src/StampService.TelegramBot/Features/CustomerBalances` - просмотр балансов клиента; бот собирает телефон клиента, Application ищет существующую активную `Phone` identity и не создает нового пользователя.
 - `src/StampService.TelegramBot/Features/Staff` - управление сотрудниками бренда; добавление сотрудника идет по телефону через `AddBrandStaffByPhoneCommand`, без auto-create и без `CustomerCode` в UI.
+- `src/StampService.TelegramBot/Features/Admin` - системная админка; создание бренда с владельцем и смена владельца идут по телефону существующего пользователя через `CreateBrandWithOwnerCommand` и `ReassignBrandOwnerCommand`, без auto-create и без `CustomerCode` в UI.
 - `src/StampService.TelegramBot/Common/Errors/BotErrorFormatter.cs` - перевод application errors в пользовательские сообщения.
 - `external/telegram-bot-flow` - смотреть перед изменениями navigation/callback/input flow.
 

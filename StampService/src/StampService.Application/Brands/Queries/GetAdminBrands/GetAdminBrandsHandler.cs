@@ -37,7 +37,7 @@ public class GetAdminBrandsHandler : IQueryHandler<IReadOnlyCollection<AdminBran
                 brand.IsManualCoinRedemptionEnabled,
                 brand.OwnerUserId,
                 brand.OwnerName,
-                brand.OwnerCustomerCode))
+                brand.OwnerPhoneNumber))
             .ToArray();
 
         return Result.Ok(response);
