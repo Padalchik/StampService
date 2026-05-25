@@ -16,6 +16,7 @@ public class GetCoinBalanceAndHistoryHandlerTests
         var brandId = Guid.NewGuid();
         var actorUserId = Guid.NewGuid();
         var customer = User.Create("Customer", "1234").Value;
+        customer.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
         var membershipRepository = new FakeBrandMembershipRepository();
         var userRepository = new FakeUserRepository();
         membershipRepository.SetRole(actorUserId, brandId, SystemRoles.Staff);
@@ -41,6 +42,7 @@ public class GetCoinBalanceAndHistoryHandlerTests
         var brandId = Guid.NewGuid();
         var actorUserId = Guid.NewGuid();
         var customer = User.Create("Customer", "1234").Value;
+        customer.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
         var membershipRepository = new FakeBrandMembershipRepository();
         var userRepository = new FakeUserRepository();
         var walletRepository = new FakeCoinWalletRepository();
@@ -59,7 +61,7 @@ public class GetCoinBalanceAndHistoryHandlerTests
             userRepository);
 
         var result = await handler.Handle(
-            new GetCoinHistoryQuery(brandId, actorUserId, customer.CustomerCode, Skip: 0, Take: 10),
+            new GetCoinHistoryQuery(brandId, actorUserId, "+7 999 123-45-67", Skip: 0, Take: 10),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);

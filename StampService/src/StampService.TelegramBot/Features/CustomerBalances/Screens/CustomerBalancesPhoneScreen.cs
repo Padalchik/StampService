@@ -6,7 +6,7 @@ using TelegramBotFlow.Core.Screens;
 
 namespace StampService.TelegramBot.Features.CustomerBalances.Screens;
 
-public sealed class CustomerBalancesCodeScreen : IScreen
+public sealed class CustomerBalancesPhoneScreen : IScreen
 {
     public ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
     {
@@ -14,8 +14,8 @@ public sealed class CustomerBalancesCodeScreen : IScreen
 
         return ValueTask.FromResult(new ScreenView(
             $"<b>{Html(brandName)}</b>\n\n" +
-            "Введите код пользователя клиента:")
-            .AwaitInput<EnterCustomerBalancesCodeAction>()
+            "Введите телефон клиента в международном формате, например +7 999 123-45-67:")
+            .AwaitInput<EnterCustomerBalancesPhoneAction>()
             .BackButton());
     }
 

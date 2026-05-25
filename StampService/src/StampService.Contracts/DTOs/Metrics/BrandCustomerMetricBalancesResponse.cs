@@ -4,6 +4,6 @@ public record BrandCustomerMetricBalancesResponse(
     Guid BrandId,
     Guid CustomerUserId,
     string CustomerName,
-    string CustomerCode,
+    string CustomerPhoneNumber,
     int CoinBalanceValue,
     IReadOnlyCollection<BrandCustomerMetricBalanceResponse> Balances);

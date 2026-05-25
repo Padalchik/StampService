@@ -5,6 +5,6 @@ namespace StampService.Application.Coins.Queries.GetCoinHistory;
 public record GetCoinHistoryQuery(
     Guid BrandId,
     Guid RequestUserId,
-    string CustomerCode,
+    string CustomerPhoneNumber,
     int Skip,
     int Take) : IQuery;
