@@ -28,12 +28,33 @@ public class GetCoinBalanceAndHistoryHandlerTests
             userRepository);
 
         var result = await handler.Handle(
-            new GetCoinBalanceQuery(brandId, actorUserId, customer.CustomerCode),
+            new GetCoinBalanceQuery(brandId, actorUserId, "+7 999 123-45-67"),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Null(result.Value.WalletId);
+        Assert.Equal("+79991234567", result.Value.CustomerPhoneNumber);
         Assert.Equal(0, result.Value.Value);
+    }
+
+    [Fact]
+    public async Task GetCoinBalance_WhenPhoneIdentityDoesNotExist_ShouldFail()
+    {
+        var brandId = Guid.NewGuid();
+        var actorUserId = Guid.NewGuid();
+        var membershipRepository = new FakeBrandMembershipRepository();
+        membershipRepository.SetRole(actorUserId, brandId, SystemRoles.Staff);
+
+        var handler = new GetCoinBalanceHandler(
+            new BrandAccessService(membershipRepository),
+            new FakeCoinWalletRepository(),
+            new FakeUserRepository());
+
+        var result = await handler.Handle(
+            new GetCoinBalanceQuery(brandId, actorUserId, "+79991234567"),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
     }
 
     [Fact]

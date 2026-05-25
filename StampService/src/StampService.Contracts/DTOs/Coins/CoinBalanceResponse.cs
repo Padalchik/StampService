@@ -5,5 +5,5 @@ public record CoinBalanceResponse(
     Guid BrandId,
     Guid UserId,
     string UserName,
-    string CustomerCode,
+    string CustomerPhoneNumber,
     int Value);
