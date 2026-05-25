@@ -1,4 +1,4 @@
-using StampService.Application.Access;
+﻿using StampService.Application.Access;
 using StampService.Application.Brands.Commands.AddBrandStaffByPhone;
 using StampService.Application.Brands.Commands.RemoveBrandStaff;
 using StampService.ApplicationTests.Fakes;
@@ -13,8 +13,8 @@ public class BrandStaffHandlerTests
     public async Task AddStaffByPhone_WhenActorIsOwner_ShouldCreateStaffMembership()
     {
         var brandId = Guid.NewGuid();
-        var owner = User.Create("Owner", "1111").Value;
-        var staff = User.Create("Staff", "1234").Value;
+        var owner = User.Create("Owner").Value;
+        var staff = User.Create("Staff").Value;
         var staffPhoneNumber = "+79991234567";
         staff.AddIdentity(IdentityType.Phone, staffPhoneNumber, "{}");
         var userRepository = new FakeUserRepository();
@@ -45,8 +45,8 @@ public class BrandStaffHandlerTests
     public async Task RemoveStaff_WhenActorIsOwner_ShouldRemoveStaffMembership()
     {
         var brandId = Guid.NewGuid();
-        var owner = User.Create("Owner", "1111").Value;
-        var staff = User.Create("Staff", "2222").Value;
+        var owner = User.Create("Owner").Value;
+        var staff = User.Create("Staff").Value;
         var userRepository = new FakeUserRepository();
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();

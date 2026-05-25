@@ -174,7 +174,6 @@ public class TelegramPhoneOnboardingHandlerTests
             new FixedTimeProvider(new DateTimeOffset(2026, 5, 17, 10, 0, 0, TimeSpan.Zero)));
         var phoneAccountService = new PhoneAccountService(
             users,
-            new CustomerCodeGenerator(users),
             new CuteUserDisplayNameGenerator());
 
         return new Fixture(

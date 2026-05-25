@@ -41,12 +41,6 @@ public static class UserErrors
             "Telegram user id must be positive",
             "telegramUserId");
 
-    public static AppError CustomerCodeInvalid() =>
-        AppError.Validation(
-            AppErrorCodes.CustomerCode.Invalid,
-            "Customer code must contain exactly 4 digits",
-            "customerCode");
-
     public static AppError RedemptionCodeInvalid() =>
         AppError.Validation(
             AppErrorCodes.RedemptionCode.Invalid,

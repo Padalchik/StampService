@@ -8,16 +8,13 @@ namespace StampService.Application.Users;
 public class PhoneAccountService : IPhoneAccountService
 {
     private readonly IUserRepository _userRepository;
-    private readonly ICustomerCodeGenerator _customerCodeGenerator;
     private readonly IUserDisplayNameGenerator _displayNameGenerator;
 
     public PhoneAccountService(
         IUserRepository userRepository,
-        ICustomerCodeGenerator customerCodeGenerator,
         IUserDisplayNameGenerator displayNameGenerator)
     {
         _userRepository = userRepository;
-        _customerCodeGenerator = customerCodeGenerator;
         _displayNameGenerator = displayNameGenerator;
     }
 
@@ -84,8 +81,7 @@ public class PhoneAccountService : IPhoneAccountService
         if (user is not null)
             return Result.Ok(new PhoneAccountLookupResult(user, Created: false));
 
-        var customerCode = await _customerCodeGenerator.GenerateAsync(cancellationToken);
-        var userResult = User.Create(_displayNameGenerator.Generate(), customerCode);
+        var userResult = User.Create(_displayNameGenerator.Generate());
         if (userResult.IsFailed)
             return Result.Fail<PhoneAccountLookupResult>(userResult.Errors);
 

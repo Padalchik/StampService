@@ -30,23 +30,11 @@ public class UserRepository : IUserRepository
         return identity?.User;
     }
 
-    public async Task<User?> GetByCustomerCodeAsync(string customerCode, CancellationToken cancellationToken)
-    {
-        return await _dbContext.Users
-            .FirstOrDefaultAsync(user => user.CustomerCode == customerCode, cancellationToken);
-    }
-
     public async Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken)
     {
         return await _dbContext.Users
             .Include(user => user.Identities)
             .FirstOrDefaultAsync(user => user.Id == userId, cancellationToken);
-    }
-
-    public async Task<bool> CustomerCodeExistsAsync(string customerCode, CancellationToken cancellationToken)
-    {
-        return await _dbContext.Users
-            .AnyAsync(user => user.CustomerCode == customerCode, cancellationToken);
     }
 
     public async Task<bool> ExistsAsync(Guid userId, CancellationToken cancellationToken)

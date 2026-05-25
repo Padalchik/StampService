@@ -1,4 +1,4 @@
-using StampService.Application.Access;
+﻿using StampService.Application.Access;
 using StampService.Application.Coins.Queries.GetCoinBalance;
 using StampService.Application.Coins.Queries.GetCoinHistory;
 using StampService.ApplicationTests.Fakes;
@@ -15,7 +15,7 @@ public class GetCoinBalanceAndHistoryHandlerTests
     {
         var brandId = Guid.NewGuid();
         var actorUserId = Guid.NewGuid();
-        var customer = User.Create("Customer", "1234").Value;
+        var customer = User.Create("Customer").Value;
         customer.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
         var membershipRepository = new FakeBrandMembershipRepository();
         var userRepository = new FakeUserRepository();
@@ -62,7 +62,7 @@ public class GetCoinBalanceAndHistoryHandlerTests
     {
         var brandId = Guid.NewGuid();
         var actorUserId = Guid.NewGuid();
-        var customer = User.Create("Customer", "1234").Value;
+        var customer = User.Create("Customer").Value;
         customer.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
         var membershipRepository = new FakeBrandMembershipRepository();
         var userRepository = new FakeUserRepository();

@@ -1,4 +1,4 @@
-using StampService.Application.Access;
+﻿using StampService.Application.Access;
 using StampService.Application.CoinProducts.Queries.GetCoinProductPurchaseOptions;
 using StampService.Application.Errors;
 using StampService.ApplicationTests.Fakes;
@@ -18,7 +18,7 @@ public class GetCoinProductPurchaseOptionsHandlerTests
         var brand = Brand.Create("Coffee").Value;
         var brandId = brand.Id;
         var staffUserId = Guid.NewGuid();
-        var customer = User.Create("Customer", "1234").Value;
+        var customer = User.Create("Customer").Value;
         var availableProduct = CoinProduct.Create(brandId, "Coffee", 7).Value;
         var unavailableProduct = CoinProduct.Create(brandId, "Cake", 12).Value;
         var inactiveProduct = CoinProduct.Create(brandId, "Tea", 1).Value;
@@ -88,7 +88,7 @@ public class GetCoinProductPurchaseOptionsHandlerTests
         var brand = Brand.Create("Coffee").Value;
         var brandId = brand.Id;
         var staffUserId = Guid.NewGuid();
-        var customer = User.Create("Customer", "1234").Value;
+        var customer = User.Create("Customer").Value;
         var product = CoinProduct.Create(brandId, "Coffee", 7).Value;
 
         var membershipRepository = new FakeBrandMembershipRepository();
@@ -139,7 +139,7 @@ public class GetCoinProductPurchaseOptionsHandlerTests
             isCoinProductRedemptionEnabled: false,
             isManualCoinRedemptionEnabled: true);
         var staffUserId = Guid.NewGuid();
-        var customer = User.Create("Customer", "1234").Value;
+        var customer = User.Create("Customer").Value;
 
         var membershipRepository = new FakeBrandMembershipRepository();
         var brandRepository = new FakeBrandRepository();

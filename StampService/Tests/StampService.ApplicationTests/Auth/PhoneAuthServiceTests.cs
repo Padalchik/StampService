@@ -92,7 +92,6 @@ public class PhoneAuthServiceTests
         var phoneCodes = new FakePhoneAuthCodeRepository();
         var sender = new FakePhoneAuthCodeSender();
         var timeProvider = new FixedTimeProvider(now);
-        var customerCodeGenerator = new CustomerCodeGenerator(users);
         var phoneAuthCodeService = new PhoneAuthCodeService(
             phoneCodes,
             new FixedPhoneAuthCodeGenerator(),
@@ -100,7 +99,6 @@ public class PhoneAuthServiceTests
             timeProvider);
         var phoneAccountService = new PhoneAccountService(
             users,
-            customerCodeGenerator,
             new CuteUserDisplayNameGenerator());
         var service = new AuthService(
             users,

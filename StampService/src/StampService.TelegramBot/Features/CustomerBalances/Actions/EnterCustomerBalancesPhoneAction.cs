@@ -1,4 +1,4 @@
-using TelegramBotFlow.Core.Routing;
+using TelegramBotFlow.Core.Endpoints;
 
 namespace StampService.TelegramBot.Features.CustomerBalances.Actions;
 

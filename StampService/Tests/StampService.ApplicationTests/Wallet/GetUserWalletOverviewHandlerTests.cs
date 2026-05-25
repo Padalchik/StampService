@@ -1,4 +1,4 @@
-using StampService.Application.Wallet.Queries.GetUserWalletOverview;
+﻿using StampService.Application.Wallet.Queries.GetUserWalletOverview;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.Brand;
 using StampService.Domain.Coins;
@@ -12,7 +12,7 @@ public class GetUserWalletOverviewHandlerTests
     [Fact]
     public async Task Handle_ShouldReturnOnlyAvailableProductsAndMetrics()
     {
-        var user = User.Create("Customer", "1234").Value;
+        var user = User.Create("Customer").Value;
         var brandEntity = Brand.Create("Brand").Value;
         var brandId = brandEntity.Id;
         var userRepository = new FakeUserRepository();
@@ -92,7 +92,7 @@ public class GetUserWalletOverviewHandlerTests
     [Fact]
     public async Task Handle_WhenCoinsAreDisabled_ShouldIgnoreCoinProducts()
     {
-        var user = User.Create("Customer", "1234").Value;
+        var user = User.Create("Customer").Value;
         var brand = Brand.Create("Brand").Value;
         brand.UpdateDetails("Brand", isMetricsEnabled: true, isCoinsEnabled: false);
         var userRepository = new FakeUserRepository();
@@ -135,7 +135,7 @@ public class GetUserWalletOverviewHandlerTests
     [Fact]
     public async Task Handle_WhenCoinProductRedemptionIsDisabled_ShouldIgnoreCoinProductsButKeepCoinBalance()
     {
-        var user = User.Create("Customer", "1234").Value;
+        var user = User.Create("Customer").Value;
         var brand = Brand.Create("Brand").Value;
         brand.UpdateDetails(
             "Brand",

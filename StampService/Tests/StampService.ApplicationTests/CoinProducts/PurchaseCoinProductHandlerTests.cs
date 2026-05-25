@@ -1,4 +1,4 @@
-using StampService.Application.Access;
+﻿using StampService.Application.Access;
 using StampService.Application.CoinProducts.Commands.PurchaseCoinProduct;
 using StampService.Application.Coins;
 using StampService.Application.Errors;
@@ -147,7 +147,7 @@ public class PurchaseCoinProductHandlerTests
             isManualCoinRedemptionEnabled: !coinProductRedemptionEnabled);
         var brandId = brand.Id;
         var staffUserId = Guid.NewGuid();
-        var customer = User.Create("Customer", "1234").Value;
+        var customer = User.Create("Customer").Value;
         var product = CoinProduct.Create(brandId, "Coffee", productPrice).Value;
 
         var brandRepository = new FakeBrandRepository();

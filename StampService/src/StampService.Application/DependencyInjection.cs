@@ -35,7 +35,6 @@ public static class DependencyInjection
         services.AddScoped<IMetricLedgerService, MetricLedgerService>();
         services.AddScoped<IRedeemMetricValidationService, RedeemMetricValidationService>();
         services.AddScoped<ITelegramValidationService, TelegramValidationService>();
-        services.AddScoped<ICustomerCodeGenerator, CustomerCodeGenerator>();
         services.AddScoped<IUserDisplayNameGenerator, CuteUserDisplayNameGenerator>();
         services.AddScoped<IPhoneAuthCodeGenerator, PhoneAuthCodeGenerator>();
         services.AddScoped<IPhoneAuthCodeService, PhoneAuthCodeService>();

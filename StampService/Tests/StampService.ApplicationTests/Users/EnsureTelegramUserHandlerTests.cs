@@ -101,7 +101,6 @@ public class EnsureTelegramUserHandlerTests
     {
         return new PhoneAccountService(
             repository,
-            new CustomerCodeGenerator(repository),
             new CuteUserDisplayNameGenerator());
     }
 }

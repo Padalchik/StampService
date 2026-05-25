@@ -1,4 +1,4 @@
-using StampService.Application.Access;
+﻿using StampService.Application.Access;
 using StampService.Application.Metrics.Queries.GetBrandCustomerMetricBalances;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.Access;
@@ -15,8 +15,8 @@ public class GetBrandCustomerMetricBalancesHandlerTests
     {
         var brandId = Guid.NewGuid();
         var otherBrandId = Guid.NewGuid();
-        var staff = User.Create("Staff", "1001").Value;
-        var customer = User.Create("Customer", "2002").Value;
+        var staff = User.Create("Staff").Value;
+        var customer = User.Create("Customer").Value;
         customer.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
         var activeMetric = LoyaltyMetricDefinition.Create(brandId, "Coffee", 1).Value;
         var inactiveMetric = LoyaltyMetricDefinition.Create(brandId, "Cake", 1).Value;
@@ -91,8 +91,8 @@ public class GetBrandCustomerMetricBalancesHandlerTests
     public async Task Handle_WhenCustomerHasNoCoinWallet_ShouldReturnZeroCoinBalance()
     {
         var brandId = Guid.NewGuid();
-        var staff = User.Create("Staff", "1001").Value;
-        var customer = User.Create("Customer", "2002").Value;
+        var staff = User.Create("Staff").Value;
+        var customer = User.Create("Customer").Value;
         customer.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
         var userRepository = new FakeUserRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
@@ -119,7 +119,7 @@ public class GetBrandCustomerMetricBalancesHandlerTests
     public async Task Handle_WhenPhoneIdentityDoesNotExist_ShouldFail()
     {
         var brandId = Guid.NewGuid();
-        var staff = User.Create("Staff", "1001").Value;
+        var staff = User.Create("Staff").Value;
         var userRepository = new FakeUserRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
         userRepository.Add(staff);

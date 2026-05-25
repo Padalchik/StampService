@@ -1,4 +1,4 @@
-using StampService.Application.Users.Commands.CreateRedemptionCode;
+﻿using StampService.Application.Users.Commands.CreateRedemptionCode;
 using StampService.Application.Users;
 using StampService.Application.Errors;
 using StampService.ApplicationTests.Fakes;
@@ -12,7 +12,7 @@ public class CreateRedemptionCodeHandlerTests
     public async Task Handle_WhenUserExists_ShouldCreateRedemptionCode()
     {
         var now = new DateTimeOffset(2026, 5, 7, 10, 0, 0, TimeSpan.Zero);
-        var user = DomainUser.Create("Ivan", "1234").Value;
+        var user = DomainUser.Create("Ivan").Value;
         var userRepository = new FakeUserRepository();
         userRepository.Add(user);
         var codeRepository = new FakeRedemptionCodeRepository();
@@ -37,7 +37,7 @@ public class CreateRedemptionCodeHandlerTests
     public async Task Handle_WhenActiveCodeAlreadyExists_ShouldReturnExistingCode()
     {
         var now = new DateTimeOffset(2026, 5, 7, 10, 0, 0, TimeSpan.Zero);
-        var user = DomainUser.Create("Ivan", "1234").Value;
+        var user = DomainUser.Create("Ivan").Value;
         var userRepository = new FakeUserRepository();
         userRepository.Add(user);
         var codeRepository = new FakeRedemptionCodeRepository();
@@ -67,7 +67,7 @@ public class CreateRedemptionCodeHandlerTests
     public async Task Handle_WhenForceRefreshAndActiveCodeExists_ShouldExpireExistingCodeAndCreateNewCode()
     {
         var now = new DateTimeOffset(2026, 5, 7, 10, 0, 0, TimeSpan.Zero);
-        var user = DomainUser.Create("Ivan", "1234").Value;
+        var user = DomainUser.Create("Ivan").Value;
         var userRepository = new FakeUserRepository();
         userRepository.Add(user);
         var codeRepository = new FakeRedemptionCodeRepository();
@@ -102,7 +102,7 @@ public class CreateRedemptionCodeHandlerTests
     public async Task Handle_WhenCodePoolIsExhausted_ShouldFail()
     {
         var now = new DateTimeOffset(2026, 5, 7, 10, 0, 0, TimeSpan.Zero);
-        var user = DomainUser.Create("Ivan", "1234").Value;
+        var user = DomainUser.Create("Ivan").Value;
         var userRepository = new FakeUserRepository();
         userRepository.Add(user);
         var codeRepository = new FakeRedemptionCodeRepository();

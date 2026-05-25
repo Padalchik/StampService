@@ -1,4 +1,4 @@
-using StampService.Application.Access;
+﻿using StampService.Application.Access;
 using StampService.Application.Coins;
 using StampService.Application.Coins.Commands.RedeemCoins;
 using StampService.Application.Errors;
@@ -196,7 +196,7 @@ public class RedeemCoinsHandlerTests
             isCoinProductRedemptionEnabled: coinsEnabled && !manualRedemptionEnabled,
             isManualCoinRedemptionEnabled: manualRedemptionEnabled);
         var staffUserId = Guid.NewGuid();
-        var customer = User.Create("Customer", "1234").Value;
+        var customer = User.Create("Customer").Value;
 
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();

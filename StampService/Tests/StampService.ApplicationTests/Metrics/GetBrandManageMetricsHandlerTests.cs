@@ -1,4 +1,4 @@
-using StampService.Application.Access;
+﻿using StampService.Application.Access;
 using StampService.Application.Metrics.Queries.GetBrandManageMetrics;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.Access;
@@ -12,7 +12,7 @@ public class GetBrandManageMetricsHandlerTests
     [Fact]
     public async Task Handle_WhenUserCanManageMetrics_ShouldReturnActiveAndInactiveMetrics()
     {
-        var user = User.Create("Owner", "1234").Value;
+        var user = User.Create("Owner").Value;
         var brandId = Guid.NewGuid();
         var activeMetric = LoyaltyMetricDefinition.Create(brandId, "Active", 1).Value;
         var inactiveMetric = LoyaltyMetricDefinition.Create(brandId, "Inactive", 2).Value;
@@ -43,7 +43,7 @@ public class GetBrandManageMetricsHandlerTests
     [Fact]
     public async Task Handle_WhenUserCannotManageMetrics_ShouldFail()
     {
-        var user = User.Create("Staff", "1234").Value;
+        var user = User.Create("Staff").Value;
         var brandId = Guid.NewGuid();
         var membershipRepository = new FakeBrandMembershipRepository();
         membershipRepository.SetRole(user.Id, brandId, SystemRoles.Staff);

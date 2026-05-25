@@ -105,16 +105,7 @@ public class IssueCoinsByPhoneHandlerTests
     {
         return new PhoneAccountService(
             repository,
-            new FixedCustomerCodeGenerator(),
             new FixedDisplayNameGenerator());
-    }
-
-    private sealed class FixedCustomerCodeGenerator : ICustomerCodeGenerator
-    {
-        public Task<string> GenerateAsync(CancellationToken cancellationToken)
-        {
-            return Task.FromResult("4321");
-        }
     }
 
     private sealed class FixedDisplayNameGenerator : IUserDisplayNameGenerator

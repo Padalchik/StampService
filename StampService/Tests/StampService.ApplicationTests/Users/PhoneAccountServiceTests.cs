@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using StampService.Application.Users;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.User;
@@ -11,7 +11,7 @@ public class PhoneAccountServiceTests
     public async Task GetOrCreateForBusinessOperationAsync_WhenPhoneIdentityExists_ShouldReturnExistingUser()
     {
         var repository = new FakeUserRepository();
-        var existingUser = User.Create("Existing customer", "1234").Value;
+        var existingUser = User.Create("Existing customer").Value;
         existingUser.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
         repository.Add(existingUser);
         var service = CreateService(repository);
@@ -41,7 +41,6 @@ public class PhoneAccountServiceTests
         Assert.True(result.IsSuccess);
         var user = Assert.Single(repository.Users);
         Assert.Equal("Business customer", user.Name);
-        Assert.Equal("4321", user.CustomerCode);
         Assert.Equal(user.Id, result.Value.Id);
         var phoneIdentity = Assert.Single(
             user.Identities,
@@ -77,16 +76,7 @@ public class PhoneAccountServiceTests
     {
         return new PhoneAccountService(
             repository,
-            new FixedCustomerCodeGenerator(),
             new FixedDisplayNameGenerator());
-    }
-
-    private sealed class FixedCustomerCodeGenerator : ICustomerCodeGenerator
-    {
-        public Task<string> GenerateAsync(CancellationToken cancellationToken)
-        {
-            return Task.FromResult("4321");
-        }
     }
 
     private sealed class FixedDisplayNameGenerator : IUserDisplayNameGenerator
