@@ -13,27 +13,6 @@ namespace StampService.API.Controllers;
 [Route("api")]
 public class CoinsController : ApiControllerBase
 {
-    [HttpPost("brands/{brandId:guid}/coins/issue")]
-    public async Task<EndpointResult<CoinOperationResponse>> Issue(
-        Guid brandId,
-        IssueCoinsRequest request,
-        [FromServices] ICommandHandler<CoinOperationResponse, IssueCoinsCommand> handler,
-        CancellationToken cancellationToken)
-    {
-        var userIdResult = GetUserId();
-        if (userIdResult.IsFailed)
-            return userIdResult.ToResult<CoinOperationResponse>();
-
-        return await handler.Handle(
-            new IssueCoinsCommand(
-                brandId,
-                userIdResult.Value,
-                request.CustomerCode,
-                request.Amount,
-                string.IsNullOrWhiteSpace(request.Comment) ? "Issue coins" : request.Comment.Trim()),
-            cancellationToken);
-    }
-
     [HttpPost("brands/{brandId:guid}/coins/issue-by-phone")]
     public async Task<EndpointResult<CoinOperationResponse>> IssueByPhone(
         Guid brandId,

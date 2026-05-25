@@ -95,7 +95,7 @@ Auto-create клиента по телефону применяется толь
 
 4-значный `CustomerCode` не является основным способом начисления. Он сохраняется как legacy/совместимость и может временно использоваться как внутренний мост для старых Application-сценариев, пока они еще принимают код. Новые UI-сценарии начисления не должны просить сотрудника вводить `CustomerCode`.
 
-Ключевые Application use cases для нового flow: `IssueMetricByPhoneCommand` / `IssueMetricByPhoneHandler` и `IssueCoinsByPhoneCommand` / `IssueCoinsByPhoneHandler`. Web controllers и Telegram endpoints должны вызывать эти сценарии, а не делать предварительный `ResolveByPhoneAsync` в UI/API слое.
+Ключевые Application use cases для нового flow: `IssueMetricByPhoneCommand` / `IssueMetricByPhoneHandler` и `IssueCoinsByPhoneCommand` / `IssueCoinsByPhoneHandler`. Web controllers и Telegram endpoints должны вызывать эти сценарии, а не делать предварительный resolve клиента по телефону в UI/API слое.
 
 ## Телефонная авторизация и привязка
 
@@ -182,10 +182,8 @@ Web и Telegram могут иметь разные UI labels для одного
 - `GET /api/brands/{brandId}/metrics/issue-options` - активные метрики, доступные для выдачи, через `GetBrandIssueMetricsQuery`;
 - `GET /api/brands/{brandId}/metrics/redeem-options?redemptionCode=...` - варианты списания метрик по коду списания через `GetRedeemMetricOptionsQuery`;
 - `POST /api/metrics/{metricDefinitionId}/issue-by-phone` - основной web-friendly сценарий выдачи метрики по номеру телефона клиента через `IssueMetricByPhoneCommand`; Application находит или создает `User` по `Phone` identity и проводит ledger-начисление;
-- `POST /api/metrics/{metricDefinitionId}/issue-by-customer-code` - legacy/совместимый сценарий выдачи метрики по публичному 4-значному коду клиента;
 - `POST /api/metrics/{metricDefinitionId}/redeem` - списание метрики через существующий `RedeemMetricCommand`;
 - `POST /api/brands/{brandId}/coins/issue-by-phone` - основной web-friendly сценарий начисления монеток по номеру телефона клиента через `IssueCoinsByPhoneCommand`; Application находит или создает `User` по `Phone` identity и проводит ledger-начисление;
-- `POST /api/brands/{brandId}/coins/issue` - legacy/совместимый сценарий начисления монеток по коду клиента через `IssueCoinsCommand`;
 - `POST /api/brands/{brandId}/coins/redeem` - ручное списание монеток через `RedeemCoinsCommand`;
 - `GET /api/brands/{brandId}/coin-products/purchase-options?redemptionCode=...` и `POST /api/brands/{brandId}/coin-products/{productId}/purchase` - выдача товара за монетки через существующие CoinProduct use cases.
 

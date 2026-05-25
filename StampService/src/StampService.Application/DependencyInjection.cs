@@ -41,7 +41,6 @@ public static class DependencyInjection
         services.AddScoped<IPhoneAuthCodeService, PhoneAuthCodeService>();
         services.AddScoped<IPhoneAccountService, PhoneAccountService>();
         services.AddScoped<IRedemptionCodeGenerator, RedemptionCodeGenerator>();
-        services.AddScoped<IRecipientResolver, RecipientResolver>();
         services.AddSingleton(TimeProvider.System);
 
         return services;

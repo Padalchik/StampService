@@ -1,4 +1,3 @@
-using FluentResults;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StampService.API.EndpointResults;
@@ -13,7 +12,6 @@ using StampService.Application.Metrics.Queries.GetMetricBalance;
 using StampService.Application.Metrics.Queries.GetMetricDetails;
 using StampService.Application.Metrics.Queries.GetMetricTransactions;
 using StampService.Application.Metrics.Queries.GetRedeemMetricOptions;
-using StampService.Application.Users;
 using StampService.Contracts.DTOs.Metrics;
 
 namespace StampService.API.Controllers;
@@ -132,36 +130,6 @@ public class MetricsController : ApiControllerBase
             metricDefinitionId,
             userIdResult.Value,
             request);
-
-        return await handler.Handle(command, cancellationToken);
-    }
-
-    [HttpPost("metrics/{metricDefinitionId:guid}/issue-by-customer-code")]
-    public async Task<EndpointResult<IssueMetricResponse>> IssueByCustomerCode(
-        Guid metricDefinitionId,
-        IssueMetricByCustomerCodeRequest request,
-        [FromServices] IRecipientResolver recipientResolver,
-        [FromServices] ICommandHandler<IssueMetricResponse, IssueMetricCommand> handler,
-        CancellationToken cancellationToken)
-    {
-        var userIdResult = GetUserId();
-        if (userIdResult.IsFailed)
-            return userIdResult.ToResult<IssueMetricResponse>();
-
-        var recipientResult = await recipientResolver.ResolveAsync(
-            request.CustomerCode,
-            cancellationToken);
-
-        if (recipientResult.IsFailed)
-            return Result.Fail<IssueMetricResponse>(recipientResult.Errors);
-
-        var command = new IssueMetricCommand(
-            metricDefinitionId,
-            userIdResult.Value,
-            new IssueMetricRequest(
-                recipientResult.Value.UserId,
-                request.Amount,
-                string.IsNullOrWhiteSpace(request.Comment) ? "Issue metric" : request.Comment.Trim()));
 
         return await handler.Handle(command, cancellationToken);
     }
