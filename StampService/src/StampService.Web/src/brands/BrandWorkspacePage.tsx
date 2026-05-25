@@ -364,7 +364,7 @@ function RedeemMetricPanel({ brandId }: { brandId: string }) {
     <OperationPanel icon={<TicketMinus size={20} />} title="Списать метрику">
       <div className="work-form">
         <label>
-          Код списания
+          Код списания клиента
           <input value={redemptionCode} inputMode="numeric" onChange={(event) => setRedemptionCode(event.target.value)} />
         </label>
         <button className="button-secondary" type="button" disabled={isLoading} onClick={() => void loadOptions()}>
@@ -476,7 +476,7 @@ function RedeemCoinsPanel({ brandId }: { brandId: string }) {
   async function submit() {
     const parsedAmount = Number(amount);
     if (!redemptionCode.trim() || !Number.isInteger(parsedAmount) || parsedAmount <= 0 || !comment.trim()) {
-      setError('Укажите код списания, положительное количество и назначение списания.');
+      setError('Укажите код списания клиента, положительное количество и назначение списания.');
       return;
     }
 
@@ -505,7 +505,7 @@ function RedeemCoinsPanel({ brandId }: { brandId: string }) {
     <OperationPanel icon={<TicketMinus size={20} />} title="Списать монетки">
       <div className="work-form">
         <label>
-          Код списания
+          Код списания клиента
           <input value={redemptionCode} inputMode="numeric" onChange={(event) => setRedemptionCode(event.target.value)} />
         </label>
         <label>
@@ -575,7 +575,7 @@ function PurchaseCoinProductPanel({ brandId }: { brandId: string }) {
     <OperationPanel icon={<Gift size={20} />} title="Выдать товар за монетки">
       <div className="work-form">
         <label>
-          Код списания
+          Код списания клиента
           <input value={redemptionCode} inputMode="numeric" onChange={(event) => setRedemptionCode(event.target.value)} />
         </label>
         <button className="button-secondary" type="button" disabled={isLoading} onClick={() => void loadOptions()}>

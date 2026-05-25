@@ -1,4 +1,4 @@
-using StampService.Application.Wallet.Queries.GetUserWalletBrandDetails;
+﻿using StampService.Application.Wallet.Queries.GetUserWalletBrandDetails;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.Brand;
 using StampService.Domain.Coins;
@@ -13,7 +13,7 @@ public class GetUserWalletBrandDetailsHandlerTests
     [Fact]
     public async Task Handle_WhenBrandHasRewardsAndHistory_ShouldReturnPresentationDetails()
     {
-        var user = User.Create("Customer", "1234").Value;
+        var user = User.Create("Customer").Value;
         var brand = Brand.Create("Brand").Value;
         var userRepository = new FakeUserRepository();
         var brandRepository = new FakeBrandRepository();

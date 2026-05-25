@@ -1,4 +1,4 @@
-using StampService.Application.Access;
+﻿using StampService.Application.Access;
 using StampService.Application.Coins.Queries.GetCoinBalance;
 using StampService.Application.Coins.Queries.GetCoinHistory;
 using StampService.ApplicationTests.Fakes;
@@ -15,7 +15,8 @@ public class GetCoinBalanceAndHistoryHandlerTests
     {
         var brandId = Guid.NewGuid();
         var actorUserId = Guid.NewGuid();
-        var customer = User.Create("Customer", "1234").Value;
+        var customer = User.Create("Customer").Value;
+        customer.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
         var membershipRepository = new FakeBrandMembershipRepository();
         var userRepository = new FakeUserRepository();
         membershipRepository.SetRole(actorUserId, brandId, SystemRoles.Staff);
@@ -27,12 +28,33 @@ public class GetCoinBalanceAndHistoryHandlerTests
             userRepository);
 
         var result = await handler.Handle(
-            new GetCoinBalanceQuery(brandId, actorUserId, customer.CustomerCode),
+            new GetCoinBalanceQuery(brandId, actorUserId, "+7 999 123-45-67"),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Null(result.Value.WalletId);
+        Assert.Equal("+79991234567", result.Value.CustomerPhoneNumber);
         Assert.Equal(0, result.Value.Value);
+    }
+
+    [Fact]
+    public async Task GetCoinBalance_WhenPhoneIdentityDoesNotExist_ShouldFail()
+    {
+        var brandId = Guid.NewGuid();
+        var actorUserId = Guid.NewGuid();
+        var membershipRepository = new FakeBrandMembershipRepository();
+        membershipRepository.SetRole(actorUserId, brandId, SystemRoles.Staff);
+
+        var handler = new GetCoinBalanceHandler(
+            new BrandAccessService(membershipRepository),
+            new FakeCoinWalletRepository(),
+            new FakeUserRepository());
+
+        var result = await handler.Handle(
+            new GetCoinBalanceQuery(brandId, actorUserId, "+79991234567"),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
     }
 
     [Fact]
@@ -40,7 +62,8 @@ public class GetCoinBalanceAndHistoryHandlerTests
     {
         var brandId = Guid.NewGuid();
         var actorUserId = Guid.NewGuid();
-        var customer = User.Create("Customer", "1234").Value;
+        var customer = User.Create("Customer").Value;
+        customer.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
         var membershipRepository = new FakeBrandMembershipRepository();
         var userRepository = new FakeUserRepository();
         var walletRepository = new FakeCoinWalletRepository();
@@ -59,7 +82,7 @@ public class GetCoinBalanceAndHistoryHandlerTests
             userRepository);
 
         var result = await handler.Handle(
-            new GetCoinHistoryQuery(brandId, actorUserId, customer.CustomerCode, Skip: 0, Take: 10),
+            new GetCoinHistoryQuery(brandId, actorUserId, "+7 999 123-45-67", Skip: 0, Take: 10),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);

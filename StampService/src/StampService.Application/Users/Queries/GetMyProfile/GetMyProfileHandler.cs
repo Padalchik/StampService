@@ -33,7 +33,6 @@ public class GetMyProfileHandler : IQueryHandler<MyProfileResponse, GetMyProfile
         return Result.Ok(new MyProfileResponse(
             user.Id,
             user.Name,
-            user.CustomerCode,
             new IdentityStatusResponse(telegram is not null, telegram is null ? null : GetTelegramDisplayName(telegram)),
             new IdentityStatusResponse(
                 phone is not null,

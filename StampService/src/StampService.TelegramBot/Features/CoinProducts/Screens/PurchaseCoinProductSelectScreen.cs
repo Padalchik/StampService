@@ -48,7 +48,7 @@ public sealed class PurchaseCoinProductSelectScreen : IScreen
         var view = new ScreenView(
             $"<b>Покупка товара</b>\n\n" +
             $"Клиент: {Html(options.CustomerName)}\n" +
-            $"Код списания: <code>{Html(options.RedemptionCode)}</code>\n\n" +
+            $"Код списания клиента: <code>{Html(options.RedemptionCode)}</code>\n\n" +
             (options.Products.Count == 0
                 ? "Активных товаров пока нет."
                 : "Выберите товар:"));

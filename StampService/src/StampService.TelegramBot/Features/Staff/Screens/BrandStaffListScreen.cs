@@ -49,12 +49,13 @@ public sealed class BrandStaffListScreen : IScreen
 
         foreach (var staff in result.Value)
         {
+            var phoneNumber = staff.PhoneNumber ?? "-";
             view.Row().Button<OpenStaffDetailsAction, OpenStaffDetailsPayload>(
-                $"{staff.UserName} · {staff.CustomerCode}",
+                $"{staff.UserName} · {phoneNumber}",
                 new OpenStaffDetailsPayload(
                     staff.UserId,
                     staff.UserName,
-                    staff.CustomerCode));
+                    staff.PhoneNumber));
         }
 
         return view.Row()

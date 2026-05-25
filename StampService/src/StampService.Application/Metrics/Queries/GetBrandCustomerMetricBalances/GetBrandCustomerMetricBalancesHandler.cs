@@ -1,12 +1,13 @@
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Auth;
 using StampService.Application.Coins;
 using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Access;
-using UserEntity = StampService.Domain.User.User;
+using StampService.Domain.User;
 
 namespace StampService.Application.Metrics.Queries.GetBrandCustomerMetricBalances;
 
@@ -52,11 +53,16 @@ public class GetBrandCustomerMetricBalancesHandler
         if (!canViewBalances)
             return Result.Fail(AccessErrors.Denied());
 
-        var customerCode = query.CustomerCode.Trim();
-        if (!UserEntity.IsValidCustomerCode(customerCode))
-            return Result.Fail(UserErrors.CustomerCodeInvalid());
+        var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(
+            query.CustomerPhoneNumber,
+            nameof(query.CustomerPhoneNumber));
+        if (phoneNumberResult.IsFailed)
+            return Result.Fail(phoneNumberResult.Errors);
 
-        var customer = await _userRepository.GetByCustomerCodeAsync(customerCode, cancellationToken);
+        var customer = await _userRepository.GetByIdentityAsync(
+            IdentityType.Phone,
+            phoneNumberResult.Value,
+            cancellationToken);
         if (customer is null)
             return Result.Fail(UserErrors.RecipientNotFound());
 
@@ -87,7 +93,7 @@ public class GetBrandCustomerMetricBalancesHandler
             query.BrandId,
             customer.Id,
             customer.Name,
-            customer.CustomerCode,
+            phoneNumberResult.Value,
             coinWallet?.Value ?? 0,
             balances));
     }

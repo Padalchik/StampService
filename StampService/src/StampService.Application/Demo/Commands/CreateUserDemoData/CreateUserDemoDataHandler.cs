@@ -2,6 +2,7 @@ using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
 using StampService.Application.Administration;
+using StampService.Application.Auth;
 using StampService.Application.Brands;
 using StampService.Application.CoinProducts;
 using StampService.Application.Coins;
@@ -72,11 +73,16 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
         if (brand is null)
             return Result.Fail(BrandErrors.NotFound());
 
-        var customerCode = command.CustomerCode.Trim();
-        if (!User.IsValidCustomerCode(customerCode))
-            return Result.Fail(UserErrors.CustomerCodeInvalid());
+        var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(
+            command.PhoneNumber,
+            nameof(command.PhoneNumber));
+        if (phoneNumberResult.IsFailed)
+            return Result.Fail(phoneNumberResult.Errors);
 
-        var customer = await _userRepository.GetByCustomerCodeAsync(customerCode, cancellationToken);
+        var customer = await _userRepository.GetByIdentityAsync(
+            IdentityType.Phone,
+            phoneNumberResult.Value,
+            cancellationToken);
         if (customer is null)
             return Result.Fail(UserErrors.RecipientNotFound());
 

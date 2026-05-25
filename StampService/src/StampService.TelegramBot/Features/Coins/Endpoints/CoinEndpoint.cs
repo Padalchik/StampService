@@ -190,14 +190,14 @@ public sealed class CoinEndpoint : IBotEndpoint
             return BotResults.ShowView(new ScreenView("Не удалось определить пользователя.").BackButton());
 
         var result = await historyHandler.Handle(
-            new GetCoinHistoryQuery(GetBrandId(ctx), actorUserId.Value, payload.CustomerCode, Skip: 0, Take: 10),
+            new GetCoinHistoryQuery(GetBrandId(ctx), actorUserId.Value, payload.CustomerPhoneNumber, Skip: 0, Take: 10),
             ctx.CancellationToken);
 
         if (result.IsFailed)
             return BotResults.ShowView(new ScreenView($"Не удалось загрузить историю монеток: {BotErrorFormatter.Format(result.Errors)}").BackButton());
 
         var brandName = ctx.Session?.Data.GetString(BrandWorkspaceScreen.BrandNameSessionKey) ?? "бренд";
-        var title = $"<b>{Html(brandName)}</b>\nМонетки · <code>{Html(payload.CustomerCode)}</code>";
+        var title = $"<b>{Html(brandName)}</b>\nМонетки · <code>{Html(payload.CustomerPhoneNumber)}</code>";
         if (result.Value.Items.Count == 0)
         {
             return BotResults.ShowView(new ScreenView(
@@ -259,7 +259,6 @@ public sealed class CoinEndpoint : IBotEndpoint
 
     private static void ClearOperation(UpdateContext ctx)
     {
-        ctx.Session?.Data.Remove(CoinSessionKeys.CustomerCode);
         ctx.Session?.Data.Remove(CoinSessionKeys.CustomerPhoneNumber);
         ctx.Session?.Data.Remove(CoinSessionKeys.RedemptionCode);
         ctx.Session?.Data.Remove(CoinSessionKeys.Amount);

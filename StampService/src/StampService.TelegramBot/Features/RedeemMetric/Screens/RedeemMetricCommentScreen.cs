@@ -19,7 +19,7 @@ public sealed class RedeemMetricCommentScreen : IScreen
             "<b>Списание метрики</b>\n\n" +
             $"Клиент: {Html(customerName)}\n" +
             $"Метрика: {Html(metricName)}\n" +
-            $"Код списания: <code>{Html(redemptionCode ?? string.Empty)}</code>\n" +
+            $"Код списания клиента: <code>{Html(redemptionCode ?? string.Empty)}</code>\n" +
             $"Баланс: {currentBalance}/{redemptionAmount}\n\n" +
             "Введите комментарий:")
             .AwaitInput<EnterRedeemCommentAction>()

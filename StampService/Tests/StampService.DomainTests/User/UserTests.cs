@@ -1,4 +1,4 @@
-using StampService.Domain.Shared;
+﻿using StampService.Domain.Shared;
 using DomainUser = StampService.Domain.User.User;
 
 namespace StampService.DomainTests.User;
@@ -6,45 +6,33 @@ namespace StampService.DomainTests.User;
 public class UserTests
 {
     [Fact]
-    public void Create_WithValidCustomerCode_ShouldCreateUser()
+    public void Create_WithValidName_ShouldCreateUser()
     {
-        var result = DomainUser.Create("Ivan", "1234");
+        var result = DomainUser.Create("Ivan");
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Ivan", result.Value.Name);
-        Assert.Equal("1234", result.Value.CustomerCode);
     }
 
     [Theory]
     [InlineData("")]
-    [InlineData("123")]
-    [InlineData("12345")]
-    [InlineData("12A4")]
-    public void Create_WithInvalidCustomerCode_ShouldFail(string customerCode)
+    [InlineData("   ")]
+    public void Create_WithInvalidName_ShouldFail(string name)
     {
-        var result = DomainUser.Create("Ivan", customerCode);
+        var result = DomainUser.Create(name);
 
         Assert.True(result.IsFailed);
     }
 
     [Fact]
-    public void Create_WithInvalidCustomerCode_ShouldReturnTypedDomainError()
+    public void Create_WithInvalidName_ShouldReturnTypedDomainError()
     {
-        var result = DomainUser.Create("Ivan", "12A4");
+        var result = DomainUser.Create(" ");
 
         var error = Assert.IsType<DomainError>(result.Errors.Single());
-        Assert.Equal("user.customer_code_invalid", error.Code);
+        Assert.Equal("user.name_required", error.Code);
         Assert.Equal(DomainErrorType.Validation, error.Type);
-        Assert.Equal("customerCode", error.InvalidField);
-    }
-
-    [Fact]
-    public void Create_WithoutExplicitCustomerCode_ShouldGenerateFourDigitCode()
-    {
-        var result = DomainUser.Create("Ivan");
-
-        Assert.True(result.IsSuccess);
-        Assert.Matches("^[0-9]{4}$", result.Value.CustomerCode);
+        Assert.Equal("name", error.InvalidField);
     }
 
     [Fact]

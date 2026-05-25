@@ -4,6 +4,6 @@ public record ReassignBrandOwnerResponse(
     Guid BrandId,
     Guid NewOwnerUserId,
     string NewOwnerName,
-    string NewOwnerCustomerCode,
+    string NewOwnerPhoneNumber,
     Guid MembershipId,
     Guid? RemovedOwnerUserId);

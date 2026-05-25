@@ -84,9 +84,6 @@ export function WalletPage() {
           <div>
             <h2>Код для списания</h2>
             <p>Покажите этот код сотруднику бренда для операции списания.</p>
-            {wallet?.customerCode ? (
-              <div className="customer-code">Код пользователя: {wallet.customerCode}</div>
-            ) : null}
             <div className="redemption-code">{wallet?.redemptionCode.code ?? '----'}</div>
             {wallet?.redemptionCode.expiresAtUtc ? (
               <div className="wallet-code-panel__expires">

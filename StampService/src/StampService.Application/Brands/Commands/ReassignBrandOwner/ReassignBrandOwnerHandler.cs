@@ -2,11 +2,12 @@ using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
 using StampService.Application.Administration;
+using StampService.Application.Auth;
 using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Brands;
 using StampService.Domain.Access;
-using UserEntity = StampService.Domain.User.User;
+using StampService.Domain.User;
 
 namespace StampService.Application.Brands.Commands.ReassignBrandOwner;
 
@@ -40,11 +41,17 @@ public class ReassignBrandOwnerHandler : ICommandHandler<ReassignBrandOwnerRespo
         if (!brandExists)
             return Result.Fail(BrandErrors.NotFound());
 
-        var ownerCustomerCode = command.NewOwnerCustomerCode.Trim();
-        if (!UserEntity.IsValidCustomerCode(ownerCustomerCode))
-            return Result.Fail(UserErrors.CustomerCodeInvalid());
+        var ownerPhoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(
+            command.NewOwnerPhoneNumber,
+            nameof(command.NewOwnerPhoneNumber));
+        if (ownerPhoneNumberResult.IsFailed)
+            return Result.Fail(ownerPhoneNumberResult.Errors);
 
-        var newOwner = await _userRepository.GetByCustomerCodeAsync(ownerCustomerCode, cancellationToken);
+        var ownerPhoneNumber = ownerPhoneNumberResult.Value;
+        var newOwner = await _userRepository.GetByIdentityAsync(
+            IdentityType.Phone,
+            ownerPhoneNumber,
+            cancellationToken);
         if (newOwner is null)
             return Result.Fail(UserErrors.RecipientNotFound());
 
@@ -61,7 +68,7 @@ public class ReassignBrandOwnerHandler : ICommandHandler<ReassignBrandOwnerRespo
                 command.BrandId,
                 newOwner.Id,
                 newOwner.Name,
-                newOwner.CustomerCode,
+                ownerPhoneNumber,
                 currentOwner.Id,
                 null));
         }
@@ -97,7 +104,7 @@ public class ReassignBrandOwnerHandler : ICommandHandler<ReassignBrandOwnerRespo
             command.BrandId,
             newOwner.Id,
             newOwner.Name,
-            newOwner.CustomerCode,
+            ownerPhoneNumber,
             newOwnerMembership.Id,
             removedOwnerUserId));
     }

@@ -1,4 +1,4 @@
-using StampService.Application.Access;
+﻿using StampService.Application.Access;
 using StampService.Application.Metrics.Queries.GetBrandRedeemMetrics;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.Access;
@@ -13,7 +13,7 @@ public class GetBrandRedeemMetricsHandlerTests
     public async Task Handle_WhenUserCanRedeem_ShouldReturnActiveBrandMetrics()
     {
         var brandId = Guid.NewGuid();
-        var user = DomainUser.Create("Ivan", "1234").Value;
+        var user = DomainUser.Create("Ivan").Value;
         var userRepository = new FakeUserRepository();
         userRepository.Add(user);
         var membershipRepository = new FakeBrandMembershipRepository();
@@ -40,7 +40,7 @@ public class GetBrandRedeemMetricsHandlerTests
     public async Task Handle_WhenUserCannotRedeem_ShouldFail()
     {
         var brandId = Guid.NewGuid();
-        var user = DomainUser.Create("Ivan", "1234").Value;
+        var user = DomainUser.Create("Ivan").Value;
         var userRepository = new FakeUserRepository();
         userRepository.Add(user);
 

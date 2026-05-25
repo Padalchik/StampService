@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using StampService.Application.Access;
 using StampService.Application.Administration;
 using StampService.Application.Brands.Commands.CreateBrandWithOwner;
@@ -16,9 +16,11 @@ public class AdminBrandOwnerHandlerTests
     private const long AdminTelegramUserId = 278225388;
 
     [Fact]
-    public async Task CreateBrandWithOwner_WhenAdminProvidesCustomerCode_ShouldCreateOwnerMembership()
+    public async Task CreateBrandWithOwner_WhenAdminProvidesPhone_ShouldCreateOwnerMembership()
     {
-        var owner = User.Create("Owner", "1234").Value;
+        var owner = User.Create("Owner").Value;
+        var ownerPhoneNumber = "+79991234567";
+        owner.AddIdentity(IdentityType.Phone, ownerPhoneNumber, "{}");
         var userRepository = new FakeUserRepository();
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
@@ -31,7 +33,7 @@ public class AdminBrandOwnerHandlerTests
             userRepository);
 
         var result = await handler.Handle(
-            new CreateBrandWithOwnerCommand(AdminTelegramUserId, "Coffee", owner.CustomerCode),
+            new CreateBrandWithOwnerCommand(AdminTelegramUserId, "Coffee", ownerPhoneNumber),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -46,8 +48,10 @@ public class AdminBrandOwnerHandlerTests
     public async Task ReassignBrandOwner_WhenBrandHasOldOwner_ShouldRemoveOldMembershipAndAssignNewOwner()
     {
         var brandId = Guid.NewGuid();
-        var oldOwner = User.Create("Old owner", "1111").Value;
-        var newOwner = User.Create("New owner", "2222").Value;
+        var oldOwner = User.Create("Old owner").Value;
+        var newOwner = User.Create("New owner").Value;
+        var newOwnerPhoneNumber = "+79997654321";
+        newOwner.AddIdentity(IdentityType.Phone, newOwnerPhoneNumber, "{}");
         var userRepository = new FakeUserRepository();
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
@@ -65,7 +69,7 @@ public class AdminBrandOwnerHandlerTests
             userRepository);
 
         var result = await handler.Handle(
-            new ReassignBrandOwnerCommand(AdminTelegramUserId, brandId, newOwner.CustomerCode),
+            new ReassignBrandOwnerCommand(AdminTelegramUserId, brandId, newOwnerPhoneNumber),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -83,7 +87,7 @@ public class AdminBrandOwnerHandlerTests
     [Fact]
     public async Task UpdateBrandRewardSettings_WhenActorIsOwner_ShouldUpdateSettings()
     {
-        var owner = User.Create("Owner", "1234").Value;
+        var owner = User.Create("Owner").Value;
         var brand = Brand.Create("Coffee").Value;
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
@@ -114,7 +118,7 @@ public class AdminBrandOwnerHandlerTests
     [Fact]
     public async Task UpdateBrandRewardSettings_WhenActorIsStaff_ShouldFail()
     {
-        var staff = User.Create("Staff", "1234").Value;
+        var staff = User.Create("Staff").Value;
         var brand = Brand.Create("Coffee").Value;
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
@@ -141,7 +145,7 @@ public class AdminBrandOwnerHandlerTests
     [Fact]
     public async Task UpdateBrandRewardSettings_WhenCoinsEnabledWithoutRedemptionModes_ShouldFailWithoutChangingBrand()
     {
-        var owner = User.Create("Owner", "1234").Value;
+        var owner = User.Create("Owner").Value;
         var brand = Brand.Create("Coffee").Value;
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();

@@ -41,7 +41,7 @@ public class IssueCoinsByPhoneHandlerTests
         Assert.True(result.IsSuccess);
         var customer = Assert.Single(userRepository.Users);
         Assert.Equal(customer.Id, result.Value.UserId);
-        Assert.Equal("4321", result.Value.CustomerCode);
+        Assert.Equal(customer.Name, result.Value.UserName);
         Assert.Equal(15, result.Value.Amount);
         Assert.Equal(15, result.Value.BalanceValue);
         Assert.Single(walletRepository.Wallets);
@@ -105,16 +105,7 @@ public class IssueCoinsByPhoneHandlerTests
     {
         return new PhoneAccountService(
             repository,
-            new FixedCustomerCodeGenerator(),
             new FixedDisplayNameGenerator());
-    }
-
-    private sealed class FixedCustomerCodeGenerator : ICustomerCodeGenerator
-    {
-        public Task<string> GenerateAsync(CancellationToken cancellationToken)
-        {
-            return Task.FromResult("4321");
-        }
     }
 
     private sealed class FixedDisplayNameGenerator : IUserDisplayNameGenerator

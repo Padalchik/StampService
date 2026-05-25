@@ -2,4 +2,4 @@ using TelegramBotFlow.Core.Endpoints;
 
 namespace StampService.TelegramBot.Features.Admin.Actions;
 
-public sealed class EnterDemoCustomerCodeAction : IBotAction;
+public sealed class EnterDemoPhoneAction : IBotAction;

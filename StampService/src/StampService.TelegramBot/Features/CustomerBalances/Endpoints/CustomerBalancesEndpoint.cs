@@ -1,6 +1,7 @@
 using System.Net;
 using System.Globalization;
 using StampService.Application.Abstractions;
+using StampService.Application.Auth;
 using StampService.Application.Metrics.Queries.GetBrandCustomerMetricBalances;
 using StampService.Application.Metrics.Queries.GetMetricTransactions;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
@@ -16,7 +17,6 @@ using TelegramBotFlow.Core.Endpoints;
 using TelegramBotFlow.Core.Hosting;
 using TelegramBotFlow.Core.Routing;
 using TelegramBotFlow.Core.Screens;
-using UserEntity = StampService.Domain.User.User;
 
 namespace StampService.TelegramBot.Features.CustomerBalances.Endpoints;
 
@@ -25,16 +25,16 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
     public void MapEndpoint(BotApplication app)
     {
         app.MapAction<StartCustomerBalancesAction>(StartAsync);
-        app.MapInput<EnterCustomerBalancesCodeAction>(EnterCustomerCodeAsync);
+        app.MapInput<EnterCustomerBalancesPhoneAction>(EnterCustomerPhoneAsync);
         app.MapAction<ViewCustomerBalanceHistoryAction, ViewCustomerBalanceHistoryPayload>(ViewHistoryAsync);
     }
 
     private static Task<IEndpointResult> StartAsync(UpdateContext ctx)
     {
-        return Task.FromResult(BotResults.NavigateTo<CustomerBalancesCodeScreen>());
+        return Task.FromResult(BotResults.NavigateTo<CustomerBalancesPhoneScreen>());
     }
 
-    private static async Task<IEndpointResult> EnterCustomerCodeAsync(
+    private static async Task<IEndpointResult> EnterCustomerPhoneAsync(
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
         IQueryHandler<BrandCustomerMetricBalancesResponse, GetBrandCustomerMetricBalancesQuery> balancesHandler)
@@ -43,14 +43,15 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
         if (brandId == Guid.Empty)
             return BotResults.ShowView(new ScreenView("Бренд не выбран.").BackButton());
 
-        var customerCode = ctx.MessageText?.Trim() ?? string.Empty;
-        if (!UserEntity.IsValidCustomerCode(customerCode))
-        {
+        var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(
+            ctx.MessageText ?? string.Empty,
+            "phoneNumber");
+
+        if (phoneNumberResult.IsFailed)
             return BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
-                "Код пользователя должен состоять из 4 цифр.")
-                .AwaitInput<EnterCustomerBalancesCodeAction>()
+                "Введите телефон клиента в международном формате, например +7 999 123-45-67.")
+                .AwaitInput<EnterCustomerBalancesPhoneAction>()
                 .BackButton()));
-        }
 
         var userResult = await BotEndpointHelpers.EnsureUserAsync(ctx, ensureUserHandler);
 
@@ -58,7 +59,7 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
         {
             return BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
                 $"Не удалось определить пользователя: {BotErrorFormatter.Format(userResult.Errors)}")
-                .AwaitInput<EnterCustomerBalancesCodeAction>()
+                .AwaitInput<EnterCustomerBalancesPhoneAction>()
                 .BackButton()));
         }
 
@@ -66,14 +67,14 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
             new GetBrandCustomerMetricBalancesQuery(
                 userResult.Value.UserId,
                 brandId,
-                customerCode),
+                phoneNumberResult.Value),
             ctx.CancellationToken);
 
         if (balancesResult.IsFailed)
         {
             return BotInputResults.DeleteInputThen(BotResults.ShowView(new ScreenView(
                 $"Не удалось загрузить балансы: {BotErrorFormatter.Format(balancesResult.Errors)}")
-                .AwaitInput<EnterCustomerBalancesCodeAction>()
+                .AwaitInput<EnterCustomerBalancesPhoneAction>()
                 .BackButton()));
         }
 
@@ -107,14 +108,14 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
         var title =
             $"<b>{Html(brandName)}</b>\n" +
             $"{Html(payload.MetricName)}\n" +
-            $"Клиент: {Html(payload.CustomerName)} · <code>{Html(payload.CustomerCode)}</code>";
+            $"Клиент: {Html(payload.CustomerName)} · <code>{Html(payload.CustomerPhoneNumber)}</code>";
 
         if (transactionsResult.Value.Items.Count == 0)
         {
             return BotResults.ShowView(new ScreenView(
                 $"{title}\n\n" +
                 "Истории операций пока нет.")
-                .NavigateButton<CustomerBalancesCodeScreen>("Другой клиент")
+                .NavigateButton<CustomerBalancesPhoneScreen>("Другой клиент")
                 .BackButton());
         }
 
@@ -135,7 +136,7 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
             $"{title}\n\n" +
             "<b>Последние операции</b>\n" +
             string.Join("\n", lines))
-            .NavigateButton<CustomerBalancesCodeScreen>("Другой клиент")
+            .NavigateButton<CustomerBalancesPhoneScreen>("Другой клиент")
             .BackButton());
     }
 
@@ -165,7 +166,7 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
 
         var view = new ScreenView(
             $"<b>{Html(brandName)}</b>\n\n" +
-            $"Клиент: {Html(response.CustomerName)} · <code>{Html(response.CustomerCode)}</code>\n\n" +
+            $"Клиент: {Html(response.CustomerName)} · <code>{Html(response.CustomerPhoneNumber)}</code>\n\n" +
             string.Join("\n", lines));
 
         foreach (var balance in activeBalances)
@@ -175,7 +176,7 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
                 new ViewCustomerBalanceHistoryPayload(
                     response.CustomerUserId,
                     response.CustomerName,
-                    response.CustomerCode,
+                    response.CustomerPhoneNumber,
                     balance.MetricDefinitionId,
                     balance.MetricName));
         }
@@ -184,10 +185,10 @@ public sealed class CustomerBalancesEndpoint : IBotEndpoint
         {
             view.Row().Button<ViewCoinHistoryAction, ViewCoinHistoryPayload>(
                 "📈 История: монетки",
-                new ViewCoinHistoryPayload(response.CustomerCode));
+                new ViewCoinHistoryPayload(response.CustomerPhoneNumber));
         }
 
-        return view.NavigateButton<CustomerBalancesCodeScreen>("Другой клиент")
+        return view.NavigateButton<CustomerBalancesPhoneScreen>("Другой клиент")
             .BackButton();
     }
 

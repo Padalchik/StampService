@@ -2,9 +2,7 @@ using FluentResults;
 using Microsoft.Extensions.Logging;
 using StampService.Application.Abstractions;
 using StampService.Application.CustomerNotifications.Commands.MarkWalletOpened;
-using StampService.Application.Errors;
 using StampService.Application.Users.Commands.CreateRedemptionCode;
-using StampService.Application.Users;
 using StampService.Application.Wallet.Queries.GetUserWalletOverview;
 using StampService.Contracts.DTOs.CustomerNotifications;
 using StampService.Contracts.DTOs.Users;
@@ -18,20 +16,17 @@ public class OpenUserWalletHandler
     private readonly ICommandHandler<CreateRedemptionCodeResponse, CreateRedemptionCodeCommand> _createCodeHandler;
     private readonly ICommandHandler<MarkWalletOpenedResponse, MarkWalletOpenedCommand> _markWalletOpenedHandler;
     private readonly IQueryHandler<UserWalletOverviewResponse, GetUserWalletOverviewQuery> _overviewHandler;
-    private readonly IUserRepository _userRepository;
     private readonly ILogger<OpenUserWalletHandler> _logger;
 
     public OpenUserWalletHandler(
         ICommandHandler<CreateRedemptionCodeResponse, CreateRedemptionCodeCommand> createCodeHandler,
         ICommandHandler<MarkWalletOpenedResponse, MarkWalletOpenedCommand> markWalletOpenedHandler,
         IQueryHandler<UserWalletOverviewResponse, GetUserWalletOverviewQuery> overviewHandler,
-        IUserRepository userRepository,
         ILogger<OpenUserWalletHandler> logger)
     {
         _createCodeHandler = createCodeHandler;
         _markWalletOpenedHandler = markWalletOpenedHandler;
         _overviewHandler = overviewHandler;
-        _userRepository = userRepository;
         _logger = logger;
     }
 
@@ -51,15 +46,10 @@ public class OpenUserWalletHandler
         if (overviewResult.IsFailed)
             return Result.Fail(overviewResult.Errors);
 
-        var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
-        if (user is null)
-            return Result.Fail(UserErrors.NotFound());
-
         await MarkWalletOpenedBestEffortAsync(command.UserId, cancellationToken);
 
         return Result.Ok(new UserWalletResponse(
             overviewResult.Value.UserId,
-            user.CustomerCode,
             new UserWalletRedemptionCodeResponse(
                 codeResult.Value.Code,
                 codeResult.Value.ExpiresAtUtc),

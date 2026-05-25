@@ -1,4 +1,4 @@
-using StampService.Application.Access;
+﻿using StampService.Application.Access;
 using StampService.Application.Metrics.Queries.GetBrandCustomerMetricBalances;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.Access;
@@ -15,8 +15,9 @@ public class GetBrandCustomerMetricBalancesHandlerTests
     {
         var brandId = Guid.NewGuid();
         var otherBrandId = Guid.NewGuid();
-        var staff = User.Create("Staff", "1001").Value;
-        var customer = User.Create("Customer", "2002").Value;
+        var staff = User.Create("Staff").Value;
+        var customer = User.Create("Customer").Value;
+        customer.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
         var activeMetric = LoyaltyMetricDefinition.Create(brandId, "Coffee", 1).Value;
         var inactiveMetric = LoyaltyMetricDefinition.Create(brandId, "Cake", 1).Value;
         var otherBrandMetric = LoyaltyMetricDefinition.Create(otherBrandId, "Tea", 1).Value;
@@ -50,12 +51,12 @@ public class GetBrandCustomerMetricBalancesHandlerTests
             userRepository);
 
         var result = await handler.Handle(
-            new GetBrandCustomerMetricBalancesQuery(staff.Id, brandId, customer.CustomerCode),
+            new GetBrandCustomerMetricBalancesQuery(staff.Id, brandId, "+7 999 123-45-67"),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(customer.Id, result.Value.CustomerUserId);
-        Assert.Equal(customer.CustomerCode, result.Value.CustomerCode);
+        Assert.Equal("+79991234567", result.Value.CustomerPhoneNumber);
         Assert.Equal(11, result.Value.CoinBalanceValue);
         Assert.Equal(2, result.Value.Balances.Count);
         Assert.DoesNotContain(result.Value.Balances, item => item.MetricDefinitionId == otherBrandMetric.Id);
@@ -80,7 +81,7 @@ public class GetBrandCustomerMetricBalancesHandlerTests
             new FakeUserRepository());
 
         var result = await handler.Handle(
-            new GetBrandCustomerMetricBalancesQuery(Guid.NewGuid(), Guid.NewGuid(), "1234"),
+            new GetBrandCustomerMetricBalancesQuery(Guid.NewGuid(), Guid.NewGuid(), "+79991234567"),
             CancellationToken.None);
 
         Assert.True(result.IsFailed);
@@ -90,8 +91,9 @@ public class GetBrandCustomerMetricBalancesHandlerTests
     public async Task Handle_WhenCustomerHasNoCoinWallet_ShouldReturnZeroCoinBalance()
     {
         var brandId = Guid.NewGuid();
-        var staff = User.Create("Staff", "1001").Value;
-        var customer = User.Create("Customer", "2002").Value;
+        var staff = User.Create("Staff").Value;
+        var customer = User.Create("Customer").Value;
+        customer.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
         var userRepository = new FakeUserRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
         userRepository.Add(staff);
@@ -106,10 +108,34 @@ public class GetBrandCustomerMetricBalancesHandlerTests
             userRepository);
 
         var result = await handler.Handle(
-            new GetBrandCustomerMetricBalancesQuery(staff.Id, brandId, customer.CustomerCode),
+            new GetBrandCustomerMetricBalancesQuery(staff.Id, brandId, "+79991234567"),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(0, result.Value.CoinBalanceValue);
+    }
+
+    [Fact]
+    public async Task Handle_WhenPhoneIdentityDoesNotExist_ShouldFail()
+    {
+        var brandId = Guid.NewGuid();
+        var staff = User.Create("Staff").Value;
+        var userRepository = new FakeUserRepository();
+        var membershipRepository = new FakeBrandMembershipRepository();
+        userRepository.Add(staff);
+        membershipRepository.SetRole(staff.Id, brandId, SystemRoles.Staff);
+
+        var handler = new GetBrandCustomerMetricBalancesHandler(
+            new BrandAccessService(membershipRepository),
+            new FakeLoyaltyMetricRepository(),
+            new FakeMetricBalanceRepository(),
+            new FakeCoinWalletRepository(),
+            userRepository);
+
+        var result = await handler.Handle(
+            new GetBrandCustomerMetricBalancesQuery(staff.Id, brandId, "+79991234567"),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
     }
 }

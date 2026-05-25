@@ -1,22 +1,23 @@
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Auth;
 using StampService.Application.Brands;
 using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Brands;
-using UserEntity = StampService.Domain.User.User;
+using StampService.Domain.User;
 
-namespace StampService.Application.Brands.Commands.AddBrandStaffByCustomerCode;
+namespace StampService.Application.Brands.Commands.AddBrandStaffByPhone;
 
-public class AddBrandStaffByCustomerCodeHandler
-    : ICommandHandler<AddBrandStaffByCustomerCodeResponse, AddBrandStaffByCustomerCodeCommand>
+public class AddBrandStaffByPhoneHandler
+    : ICommandHandler<AddBrandStaffByPhoneResponse, AddBrandStaffByPhoneCommand>
 {
     private readonly IBrandAccessService _brandAccessService;
     private readonly IBrandMembershipService _brandMembershipService;
     private readonly IUserRepository _userRepository;
 
-    public AddBrandStaffByCustomerCodeHandler(
+    public AddBrandStaffByPhoneHandler(
         IBrandAccessService brandAccessService,
         IBrandMembershipService brandMembershipService,
         IUserRepository userRepository)
@@ -26,8 +27,8 @@ public class AddBrandStaffByCustomerCodeHandler
         _userRepository = userRepository;
     }
 
-    public async Task<Result<AddBrandStaffByCustomerCodeResponse>> Handle(
-        AddBrandStaffByCustomerCodeCommand command,
+    public async Task<Result<AddBrandStaffByPhoneResponse>> Handle(
+        AddBrandStaffByPhoneCommand command,
         CancellationToken cancellationToken)
     {
         var canManageStaff = await BrandStaffAuthorization.CanManageStaffAsync(
@@ -39,11 +40,17 @@ public class AddBrandStaffByCustomerCodeHandler
         if (!canManageStaff)
             return Result.Fail(AccessErrors.Denied());
 
-        var customerCode = command.CustomerCode.Trim();
-        if (!UserEntity.IsValidCustomerCode(customerCode))
-            return Result.Fail(UserErrors.CustomerCodeInvalid());
+        var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(
+            command.PhoneNumber,
+            nameof(command.PhoneNumber));
+        if (phoneNumberResult.IsFailed)
+            return Result.Fail(phoneNumberResult.Errors);
 
-        var user = await _userRepository.GetByCustomerCodeAsync(customerCode, cancellationToken);
+        var phoneNumber = phoneNumberResult.Value;
+        var user = await _userRepository.GetByIdentityAsync(
+            IdentityType.Phone,
+            phoneNumber,
+            cancellationToken);
         if (user is null)
             return Result.Fail(UserErrors.RecipientNotFound());
 
@@ -56,11 +63,11 @@ public class AddBrandStaffByCustomerCodeHandler
             return Result.Fail(membershipResult.Errors);
 
         var membership = membershipResult.Value;
-        return Result.Ok(new AddBrandStaffByCustomerCodeResponse(
+        return Result.Ok(new AddBrandStaffByPhoneResponse(
             membership.BrandId,
             user.Id,
             user.Name,
-            user.CustomerCode,
+            phoneNumber,
             membership.Id,
             membership.CreatedAt));
     }

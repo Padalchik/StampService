@@ -34,9 +34,9 @@ public sealed class AdminPanelScreen : IScreen
 
         foreach (var brand in brandsResult.Value)
         {
-            var ownerText = string.IsNullOrWhiteSpace(brand.OwnerCustomerCode)
-                ? "без владельца"
-                : $"владелец {brand.OwnerCustomerCode}";
+            var ownerText = string.IsNullOrWhiteSpace(brand.OwnerPhoneNumber)
+                ? string.IsNullOrWhiteSpace(brand.OwnerName) ? "без владельца" : $"владелец {brand.OwnerName}"
+                : $"владелец {brand.OwnerPhoneNumber}";
 
             view.Row().Button<OpenAdminBrandAction, OpenAdminBrandPayload>(
                 $"{brand.BrandName} ({ownerText})",
@@ -49,7 +49,7 @@ public sealed class AdminPanelScreen : IScreen
                     brand.IsManualCoinRedemptionEnabled,
                     brand.OwnerUserId,
                     brand.OwnerName,
-                    brand.OwnerCustomerCode));
+                    brand.OwnerPhoneNumber));
         }
 
         return view.Row()

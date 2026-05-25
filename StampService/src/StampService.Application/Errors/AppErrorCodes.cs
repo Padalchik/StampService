@@ -37,11 +37,6 @@ public static class AppErrorCodes
         public const string CannotChangeOwnerRole = "brand_membership.cannot_change_owner_role";
     }
 
-    public static class CustomerCode
-    {
-        public const string Invalid = "customer_code.invalid";
-    }
-
     public static class Coin
     {
         public const string WalletNotFound = "coin.wallet_not_found";

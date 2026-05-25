@@ -42,7 +42,6 @@ public static class BotErrorFormatter
             AppErrorCodes.Brand.NotFound => "бренд не найден",
             AppErrorCodes.BrandMembership.NotFound => "нет доступа к этому бренду",
             AppErrorCodes.BrandMembership.CannotChangeOwnerRole => "владельца нельзя изменить через управление сотрудниками",
-            AppErrorCodes.CustomerCode.Invalid => "код пользователя должен состоять из 4 цифр",
             AppErrorCodes.Metric.NotFound => "метрика не найдена",
             AppErrorCodes.Metric.Inactive => "метрика неактивна",
             AppErrorCodes.MetricBalance.NotFound => "у клиента нет баланса по этой метрике",

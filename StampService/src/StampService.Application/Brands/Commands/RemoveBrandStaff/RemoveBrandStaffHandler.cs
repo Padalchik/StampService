@@ -6,6 +6,7 @@ using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Brands;
 using StampService.Domain.Access;
+using StampService.Domain.User;
 
 namespace StampService.Application.Brands.Commands.RemoveBrandStaff;
 
@@ -78,6 +79,12 @@ public class RemoveBrandStaffHandler : ICommandHandler<RemoveBrandStaffResponse,
             command.BrandId,
             user.Id,
             user.Name,
-            user.CustomerCode));
+            GetActivePhoneNumber(user)));
+    }
+
+    private static string? GetActivePhoneNumber(User user)
+    {
+        return user.Identities.FirstOrDefault(identity =>
+            identity.DeletedAt is null && identity.Type == IdentityType.Phone)?.Key;
     }
 }

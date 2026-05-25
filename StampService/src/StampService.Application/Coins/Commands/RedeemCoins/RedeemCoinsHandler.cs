@@ -136,7 +136,6 @@ public class RedeemCoinsHandler : ICommandHandler<CoinOperationResponse, RedeemC
             operation.Wallet.BrandId,
             customer.Id,
             customer.Name,
-            customer.CustomerCode,
             operation.Transaction.Type.ToString(),
             operation.Transaction.Amount,
             operation.Wallet.Value,

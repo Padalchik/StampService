@@ -15,7 +15,7 @@ public sealed class CoinRedeemConfirmScreen : IScreen
 
         return ValueTask.FromResult(new ScreenView(
             "<b>Списать монетки?</b>\n\n" +
-            $"Код списания: <code>{Html(code)}</code>\n" +
+            $"Код списания клиента: <code>{Html(code)}</code>\n" +
             $"Количество: {amount}\n" +
             $"Назначение: {Html(comment)}")
             .Button<ConfirmRedeemCoinsAction>("✅ Подтвердить")

@@ -30,7 +30,7 @@ public static class DemoDataSeeder
         await RoleSeeder.SeedSystemRolesAsync(dbContext, cancellationToken);
 
         var ownerRoleId = await GetRoleIdAsync(dbContext, SystemRoles.Owner, cancellationToken);
-        var owner = CreateUser("Владелец брендов", "1001", "+70000001001", adminTelegramUserId);
+        var owner = CreateUser("Владелец брендов", "+70000001001", adminTelegramUserId);
 
         var allRewardsBrand = CreateBrand(
             "Кофейная лаборатория",
@@ -95,9 +95,9 @@ public static class DemoDataSeeder
             .SingleAsync(cancellationToken);
     }
 
-    private static User CreateUser(string name, string customerCode, string phoneNumber, long telegramUserId)
+    private static User CreateUser(string name, string phoneNumber, long telegramUserId)
     {
-        var user = Require(User.Create(name, customerCode), $"Не удалось создать пользователя '{name}'.");
+        var user = Require(User.Create(name), $"Не удалось создать пользователя '{name}'.");
         Require(
             user.AddIdentity(IdentityType.Phone, phoneNumber, $"{{\"phoneNumber\":\"{phoneNumber}\",\"seeded\":true}}"),
             $"Не удалось добавить телефон пользователю '{name}'.");

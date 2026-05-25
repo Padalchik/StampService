@@ -1,4 +1,4 @@
-using StampService.Application.Access;
+﻿using StampService.Application.Access;
 using StampService.Application.Metrics.Queries.GetRedeemMetricOptions;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.Access;
@@ -14,8 +14,8 @@ public class GetRedeemMetricOptionsHandlerTests
     {
         var now = new DateTimeOffset(2026, 5, 8, 12, 0, 0, TimeSpan.Zero);
         var brandId = Guid.NewGuid();
-        var redeemer = User.Create("Staff", "1001").Value;
-        var customer = User.Create("Customer", "2002").Value;
+        var redeemer = User.Create("Staff").Value;
+        var customer = User.Create("Customer").Value;
         var availableMetric = LoyaltyMetricDefinition.Create(brandId, "Coffee", 2).Value;
         var unavailableMetric = LoyaltyMetricDefinition.Create(brandId, "Cake", 5).Value;
         var userRepository = new FakeUserRepository();

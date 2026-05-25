@@ -10,7 +10,7 @@ public sealed class CoinRedemptionCodeScreen : IScreen
     {
         return ValueTask.FromResult(new ScreenView(
             "<b>Списать монетки</b>\n\n" +
-            "Введите код для списания клиента:")
+            "Введите код списания клиента:")
             .AwaitInput<EnterCoinRedemptionCodeAction>()
             .BackButton());
     }

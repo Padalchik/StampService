@@ -2,4 +2,4 @@ using TelegramBotFlow.Core.Endpoints;
 
 namespace StampService.TelegramBot.Features.Admin.Actions;
 
-public sealed class EnterCreateBrandOwnerCodeAction : IBotAction;
+public sealed class EnterCreateBrandOwnerPhoneAction : IBotAction;

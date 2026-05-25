@@ -51,7 +51,7 @@ public class EnsureTelegramUserHandlerTests
         Assert.True(result.IsSuccess);
         Assert.False(result.Value.Created);
         Assert.Equal(existingUser.Id, result.Value.UserId);
-        Assert.Equal(existingUser.CustomerCode, result.Value.CustomerCode);
+        Assert.Equal(existingUser.Name, result.Value.DisplayName);
         Assert.Single(repository.Users);
         Assert.Equal(0, repository.SaveCount);
     }
@@ -101,7 +101,6 @@ public class EnsureTelegramUserHandlerTests
     {
         return new PhoneAccountService(
             repository,
-            new CustomerCodeGenerator(repository),
             new CuteUserDisplayNameGenerator());
     }
 }

@@ -184,7 +184,6 @@ public class TelegramLinkSessionHandlerTests
         var brandMemberships = new FakeBrandMembershipRepository();
         var phoneAccountService = new PhoneAccountService(
             users,
-            new CustomerCodeGenerator(users),
             new CuteUserDisplayNameGenerator());
 
         return new Fixture(

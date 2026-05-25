@@ -5,4 +5,4 @@ namespace StampService.Application.Metrics.Queries.GetBrandCustomerMetricBalance
 public record GetBrandCustomerMetricBalancesQuery(
     Guid RequestUserId,
     Guid BrandId,
-    string CustomerCode) : IQuery;
+    string CustomerPhoneNumber) : IQuery;

@@ -308,7 +308,7 @@ public sealed class CoinProductEndpoint : IBotEndpoint
         ClearPurchaseSession(ctx);
         return BotResults.ShowView(new ScreenView(
             "<b>Покупка оформлена</b>\n\n" +
-            $"Клиент: {Html(result.Value.UserName)} · <code>{Html(result.Value.CustomerCode)}</code>\n" +
+            $"Клиент: {Html(result.Value.UserName)}\n" +
             $"Списано: {result.Value.Amount} монеток\n" +
             $"Баланс: {result.Value.BalanceValue}"));
     }

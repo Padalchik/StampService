@@ -10,11 +10,11 @@ public sealed class StaffDetailsScreen : IScreen
     public ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
     {
         var name = ctx.Session?.Data.GetString(StaffSessionKeys.SelectedStaffName) ?? "сотрудник";
-        var customerCode = ctx.Session?.Data.GetString(StaffSessionKeys.SelectedStaffCustomerCode) ?? "-";
+        var phoneNumber = ctx.Session?.Data.GetString(StaffSessionKeys.SelectedStaffPhoneNumber) ?? "-";
 
         return ValueTask.FromResult(new ScreenView(
             $"<b>{Html(name)}</b>\n\n" +
-            $"Код пользователя: <code>{Html(customerCode)}</code>\n" +
+            $"Телефон: <code>{Html(phoneNumber)}</code>\n" +
             "Роль: Сотрудник")
             .Button<StartRemoveStaffAction>("Удалить сотрудника")
             .Row()

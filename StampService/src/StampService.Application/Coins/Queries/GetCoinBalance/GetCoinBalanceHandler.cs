@@ -1,11 +1,12 @@
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Auth;
 using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Coins;
 using StampService.Domain.Access;
-using UserEntity = StampService.Domain.User.User;
+using StampService.Domain.User;
 
 namespace StampService.Application.Coins.Queries.GetCoinBalance;
 
@@ -38,11 +39,16 @@ public class GetCoinBalanceHandler : IQueryHandler<CoinBalanceResponse, GetCoinB
         if (!canViewBalance)
             return Result.Fail(AccessErrors.Denied());
 
-        var customerCode = query.CustomerCode.Trim();
-        if (!UserEntity.IsValidCustomerCode(customerCode))
-            return Result.Fail(UserErrors.CustomerCodeInvalid());
+        var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(
+            query.CustomerPhoneNumber,
+            nameof(query.CustomerPhoneNumber));
+        if (phoneNumberResult.IsFailed)
+            return Result.Fail(phoneNumberResult.Errors);
 
-        var customer = await _userRepository.GetByCustomerCodeAsync(customerCode, cancellationToken);
+        var customer = await _userRepository.GetByIdentityAsync(
+            IdentityType.Phone,
+            phoneNumberResult.Value,
+            cancellationToken);
         if (customer is null)
             return Result.Fail(UserErrors.RecipientNotFound());
 
@@ -56,7 +62,7 @@ public class GetCoinBalanceHandler : IQueryHandler<CoinBalanceResponse, GetCoinB
             query.BrandId,
             customer.Id,
             customer.Name,
-            customer.CustomerCode,
+            phoneNumberResult.Value,
             wallet?.Value ?? 0));
     }
 }

@@ -4,5 +4,5 @@ namespace StampService.Application.Demo.Commands.CreateUserDemoData;
 
 public record CreateUserDemoDataCommand(
     long AdminTelegramUserId,
-    string CustomerCode,
+    string PhoneNumber,
     Guid BrandId) : ICommand;

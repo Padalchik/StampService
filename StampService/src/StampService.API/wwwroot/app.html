@@ -295,9 +295,8 @@
                     <h2>Профиль</h2>
                     <div class="kv">
                         <div><span>Имя</span><strong id="profileName">-</strong></div>
-                        <div><span>Код пользователя</span><strong id="customerCode">-</strong></div>
-                        <div><span>Telegram</span><span id="telegramStatus" class="badge">-</span></div>
                         <div><span>Телефон</span><span id="phoneStatus" class="badge">-</span></div>
+                        <div><span>Telegram</span><span id="telegramStatus" class="badge">-</span></div>
                     </div>
                 </section>
 
@@ -370,7 +369,6 @@
         telegramPayload: document.getElementById('telegramPayload'),
         linkTelegramStatus: document.getElementById('linkTelegramStatus'),
         profileName: document.getElementById('profileName'),
-        customerCode: document.getElementById('customerCode'),
         telegramStatus: document.getElementById('telegramStatus'),
         phoneStatus: document.getElementById('phoneStatus'),
         linkPhonePanel: document.getElementById('linkPhonePanel'),
@@ -549,7 +547,6 @@
         els.subtitle.textContent = 'Профиль и способы входа';
 
         els.profileName.textContent = profile.displayName;
-        els.customerCode.textContent = profile.customerCode;
         els.telegramStatus.textContent = profile.telegram.linked ? (profile.telegram.value || 'привязан') : 'не привязан';
         els.phoneStatus.textContent = profile.phone.linked ? (profile.phone.value || 'привязан') : 'не привязан';
         els.linkPhonePanel.classList.toggle('hidden', profile.phone.linked);

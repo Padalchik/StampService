@@ -5,14 +5,14 @@ using TelegramBotFlow.Core.Screens;
 
 namespace StampService.TelegramBot.Features.Staff.Screens;
 
-public sealed class AddStaffCustomerCodeScreen : IScreen
+public sealed class AddStaffPhoneScreen : IScreen
 {
     public ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
     {
         return ValueTask.FromResult(new ScreenView(
             $"<b>{Html(StaffBrandContext.GetBrandName(ctx))}</b>\n\n" +
-            "Введите код пользователя сотрудника:")
-            .AwaitInput<EnterAddStaffCustomerCodeAction>()
+            "Введите номер телефона сотрудника:")
+            .AwaitInput<EnterAddStaffPhoneAction>()
             .BackButton());
     }
 
