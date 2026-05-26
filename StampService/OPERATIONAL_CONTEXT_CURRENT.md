@@ -363,3 +363,41 @@ Outbox сейчас не вводился. Текущая модель - direct 
 Настройки находятся в `StartupNotifications` в `src/StampService.TelegramBot/appsettings.json` и `appsettings.Development.json`: `Enabled`, `WebInterfaceUrl`, `SeqUrl`.
 
 Это host-level диагностическая удобность для локального стенда. Она не должна попадать в Domain/Application и не должна использоваться как бизнес-уведомление пользователям.
+
+## Web-админка и admin access
+
+В web добавлена глобальная админка как тонкий UI поверх HTTP API и существующих Application use cases. Она не является brand workspace и не должна смешиваться с обычными сценариями владельца/сотрудника бренда.
+
+Ключевая архитектурная модель:
+
+- системный администратор по-прежнему не является БД-ролью;
+- для Telegram сохраняется проверка через `Admin:TelegramUserIds`;
+- для web добавлена phone-first проверка через `Admin:PhoneNumbers`;
+- текущий web-пользователь считается админом, если его `User.Id` из JWT имеет активную `Phone` identity из `Admin:PhoneNumbers`;
+- текущий локальный admin phone: `+79214408362`;
+- общий Application-представитель администратора - `AdminActor`, который может быть создан как `FromTelegram(telegramUserId)` или `FromUser(userId)`.
+
+Основные файлы:
+
+- `src/StampService.Application/Administration/AdminActor.cs`;
+- `src/StampService.Application/Administration/AdminAccessService.cs`;
+- `src/StampService.API/Controllers/AdminController.cs`;
+- `src/StampService.Web/src/admin/AdminPage.tsx`;
+- `src/StampService.Web/src/admin/adminApi.ts`.
+
+Admin HTTP API:
+
+- `GET /api/admin/brands` - список брендов для глобальной админки;
+- `POST /api/admin/brands` - создать бренд и назначить владельца по телефону;
+- `PUT /api/admin/brands/{brandId}/owner` - переназначить владельца бренда по телефону;
+- `POST /api/admin/demo/brands` - создать демо-бренды;
+- `POST /api/admin/demo/user-data` - создать демо-данные пользователю по телефону и бренду;
+- `POST /api/admin/demo/reset` - очистить демонстрационную БД.
+
+Важные ограничения:
+
+- бизнес-правила админки остаются в Application; контроллеры только извлекают текущий `User.Id` и вызывают commands/queries;
+- создание владельца/сотрудника не auto-create: телефон владельца должен принадлежать уже существующему phone-first пользователю;
+- demo reset удаляет `users` и `user_identities`, поэтому текущий web JWT после reset становится невалидным; web после успешного reset очищает сессию и требует новый вход;
+- reset БД остается опасной стендовой операцией и должен требовать явного подтверждения в UI;
+- Reward Digest admin settings пока остаются Telegram-only, если отдельно не будет поставлена задача перенести их в web.
