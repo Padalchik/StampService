@@ -651,6 +651,11 @@ p {
   outline: 3px solid rgba(23, 105, 170, 0.16);
 }
 
+.demo-danger-panel {
+  border-color: #e0b4ae;
+  background: #fffafa;
+}
+
 .section-heading--split {
   align-items: flex-start;
   justify-content: space-between;

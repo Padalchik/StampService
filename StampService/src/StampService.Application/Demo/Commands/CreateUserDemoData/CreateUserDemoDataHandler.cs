@@ -52,13 +52,10 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
         CreateUserDemoDataCommand command,
         CancellationToken cancellationToken)
     {
-        if (!_adminAccessService.IsAdmin(command.AdminTelegramUserId))
+        if (!await _adminAccessService.IsAdminAsync(command.Admin, cancellationToken))
             return Result.Fail(AccessErrors.AdminRequired());
 
-        var admin = await _userRepository.GetByIdentityAsync(
-            IdentityType.Telegram,
-            command.AdminTelegramUserId.ToString(),
-            cancellationToken);
+        var admin = await GetAdminUserAsync(command.Admin, cancellationToken);
         if (admin is null)
             return Result.Fail(UserErrors.NotFound());
 
@@ -344,5 +341,21 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
     private static string Pick(IReadOnlyCollection<string> items)
     {
         return items.ElementAt(Random.Shared.Next(items.Count));
+    }
+
+    private async Task<User?> GetAdminUserAsync(AdminActor admin, CancellationToken cancellationToken)
+    {
+        if (admin.UserId is { } userId)
+            return await _userRepository.GetByIdAsync(userId, cancellationToken);
+
+        if (admin.TelegramUserId is { } telegramUserId)
+        {
+            return await _userRepository.GetByIdentityAsync(
+                IdentityType.Telegram,
+                telegramUserId.ToString(),
+                cancellationToken);
+        }
+
+        return null;
     }
 }

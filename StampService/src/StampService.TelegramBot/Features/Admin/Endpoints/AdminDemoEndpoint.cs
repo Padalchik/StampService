@@ -1,5 +1,6 @@
 using System.Net;
 using StampService.Application.Abstractions;
+using StampService.Application.Administration;
 using StampService.Application.Auth;
 using StampService.Application.Demo.Commands.CreateDemoBrands;
 using StampService.Application.Demo.Commands.CreateUserDemoData;
@@ -39,7 +40,7 @@ public sealed class AdminDemoEndpoint : IBotEndpoint
         ICommandHandler<bool, ResetDemoDatabaseCommand> handler)
     {
         var result = await handler.Handle(
-            new ResetDemoDatabaseCommand(ctx.UserId),
+            new ResetDemoDatabaseCommand(AdminActor.FromTelegram(ctx.UserId)),
             ctx.CancellationToken);
 
         if (result.IsFailed)
@@ -63,7 +64,7 @@ public sealed class AdminDemoEndpoint : IBotEndpoint
         ICommandHandler<bool, CreateDemoBrandsCommand> handler)
     {
         var result = await handler.Handle(
-            new CreateDemoBrandsCommand(ctx.UserId),
+            new CreateDemoBrandsCommand(AdminActor.FromTelegram(ctx.UserId)),
             ctx.CancellationToken);
 
         if (result.IsFailed)
@@ -106,7 +107,7 @@ public sealed class AdminDemoEndpoint : IBotEndpoint
             return BotResults.ShowView(new ScreenView("Сценарий создания демо-данных устарел. Начните заново.").BackButton());
 
         var result = await handler.Handle(
-            new CreateUserDemoDataCommand(ctx.UserId, phoneNumber, payload.BrandId),
+            new CreateUserDemoDataCommand(AdminActor.FromTelegram(ctx.UserId), phoneNumber, payload.BrandId),
             ctx.CancellationToken);
 
         if (result.IsFailed)

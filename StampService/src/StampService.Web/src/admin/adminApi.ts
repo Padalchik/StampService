@@ -57,3 +57,22 @@ export function reassignBrandOwner(
     body: { newOwnerPhoneNumber }
   });
 }
+
+export function createDemoBrands(): Promise<boolean> {
+  return apiRequest<boolean>('/api/admin/demo/brands', {
+    method: 'POST'
+  });
+}
+
+export function createUserDemoData(request: { phoneNumber: string; brandId: string }): Promise<boolean> {
+  return apiRequest<boolean>('/api/admin/demo/user-data', {
+    method: 'POST',
+    body: request
+  });
+}
+
+export function resetDemoDatabase(): Promise<boolean> {
+  return apiRequest<boolean>('/api/admin/demo/reset', {
+    method: 'POST'
+  });
+}

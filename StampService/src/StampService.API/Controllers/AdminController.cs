@@ -6,7 +6,11 @@ using StampService.Application.Administration;
 using StampService.Application.Brands.Commands.CreateBrandWithOwner;
 using StampService.Application.Brands.Commands.ReassignBrandOwner;
 using StampService.Application.Brands.Queries.GetAdminBrands;
+using StampService.Application.Demo.Commands.CreateDemoBrands;
+using StampService.Application.Demo.Commands.CreateUserDemoData;
+using StampService.Application.Demo.Commands.ResetDemoDatabase;
 using StampService.Contracts.DTOs.Brands;
+using StampService.Contracts.DTOs.Demo;
 
 namespace StampService.API.Controllers;
 
@@ -64,6 +68,52 @@ public class AdminController : ApiControllerBase
                 AdminActor.FromUser(userIdResult.Value),
                 brandId,
                 request.NewOwnerPhoneNumber),
+            cancellationToken);
+    }
+
+    [HttpPost("demo/brands")]
+    public async Task<EndpointResult<bool>> CreateDemoBrands(
+        [FromServices] ICommandHandler<bool, CreateDemoBrandsCommand> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<bool>();
+
+        return await handler.Handle(
+            new CreateDemoBrandsCommand(AdminActor.FromUser(userIdResult.Value)),
+            cancellationToken);
+    }
+
+    [HttpPost("demo/user-data")]
+    public async Task<EndpointResult<bool>> CreateUserDemoData(
+        CreateUserDemoDataRequest request,
+        [FromServices] ICommandHandler<bool, CreateUserDemoDataCommand> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<bool>();
+
+        return await handler.Handle(
+            new CreateUserDemoDataCommand(
+                AdminActor.FromUser(userIdResult.Value),
+                request.PhoneNumber,
+                request.BrandId),
+            cancellationToken);
+    }
+
+    [HttpPost("demo/reset")]
+    public async Task<EndpointResult<bool>> ResetDemoDatabase(
+        [FromServices] ICommandHandler<bool, ResetDemoDatabaseCommand> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<bool>();
+
+        return await handler.Handle(
+            new ResetDemoDatabaseCommand(AdminActor.FromUser(userIdResult.Value)),
             cancellationToken);
     }
 }

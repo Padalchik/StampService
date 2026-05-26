@@ -1,15 +1,20 @@
 import { Building2, RefreshCw, ShieldCheck, UserRoundCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getApiErrorMessage } from '../api/errorMessages';
+import { useAuth } from '../auth/AuthContext';
 import { formatRuPhoneInput } from '../validation/phoneNumber';
 import {
+  createDemoBrands,
   createBrandWithOwner,
+  createUserDemoData,
   getAdminBrands,
+  resetDemoDatabase,
   reassignBrandOwner,
   type AdminBrandResponse
 } from './adminApi';
 
 export function AdminPage() {
+  const auth = useAuth();
   const [brands, setBrands] = useState<AdminBrandResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -82,6 +87,18 @@ export function AdminPage() {
           ))}
         </div>
       </section>
+
+      <DemoPanel
+        brands={brands}
+        onChanged={async (message) => {
+          setStatus(message);
+          await loadBrands();
+        }}
+        onResetCompleted={() => {
+          setStatus('База очищена. Нужно войти заново.');
+          auth.signOut();
+        }}
+      />
     </div>
   );
 }
@@ -192,6 +209,173 @@ function AdminBrandCard({
         </button>
       </div>
     </article>
+  );
+}
+
+function DemoPanel({
+  brands,
+  onChanged,
+  onResetCompleted
+}: {
+  brands: AdminBrandResponse[];
+  onChanged: (message: string) => Promise<void>;
+  onResetCompleted: () => void;
+}) {
+  const [phoneNumber, setPhoneNumber] = useState(formatRuPhoneInput(''));
+  const [brandId, setBrandId] = useState('');
+  const [resetConfirmation, setResetConfirmation] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (brands.length === 0) {
+      setBrandId('');
+      return;
+    }
+
+    if (!brands.some((brand) => brand.brandId === brandId)) {
+      setBrandId(brands[0].brandId);
+    }
+  }, [brandId, brands]);
+
+  async function submitCreateDemoBrands() {
+    setIsSubmitting('brands');
+    setError('');
+    try {
+      await createDemoBrands();
+      await onChanged('Демо-бренды созданы.');
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting('');
+    }
+  }
+
+  async function submitCreateUserDemoData() {
+    setIsSubmitting('user-data');
+    setError('');
+    try {
+      await createUserDemoData({
+        phoneNumber: phoneNumber.trim(),
+        brandId
+      });
+      setPhoneNumber(formatRuPhoneInput(''));
+      await onChanged('Демо-данные пользователя созданы.');
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting('');
+    }
+  }
+
+  async function submitReset() {
+    setIsSubmitting('reset');
+    setError('');
+    try {
+      await resetDemoDatabase();
+      setResetConfirmation('');
+      onResetCompleted();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting('');
+    }
+  }
+
+  return (
+    <section className="surface-panel">
+      <div className="section-heading">
+        <ShieldCheck size={24} />
+        <h2>Демо</h2>
+      </div>
+
+      {error ? <p className="form-status form-status--error">{error}</p> : null}
+
+      <div className="operation-grid">
+        <div className="operation-panel">
+          <div className="operation-panel__heading">
+            <Building2 size={20} />
+            <h3>Демо-бренды</h3>
+          </div>
+          <p className="muted-text">
+            Создает набор брендов с разными настройками, метриками и товарами.
+          </p>
+          <div className="form-actions">
+            <button
+              type="button"
+              disabled={isSubmitting === 'brands'}
+              onClick={() => void submitCreateDemoBrands()}
+            >
+              Создать демо-бренды
+            </button>
+          </div>
+        </div>
+
+        <div className="operation-panel">
+          <div className="operation-panel__heading">
+            <UserRoundCheck size={20} />
+            <h3>Данные пользователю</h3>
+          </div>
+          <div className="work-form">
+            <label>
+              Телефон пользователя
+              <input
+                value={phoneNumber}
+                onChange={(event) => setPhoneNumber(formatRuPhoneInput(event.target.value))}
+              />
+            </label>
+            <label>
+              Бренд
+              <select value={brandId} onChange={(event) => setBrandId(event.target.value)}>
+                {brands.map((brand) => (
+                  <option key={brand.brandId} value={brand.brandId}>
+                    {brand.brandName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="form-actions">
+              <button
+                type="button"
+                disabled={!brandId || isSubmitting === 'user-data'}
+                onClick={() => void submitCreateUserDemoData()}
+              >
+                Создать данные
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="operation-panel demo-danger-panel">
+          <div className="operation-panel__heading">
+            <ShieldCheck size={20} />
+            <h3>Очистить всю БД</h3>
+          </div>
+          <p className="muted-text">
+            Операция удаляет данные стенда и восстанавливает системные роли.
+          </p>
+          <div className="work-form">
+            <label>
+              Подтверждение
+              <input
+                value={resetConfirmation}
+                onChange={(event) => setResetConfirmation(event.target.value)}
+                placeholder="ОЧИСТИТЬ"
+              />
+            </label>
+            <div className="form-actions">
+              <button
+                type="button"
+                disabled={resetConfirmation !== 'ОЧИСТИТЬ' || isSubmitting === 'reset'}
+                onClick={() => void submitReset()}
+              >
+                Очистить всю БД
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
