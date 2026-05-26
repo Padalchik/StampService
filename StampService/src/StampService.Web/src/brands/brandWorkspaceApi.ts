@@ -114,6 +114,30 @@ export function getIssueMetricOptions(brandId: string): Promise<MetricResponse[]
   return apiRequest<MetricResponse[]>(`/api/brands/${brandId}/metrics/issue-options`);
 }
 
+export function getManageMetrics(brandId: string): Promise<MetricResponse[]> {
+  return apiRequest<MetricResponse[]>(`/api/brands/${brandId}/metrics`);
+}
+
+export function createMetric(
+  brandId: string,
+  request: { name: string; redemptionAmount: number }
+): Promise<MetricResponse> {
+  return apiRequest<MetricResponse>(`/api/brands/${brandId}/metrics`, {
+    method: 'POST',
+    body: request
+  });
+}
+
+export function updateMetric(
+  metricDefinitionId: string,
+  request: { name: string; redemptionAmount: number }
+): Promise<MetricResponse> {
+  return apiRequest<MetricResponse>(`/api/metrics/${metricDefinitionId}`, {
+    method: 'PUT',
+    body: request
+  });
+}
+
 export function getRedeemMetricOptions(
   brandId: string,
   redemptionCode: string

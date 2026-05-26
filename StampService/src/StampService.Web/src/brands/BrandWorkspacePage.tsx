@@ -2,18 +2,25 @@ import { useEffect, useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
   BadgePlus,
+  BarChart3,
   Coins,
+  Edit3,
   Gift,
+  Plus,
   RefreshCw,
+  Save,
   Search,
   Store,
-  TicketMinus
+  TicketMinus,
+  X
 } from 'lucide-react';
 import { getApiErrorMessage } from '../api/errorMessages';
 import {
+  createMetric,
   getBrandWorkspace,
   getCoinProductPurchaseOptions,
   getIssueMetricOptions,
+  getManageMetrics,
   getMyBrands,
   getRedeemMetricOptions,
   issueCoinsByPhone,
@@ -21,6 +28,7 @@ import {
   purchaseCoinProduct,
   redeemCoins,
   redeemMetric,
+  updateMetric,
   type BrandWorkspaceResponse,
   type CoinOperationResponse,
   type CoinProductPurchaseOptionsResponse,
@@ -166,6 +174,7 @@ function BrandWorkspace({
   }
 
   const hasClientActions = workspace.canIssue || workspace.canRedeem;
+  const showMetricManagement = workspace.canManageMetrics && workspace.isMetricsEnabled;
 
   return (
     <div className="brand-workspace-page">
@@ -213,7 +222,229 @@ function BrandWorkspace({
           <PurchaseCoinProductPanel brandId={workspace.brandId} />
         ) : null}
       </div>
+
+      {showMetricManagement ? (
+        <MetricManagementPanel
+          brandId={workspace.brandId}
+          onMetricsChanged={workspace.canIssue ? loadIssueMetrics : undefined}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function MetricManagementPanel({
+  brandId,
+  onMetricsChanged
+}: {
+  brandId: string;
+  onMetricsChanged?: () => Promise<void>;
+}) {
+  const [metrics, setMetrics] = useState<MetricResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newRedemptionAmount, setNewRedemptionAmount] = useState('');
+  const [editingMetricId, setEditingMetricId] = useState('');
+  const [editName, setEditName] = useState('');
+  const [editRedemptionAmount, setEditRedemptionAmount] = useState('');
+
+  useEffect(() => {
+    void loadMetrics();
+  }, [brandId]);
+
+  async function loadMetrics() {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await getManageMetrics(brandId);
+      setMetrics(response);
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function refreshAllMetrics() {
+    await loadMetrics();
+    if (onMetricsChanged) {
+      await onMetricsChanged();
+    }
+  }
+
+  async function submitCreate() {
+    const parsedAmount = Number(newRedemptionAmount);
+    if (!newName.trim() || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+      setError('Укажите название метрики и положительное количество для списания.');
+      setStatus('');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setStatus('');
+
+    try {
+      await createMetric(brandId, {
+        name: newName.trim(),
+        redemptionAmount: parsedAmount
+      });
+      setNewName('');
+      setNewRedemptionAmount('');
+      setStatus('Метрика создана.');
+      await refreshAllMetrics();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function startEdit(metric: MetricResponse) {
+    setEditingMetricId(metric.id);
+    setEditName(metric.name);
+    setEditRedemptionAmount(String(metric.redemptionAmount));
+    setError('');
+    setStatus('');
+  }
+
+  function cancelEdit() {
+    setEditingMetricId('');
+    setEditName('');
+    setEditRedemptionAmount('');
+  }
+
+  async function submitUpdate(metricId: string) {
+    const parsedAmount = Number(editRedemptionAmount);
+    if (!editName.trim() || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+      setError('Укажите название метрики и положительное количество для списания.');
+      setStatus('');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setStatus('');
+
+    try {
+      await updateMetric(metricId, {
+        name: editName.trim(),
+        redemptionAmount: parsedAmount
+      });
+      cancelEdit();
+      setStatus('Метрика обновлена.');
+      await refreshAllMetrics();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="surface-panel metric-management">
+      <div className="section-heading section-heading--split">
+        <div>
+          <div className="section-heading__title">
+            <BarChart3 size={22} />
+            <h2>Управление метриками</h2>
+          </div>
+          <p>Создание и редактирование метрик бренда.</p>
+        </div>
+        <button className="button-secondary button-compact" type="button" onClick={() => void refreshAllMetrics()}>
+          <RefreshCw size={17} />
+          Обновить
+        </button>
+      </div>
+
+      <div className="metric-create-form">
+        <label>
+          Название
+          <input value={newName} onChange={(event) => setNewName(event.target.value)} />
+        </label>
+        <label>
+          Списание
+          <input
+            value={newRedemptionAmount}
+            inputMode="numeric"
+            onChange={(event) => setNewRedemptionAmount(event.target.value)}
+          />
+        </label>
+        <button type="button" disabled={isSubmitting} onClick={() => void submitCreate()}>
+          <Plus size={17} />
+          Создать
+        </button>
+      </div>
+
+      {isLoading ? <p className="muted-text">Загружаем метрики...</p> : null}
+      {error ? <p className="form-status form-status--error">{error}</p> : null}
+      {status ? <p className="form-status form-status--ok">{status}</p> : null}
+
+      {!isLoading && metrics.length === 0 ? (
+        <p className="muted-text">Метрик пока нет.</p>
+      ) : null}
+
+      <div className="metric-management-list">
+        {metrics.map((metric) => {
+          const isEditing = editingMetricId === metric.id;
+
+          return (
+            <article className="metric-management-row" key={metric.id}>
+              {isEditing ? (
+                <div className="metric-edit-form">
+                  <label>
+                    Название
+                    <input value={editName} onChange={(event) => setEditName(event.target.value)} />
+                  </label>
+                  <label>
+                    Списание
+                    <input
+                      value={editRedemptionAmount}
+                      inputMode="numeric"
+                      onChange={(event) => setEditRedemptionAmount(event.target.value)}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <div className="metric-management-row__summary">
+                  <div>
+                    <h3>{metric.name}</h3>
+                    <p>Списание: {metric.redemptionAmount}</p>
+                  </div>
+                  <span className={`status-pill ${metric.isActive ? 'status-pill--ok' : ''}`}>
+                    {metric.isActive ? 'Активна' : 'Выключена'}
+                  </span>
+                </div>
+              )}
+
+              <div className="metric-management-row__actions">
+                {isEditing ? (
+                  <>
+                    <button type="button" disabled={isSubmitting} onClick={() => void submitUpdate(metric.id)}>
+                      <Save size={17} />
+                      Сохранить
+                    </button>
+                    <button className="button-secondary" type="button" disabled={isSubmitting} onClick={cancelEdit}>
+                      <X size={17} />
+                      Отмена
+                    </button>
+                  </>
+                ) : (
+                  <button className="button-secondary" type="button" onClick={() => startEdit(metric)}>
+                    <Edit3 size={17} />
+                    Редактировать
+                  </button>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
