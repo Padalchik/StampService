@@ -422,3 +422,32 @@ Admin HTTP API:
 - demo reset удаляет `users` и `user_identities`, поэтому текущий web JWT после reset становится невалидным; web после успешного reset очищает сессию и требует новый вход;
 - reset БД остается опасной стендовой операцией и должен требовать явного подтверждения в UI;
 - Reward Digest admin settings пока остаются Telegram-only, если отдельно не будет поставлена задача перенести их в web.
+
+## Web UI: экспериментальный HeroUI-слой
+
+В `src/StampService.Web` подключен HeroUI как экспериментальный параллельный UI-слой, а не как замена основного интерфейса. Цель текущей интеграции - оценить библиотеку на реальных сценариях StampService и постепенно понять, какие компоненты стоит переносить в общий дизайн-слой.
+
+Архитектурные решения:
+
+- HeroUI подключен на уровне React/Vite frontend: зависимости `@heroui/react`, `@heroui/styles`, `tailwindcss`, `@tailwindcss/vite`; Tailwind-плагин добавлен в `src/StampService.Web/vite.config.ts`, стили HeroUI импортируются из `src/StampService.Web/src/styles.css`;
+- существующие production-like экраны не заменены: обычные `PhoneLoginPage`, `ProfilePage`, `WalletPage` и рабочие сценарии остаются основными;
+- HeroUI-экраны являются копиями/прототипами поверх тех же typed API clients и тех же HTTP/Application сценариев, без новой бизнес-логики во frontend;
+- экспериментальные стили изолированы через классы вроде `heroui-experiment`, `heroui-wallet-*`, `heroui-detail-*`, чтобы не размазать HeroUI-специфику по существующему CSS;
+- если HeroUI будет принят как основа UI, следующий шаг - выделить локальные app-компоненты (`AppButton`, `AppCard`, `AppInput`, `AppAlert` и т.п.) и постепенно мигрировать экраны через них, а не импортировать HeroUI напрямую во все бизнес-компоненты.
+
+Текущие экспериментальные поверхности:
+
+- `/login-heroui` - копия телефонного входа на HeroUI; обычная форма входа содержит ссылку на этот маршрут, но основной auth flow остается прежним;
+- в авторизованных разделах `Настройки аккаунта` и `Мой кошелек` HeroUI-версии включаются кнопкой смены версии в заголовке экрана, а не отдельными пунктами меню;
+- `HeroUI кошелек` является копией `Мой кошелек` и детализации бренда в кошельке, использует `openUserWallet` и `getBrandDetails` из существующего `walletApi`.
+
+Ключевые файлы:
+
+- `src/StampService.Web/src/auth/PhoneLoginHeroUIPage.tsx`;
+- `src/StampService.Web/src/profile/ProfileHeroUIFormsPage.tsx`;
+- `src/StampService.Web/src/wallet/WalletHeroUIPage.tsx`;
+- `src/StampService.Web/src/app/App.tsx`;
+- `src/StampService.Web/src/styles.css`;
+- `src/StampService.Web/vite.config.ts`.
+
+Важно для следующих задач: HeroUI-интеграция пока не является архитектурным решением "переписать весь UI". Это проверка применимости библиотеки на реальных формах и кошельке. Любое расширение должно сохранять thin UI поверх API/Application, не добавлять бизнес-правила в React и не ломать текущие основные экраны.

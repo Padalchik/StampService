@@ -1,5 +1,6 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { CheckCircle2, LogIn, MessageSquareText, ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { ApiRequestError } from '../api/apiClient';
 import { useAuth } from './AuthContext';
 import { requestPhoneAuthCode, verifyPhoneAuthCode } from './authApi';
@@ -151,6 +152,10 @@ export function PhoneLoginPage() {
 
         {status ? <p className="form-status form-status--ok">{status}</p> : null}
         {error ? <p className="form-status form-status--error">{error}</p> : null}
+
+        <Link className="button-link button-secondary" to="/login-heroui">
+          Открыть HeroUI-копию
+        </Link>
       </section>
     </main>
   );
