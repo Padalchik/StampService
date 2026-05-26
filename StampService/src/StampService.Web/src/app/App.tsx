@@ -1,15 +1,23 @@
-import { LogOut, Settings, WalletCards, Workflow } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { LogOut, Settings, ShieldCheck, WalletCards, Workflow } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { AdminPage } from '../admin/AdminPage';
+import { getAdminAccess } from '../admin/adminApi';
 import { AuthProvider, useAuth } from '../auth/AuthContext';
 import { PhoneLoginPage } from '../auth/PhoneLoginPage';
 import { BrandWorkspacePage } from '../brands/BrandWorkspacePage';
+import { getMyBrands, type MyBrandResponse } from '../brands/brandWorkspaceApi';
 import { DesignVariantsPage } from '../design/DesignVariantsPage';
 import { ProfilePage } from '../profile/ProfilePage';
 import { WalletPage } from '../wallet/WalletPage';
 import { navigationLabels } from './navigationLabels';
 
-type ActiveSection = 'profile' | 'wallet' | 'brands';
+type ActiveSection = 'profile' | 'wallet' | 'brands' | 'admin';
+
+type NavigationAccess = {
+  brands: MyBrandResponse[];
+  isAdmin: boolean;
+};
 
 export function App() {
   return (
@@ -55,8 +63,49 @@ function RequireAuth({ children }: { children: ReactNode }) {
 function AppShell() {
   const auth = useAuth();
   const [activeSection, setActiveSection] = useState<ActiveSection>('wallet');
-  const pageTitle = getPageTitle(activeSection);
+  const [navigationAccess, setNavigationAccess] = useState<NavigationAccess>({
+    brands: [],
+    isAdmin: false
+  });
+  const singleBrand = navigationAccess.brands.length === 1 ? navigationAccess.brands[0] : null;
+  const pageTitle = getPageTitle(activeSection, singleBrand !== null);
   const pageDescription = getPageDescription(activeSection);
+  const availableSections = useMemo(
+    () => getAvailableSections(navigationAccess),
+    [navigationAccess]
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadNavigationAccess() {
+      const [brandsResult, adminResult] = await Promise.allSettled([
+        getMyBrands(),
+        getAdminAccess()
+      ]);
+
+      if (!isMounted) {
+        return;
+      }
+
+      setNavigationAccess({
+        brands: brandsResult.status === 'fulfilled' ? brandsResult.value.brands : [],
+        isAdmin: adminResult.status === 'fulfilled' && adminResult.value
+      });
+    }
+
+    void loadNavigationAccess();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [auth.token]);
+
+  useEffect(() => {
+    if (!availableSections.includes(activeSection)) {
+      setActiveSection('wallet');
+    }
+  }, [activeSection, availableSections]);
 
   return (
     <div className="app-shell">
@@ -71,14 +120,16 @@ function AppShell() {
             <WalletCards size={18} />
             {navigationLabels.myWallet}
           </button>
-          <button
-            className={`sidebar__item ${activeSection === 'brands' ? 'sidebar__item--active' : ''}`}
-            type="button"
-            onClick={() => setActiveSection('brands')}
-          >
-            <Workflow size={18} />
-            {navigationLabels.brandWorkspaces}
-          </button>
+          {navigationAccess.brands.length > 0 ? (
+            <button
+              className={`sidebar__item ${activeSection === 'brands' ? 'sidebar__item--active' : ''}`}
+              type="button"
+              onClick={() => setActiveSection('brands')}
+            >
+              <Workflow size={18} />
+              {singleBrand ? navigationLabels.work : navigationLabels.brandWorkspaces}
+            </button>
+          ) : null}
           <button
             className={`sidebar__item ${activeSection === 'profile' ? 'sidebar__item--active' : ''}`}
             type="button"
@@ -87,6 +138,16 @@ function AppShell() {
             <Settings size={18} />
             {navigationLabels.accountSettings}
           </button>
+          {navigationAccess.isAdmin ? (
+            <button
+              className={`sidebar__item ${activeSection === 'admin' ? 'sidebar__item--active' : ''}`}
+              type="button"
+              onClick={() => setActiveSection('admin')}
+            >
+              <ShieldCheck size={18} />
+              {navigationLabels.adminPanel}
+            </button>
+          ) : null}
         </nav>
       </aside>
 
@@ -104,19 +165,43 @@ function AppShell() {
 
         {activeSection === 'profile' ? <ProfilePage /> : null}
         {activeSection === 'wallet' ? <WalletPage /> : null}
-        {activeSection === 'brands' ? <BrandWorkspacePage /> : null}
+        {activeSection === 'brands' && navigationAccess.brands.length > 0 ? (
+          <BrandWorkspacePage
+            initialBrands={navigationAccess.brands}
+            initialBrandId={singleBrand?.brandId}
+          />
+        ) : null}
+        {activeSection === 'admin' && navigationAccess.isAdmin ? <AdminPage /> : null}
       </main>
     </div>
   );
 }
 
-function getPageTitle(activeSection: ActiveSection): string {
+function getAvailableSections(navigationAccess: NavigationAccess): ActiveSection[] {
+  const sections: ActiveSection[] = ['wallet', 'profile'];
+
+  if (navigationAccess.brands.length > 0) {
+    sections.push('brands');
+  }
+
+  if (navigationAccess.isAdmin) {
+    sections.push('admin');
+  }
+
+  return sections;
+}
+
+function getPageTitle(activeSection: ActiveSection, hasSingleBrand: boolean): string {
   if (activeSection === 'profile') {
     return navigationLabels.accountSettings;
   }
 
   if (activeSection === 'brands') {
-    return navigationLabels.brandWorkspaces;
+    return hasSingleBrand ? navigationLabels.work : navigationLabels.brandWorkspaces;
+  }
+
+  if (activeSection === 'admin') {
+    return navigationLabels.adminPanel;
   }
 
   return navigationLabels.myWallet;
@@ -129,6 +214,10 @@ function getPageDescription(activeSection: ActiveSection): string {
 
   if (activeSection === 'brands') {
     return 'Выдача и списание метрик, монеток и товаров.';
+  }
+
+  if (activeSection === 'admin') {
+    return 'Глобальное управление брендами и владельцами.';
   }
 
   return 'Балансы, доступные награды и код для списания.';

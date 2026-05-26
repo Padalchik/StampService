@@ -27,6 +27,39 @@ export type BrandWorkspaceResponse = {
   canManageStaff: boolean;
 };
 
+export type BrandStaffResponse = {
+  userId: string;
+  userName: string;
+  phoneNumber?: string | null;
+  membershipCreatedAt: string;
+};
+
+export type AddBrandStaffByPhoneResponse = {
+  brandId: string;
+  userId: string;
+  userName: string;
+  phoneNumber: string;
+  membershipId: string;
+  membershipCreatedAt: string;
+};
+
+export type RemoveBrandStaffResponse = {
+  brandId: string;
+  userId: string;
+  userName: string;
+  phoneNumber?: string | null;
+};
+
+export type UpdateBrandResponse = {
+  brandId: string;
+  brandName: string;
+  isMetricsEnabled: boolean;
+  isCoinsEnabled: boolean;
+  isCoinProductRedemptionEnabled: boolean;
+  isManualCoinRedemptionEnabled: boolean;
+  updatedAt?: string | null;
+};
+
 export type MetricResponse = {
   id: string;
   brandId: string;
@@ -87,6 +120,15 @@ export type CoinOperationResponse = {
   createdAt: string;
 };
 
+export type CoinProductResponse = {
+  id: string;
+  brandId: string;
+  name: string;
+  price: number;
+  isActive: boolean;
+  createdAt: string;
+};
+
 export type CoinProductPurchaseOptionResponse = {
   productId: string;
   productName: string;
@@ -102,6 +144,22 @@ export type CoinProductPurchaseOptionsResponse = {
   products: CoinProductPurchaseOptionResponse[];
 };
 
+export type BrandCustomerMetricBalanceResponse = {
+  metricDefinitionId: string;
+  metricName: string;
+  value: number;
+  isActive: boolean;
+};
+
+export type BrandCustomerBalancesResponse = {
+  brandId: string;
+  customerUserId: string;
+  customerName: string;
+  customerPhoneNumber: string;
+  coinBalanceValue: number;
+  balances: BrandCustomerMetricBalanceResponse[];
+};
+
 export function getMyBrands(): Promise<MyBrandsResponse> {
   return apiRequest<MyBrandsResponse>('/api/brands/mine');
 }
@@ -110,8 +168,70 @@ export function getBrandWorkspace(brandId: string): Promise<BrandWorkspaceRespon
   return apiRequest<BrandWorkspaceResponse>(`/api/brands/${brandId}/workspace`);
 }
 
+export function getBrandStaff(brandId: string): Promise<BrandStaffResponse[]> {
+  return apiRequest<BrandStaffResponse[]>(`/api/brands/${brandId}/staff`);
+}
+
+export function addBrandStaffByPhone(
+  brandId: string,
+  phoneNumber: string
+): Promise<AddBrandStaffByPhoneResponse> {
+  return apiRequest<AddBrandStaffByPhoneResponse>(`/api/brands/${brandId}/staff/by-phone`, {
+    method: 'POST',
+    body: { phoneNumber }
+  });
+}
+
+export function removeBrandStaff(
+  brandId: string,
+  staffUserId: string
+): Promise<RemoveBrandStaffResponse> {
+  return apiRequest<RemoveBrandStaffResponse>(`/api/brands/${brandId}/staff/${staffUserId}`, {
+    method: 'DELETE'
+  });
+}
+
+export function updateBrandRewardSettings(
+  brandId: string,
+  request: {
+    isMetricsEnabled: boolean;
+    isCoinsEnabled: boolean;
+    isCoinProductRedemptionEnabled: boolean;
+    isManualCoinRedemptionEnabled: boolean;
+  }
+): Promise<UpdateBrandResponse> {
+  return apiRequest<UpdateBrandResponse>(`/api/brands/${brandId}/reward-settings`, {
+    method: 'PUT',
+    body: request
+  });
+}
+
 export function getIssueMetricOptions(brandId: string): Promise<MetricResponse[]> {
   return apiRequest<MetricResponse[]>(`/api/brands/${brandId}/metrics/issue-options`);
+}
+
+export function getManageMetrics(brandId: string): Promise<MetricResponse[]> {
+  return apiRequest<MetricResponse[]>(`/api/brands/${brandId}/metrics`);
+}
+
+export function createMetric(
+  brandId: string,
+  request: { name: string; redemptionAmount: number }
+): Promise<MetricResponse> {
+  return apiRequest<MetricResponse>(`/api/brands/${brandId}/metrics`, {
+    method: 'POST',
+    body: request
+  });
+}
+
+export function updateMetric(
+  metricDefinitionId: string,
+  request: { name: string; redemptionAmount: number }
+): Promise<MetricResponse> {
+  return apiRequest<MetricResponse>(`/api/metrics/${metricDefinitionId}`, {
+    method: 'PUT',
+    body: request
+  });
 }
 
 export function getRedeemMetricOptions(
@@ -120,6 +240,15 @@ export function getRedeemMetricOptions(
 ): Promise<RedeemMetricOptionsResponse> {
   return apiRequest<RedeemMetricOptionsResponse>(
     `/api/brands/${brandId}/metrics/redeem-options?redemptionCode=${encodeURIComponent(redemptionCode)}`
+  );
+}
+
+export function getCustomerBalances(
+  brandId: string,
+  customerPhoneNumber: string
+): Promise<BrandCustomerBalancesResponse> {
+  return apiRequest<BrandCustomerBalancesResponse>(
+    `/api/brands/${brandId}/customer-balances?customerPhoneNumber=${encodeURIComponent(customerPhoneNumber)}`
   );
 }
 
@@ -160,6 +289,36 @@ export function redeemCoins(
   return apiRequest<CoinOperationResponse>(`/api/brands/${brandId}/coins/redeem`, {
     method: 'POST',
     body: request
+  });
+}
+
+export function getManageCoinProducts(brandId: string): Promise<CoinProductResponse[]> {
+  return apiRequest<CoinProductResponse[]>(`/api/brands/${brandId}/coin-products`);
+}
+
+export function createCoinProduct(
+  brandId: string,
+  request: { name: string; price: number }
+): Promise<CoinProductResponse> {
+  return apiRequest<CoinProductResponse>(`/api/brands/${brandId}/coin-products`, {
+    method: 'POST',
+    body: request
+  });
+}
+
+export function updateCoinProduct(
+  productId: string,
+  request: { name: string; price: number }
+): Promise<CoinProductResponse> {
+  return apiRequest<CoinProductResponse>(`/api/coin-products/${productId}`, {
+    method: 'PUT',
+    body: request
+  });
+}
+
+export function deleteCoinProduct(productId: string): Promise<CoinProductResponse> {
+  return apiRequest<CoinProductResponse>(`/api/coin-products/${productId}`, {
+    method: 'DELETE'
   });
 }
 

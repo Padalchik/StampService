@@ -7,6 +7,7 @@ using StampService.Application.Metrics.Commands.IssueMetric;
 using StampService.Application.Metrics.Commands.RedeemMetric;
 using StampService.Application.Metrics.Commands.UpdateMetric;
 using StampService.Application.Metrics.Queries.GetBrandIssueMetrics;
+using StampService.Application.Metrics.Queries.GetBrandCustomerMetricBalances;
 using StampService.Application.Metrics.Queries.GetBrandManageMetrics;
 using StampService.Application.Metrics.Queries.GetMetricBalance;
 using StampService.Application.Metrics.Queries.GetMetricDetails;
@@ -81,6 +82,25 @@ public class MetricsController : ApiControllerBase
 
         return await handler.Handle(
             new GetRedeemMetricOptionsQuery(userIdResult.Value, brandId, redemptionCode),
+            cancellationToken);
+    }
+
+    [HttpGet("brands/{brandId:guid}/customer-balances")]
+    public async Task<EndpointResult<BrandCustomerMetricBalancesResponse>> GetCustomerBalances(
+        Guid brandId,
+        [FromQuery] string customerPhoneNumber,
+        [FromServices] IQueryHandler<BrandCustomerMetricBalancesResponse, GetBrandCustomerMetricBalancesQuery> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<BrandCustomerMetricBalancesResponse>();
+
+        return await handler.Handle(
+            new GetBrandCustomerMetricBalancesQuery(
+                userIdResult.Value,
+                brandId,
+                customerPhoneNumber),
             cancellationToken);
     }
 

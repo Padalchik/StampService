@@ -2,18 +2,35 @@ import { useEffect, useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
   BadgePlus,
+  BarChart3,
   Coins,
+  Edit3,
   Gift,
+  Plus,
   RefreshCw,
+  Save,
   Search,
+  Settings,
   Store,
-  TicketMinus
+  TicketMinus,
+  Trash2,
+  UserPlus,
+  Users,
+  X
 } from 'lucide-react';
 import { getApiErrorMessage } from '../api/errorMessages';
 import {
+  addBrandStaffByPhone,
+  createCoinProduct,
+  createMetric,
+  deleteCoinProduct,
+  getBrandStaff,
   getBrandWorkspace,
   getCoinProductPurchaseOptions,
+  getCustomerBalances,
   getIssueMetricOptions,
+  getManageCoinProducts,
+  getManageMetrics,
   getMyBrands,
   getRedeemMetricOptions,
   issueCoinsByPhone,
@@ -21,32 +38,66 @@ import {
   purchaseCoinProduct,
   redeemCoins,
   redeemMetric,
+  removeBrandStaff,
+  updateBrandRewardSettings,
+  updateCoinProduct,
+  updateMetric,
+  type AddBrandStaffByPhoneResponse,
+  type BrandCustomerBalancesResponse,
+  type BrandStaffResponse,
   type BrandWorkspaceResponse,
   type CoinOperationResponse,
+  type CoinProductResponse,
   type CoinProductPurchaseOptionsResponse,
   type IssueMetricResponse,
   type MetricResponse,
   type MyBrandResponse,
   type RedeemMetricOptionsResponse,
-  type RedeemMetricResponse
+  type RedeemMetricResponse,
+  type UpdateBrandResponse
 } from './brandWorkspaceApi';
 import { formatRuPhoneInput, isRuPhoneInputComplete } from '../validation/phoneNumber';
 import { RuPhoneInput } from '../components/RuPhoneInput';
+import { formatRuDateTime } from '../format/dateTime';
 
 type OperationResult =
   | { kind: 'metric'; title: string; response: IssueMetricResponse | RedeemMetricResponse }
   | { kind: 'coins'; title: string; response: CoinOperationResponse };
 
-export function BrandWorkspacePage() {
-  const [brands, setBrands] = useState<MyBrandResponse[]>([]);
+type StaffOperationResult =
+  | { kind: 'add'; response: AddBrandStaffByPhoneResponse }
+  | { kind: 'remove'; response: { userName: string; phoneNumber?: string | null } };
+
+type BrandWorkspacePageProps = {
+  initialBrandId?: string;
+  initialBrands?: MyBrandResponse[];
+};
+
+export function BrandWorkspacePage({
+  initialBrandId,
+  initialBrands
+}: BrandWorkspacePageProps = {}) {
+  const [brands, setBrands] = useState<MyBrandResponse[]>(() => initialBrands ?? []);
   const [workspace, setWorkspace] = useState<BrandWorkspaceResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialBrands);
   const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    void loadBrands();
-  }, []);
+    if (initialBrands) {
+      setBrands(initialBrands);
+      setIsLoading(false);
+    }
+
+    if (initialBrandId) {
+      void openWorkspace(initialBrandId);
+      return;
+    }
+
+    if (!initialBrands) {
+      void loadBrands();
+    }
+  }, [initialBrandId, initialBrands]);
 
   async function loadBrands() {
     setIsLoading(true);
@@ -80,6 +131,7 @@ export function BrandWorkspacePage() {
     return (
       <BrandWorkspace
         workspace={workspace}
+        onWorkspaceUpdated={(updatedWorkspace) => setWorkspace(updatedWorkspace)}
         onBack={() => {
           setWorkspace(null);
           setError('');
@@ -137,9 +189,11 @@ export function BrandWorkspacePage() {
 
 function BrandWorkspace({
   workspace,
+  onWorkspaceUpdated,
   onBack
 }: {
   workspace: BrandWorkspaceResponse;
+  onWorkspaceUpdated: (workspace: BrandWorkspaceResponse) => void;
   onBack: () => void;
 }) {
   const [metrics, setMetrics] = useState<MetricResponse[]>([]);
@@ -165,7 +219,12 @@ function BrandWorkspace({
     }
   }
 
-  const hasClientActions = workspace.canIssue || workspace.canRedeem;
+  const hasClientActions = workspace.canIssue || workspace.canRedeem || workspace.canViewBalances;
+  const showMetricManagement = workspace.canManageMetrics && workspace.isMetricsEnabled;
+  const showCoinProductManagement =
+    workspace.canManageMetrics && workspace.isCoinsEnabled && workspace.isCoinProductRedemptionEnabled;
+  const showStaffManagement = workspace.canManageStaff;
+  const showBrandSettings = workspace.canManageBrand;
 
   return (
     <div className="brand-workspace-page">
@@ -212,9 +271,791 @@ function BrandWorkspace({
         {workspace.isCoinsEnabled && workspace.canRedeem && workspace.isCoinProductRedemptionEnabled ? (
           <PurchaseCoinProductPanel brandId={workspace.brandId} />
         ) : null}
+
+        {workspace.canViewBalances && (workspace.isMetricsEnabled || workspace.isCoinsEnabled) ? (
+          <CustomerBalancesPanel
+            brandId={workspace.brandId}
+            isMetricsEnabled={workspace.isMetricsEnabled}
+            isCoinsEnabled={workspace.isCoinsEnabled}
+          />
+        ) : null}
       </div>
+
+      {showMetricManagement ? (
+        <MetricManagementPanel
+          brandId={workspace.brandId}
+          onMetricsChanged={workspace.canIssue ? loadIssueMetrics : undefined}
+        />
+      ) : null}
+
+      {showCoinProductManagement ? (
+        <CoinProductManagementPanel brandId={workspace.brandId} />
+      ) : null}
+
+      {showStaffManagement ? (
+        <StaffManagementPanel brandId={workspace.brandId} />
+      ) : null}
+
+      {showBrandSettings ? (
+        <BrandSettingsPanel workspace={workspace} onWorkspaceUpdated={onWorkspaceUpdated} />
+      ) : null}
     </div>
   );
+}
+
+function MetricManagementPanel({
+  brandId,
+  onMetricsChanged
+}: {
+  brandId: string;
+  onMetricsChanged?: () => Promise<void>;
+}) {
+  const [metrics, setMetrics] = useState<MetricResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newRedemptionAmount, setNewRedemptionAmount] = useState('');
+  const [editingMetricId, setEditingMetricId] = useState('');
+  const [editName, setEditName] = useState('');
+  const [editRedemptionAmount, setEditRedemptionAmount] = useState('');
+
+  useEffect(() => {
+    void loadMetrics();
+  }, [brandId]);
+
+  async function loadMetrics() {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await getManageMetrics(brandId);
+      setMetrics(response);
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function refreshAllMetrics() {
+    await loadMetrics();
+    if (onMetricsChanged) {
+      await onMetricsChanged();
+    }
+  }
+
+  async function submitCreate() {
+    const parsedAmount = Number(newRedemptionAmount);
+    if (!newName.trim() || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+      setError('Укажите название метрики и положительное количество для списания.');
+      setStatus('');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setStatus('');
+
+    try {
+      await createMetric(brandId, {
+        name: newName.trim(),
+        redemptionAmount: parsedAmount
+      });
+      setNewName('');
+      setNewRedemptionAmount('');
+      setStatus('Метрика создана.');
+      await refreshAllMetrics();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function startEdit(metric: MetricResponse) {
+    setEditingMetricId(metric.id);
+    setEditName(metric.name);
+    setEditRedemptionAmount(String(metric.redemptionAmount));
+    setError('');
+    setStatus('');
+  }
+
+  function cancelEdit() {
+    setEditingMetricId('');
+    setEditName('');
+    setEditRedemptionAmount('');
+  }
+
+  async function submitUpdate(metricId: string) {
+    const parsedAmount = Number(editRedemptionAmount);
+    if (!editName.trim() || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+      setError('Укажите название метрики и положительное количество для списания.');
+      setStatus('');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setStatus('');
+
+    try {
+      await updateMetric(metricId, {
+        name: editName.trim(),
+        redemptionAmount: parsedAmount
+      });
+      cancelEdit();
+      setStatus('Метрика обновлена.');
+      await refreshAllMetrics();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="surface-panel metric-management">
+      <div className="section-heading section-heading--split">
+        <div>
+          <div className="section-heading__title">
+            <BarChart3 size={22} />
+            <h2>Управление метриками</h2>
+          </div>
+          <p>Создание и редактирование метрик бренда.</p>
+        </div>
+        <button className="button-secondary button-compact" type="button" onClick={() => void refreshAllMetrics()}>
+          <RefreshCw size={17} />
+          Обновить
+        </button>
+      </div>
+
+      <div className="metric-create-form">
+        <label>
+          Название
+          <input value={newName} onChange={(event) => setNewName(event.target.value)} />
+        </label>
+        <label>
+          Списание
+          <input
+            value={newRedemptionAmount}
+            inputMode="numeric"
+            onChange={(event) => setNewRedemptionAmount(event.target.value)}
+          />
+        </label>
+        <button type="button" disabled={isSubmitting} onClick={() => void submitCreate()}>
+          <Plus size={17} />
+          Создать
+        </button>
+      </div>
+
+      {isLoading ? <p className="muted-text">Загружаем метрики...</p> : null}
+      {error ? <p className="form-status form-status--error">{error}</p> : null}
+      {status ? <p className="form-status form-status--ok">{status}</p> : null}
+
+      {!isLoading && metrics.length === 0 ? (
+        <p className="muted-text">Метрик пока нет.</p>
+      ) : null}
+
+      <div className="metric-management-list">
+        {metrics.map((metric) => {
+          const isEditing = editingMetricId === metric.id;
+
+          return (
+            <article className="metric-management-row" key={metric.id}>
+              {isEditing ? (
+                <div className="metric-edit-form">
+                  <label>
+                    Название
+                    <input value={editName} onChange={(event) => setEditName(event.target.value)} />
+                  </label>
+                  <label>
+                    Списание
+                    <input
+                      value={editRedemptionAmount}
+                      inputMode="numeric"
+                      onChange={(event) => setEditRedemptionAmount(event.target.value)}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <div className="metric-management-row__summary">
+                  <div>
+                    <h3>{metric.name}</h3>
+                    <p>Списание: {metric.redemptionAmount}</p>
+                  </div>
+                  <span className={`status-pill ${metric.isActive ? 'status-pill--ok' : ''}`}>
+                    {metric.isActive ? 'Активна' : 'Выключена'}
+                  </span>
+                </div>
+              )}
+
+              <div className="metric-management-row__actions">
+                {isEditing ? (
+                  <>
+                    <button type="button" disabled={isSubmitting} onClick={() => void submitUpdate(metric.id)}>
+                      <Save size={17} />
+                      Сохранить
+                    </button>
+                    <button className="button-secondary" type="button" disabled={isSubmitting} onClick={cancelEdit}>
+                      <X size={17} />
+                      Отмена
+                    </button>
+                  </>
+                ) : (
+                  <button className="button-secondary" type="button" onClick={() => startEdit(metric)}>
+                    <Edit3 size={17} />
+                    Редактировать
+                  </button>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function CoinProductManagementPanel({ brandId }: { brandId: string }) {
+  const [products, setProducts] = useState<CoinProductResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newPrice, setNewPrice] = useState('');
+  const [editingProductId, setEditingProductId] = useState('');
+  const [editName, setEditName] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+
+  useEffect(() => {
+    void loadProducts();
+  }, [brandId]);
+
+  async function loadProducts() {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await getManageCoinProducts(brandId);
+      setProducts(response);
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function submitCreate() {
+    const parsedPrice = Number(newPrice);
+    if (!newName.trim() || !Number.isInteger(parsedPrice) || parsedPrice <= 0) {
+      setError('Укажите название товара и положительную цену в монетках.');
+      setStatus('');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setStatus('');
+
+    try {
+      await createCoinProduct(brandId, {
+        name: newName.trim(),
+        price: parsedPrice
+      });
+      setNewName('');
+      setNewPrice('');
+      setStatus('Товар создан.');
+      await loadProducts();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function startEdit(product: CoinProductResponse) {
+    setEditingProductId(product.id);
+    setEditName(product.name);
+    setEditPrice(String(product.price));
+    setError('');
+    setStatus('');
+  }
+
+  function cancelEdit() {
+    setEditingProductId('');
+    setEditName('');
+    setEditPrice('');
+  }
+
+  async function submitUpdate(productId: string) {
+    const parsedPrice = Number(editPrice);
+    if (!editName.trim() || !Number.isInteger(parsedPrice) || parsedPrice <= 0) {
+      setError('Укажите название товара и положительную цену в монетках.');
+      setStatus('');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setStatus('');
+
+    try {
+      await updateCoinProduct(productId, {
+        name: editName.trim(),
+        price: parsedPrice
+      });
+      cancelEdit();
+      setStatus('Товар обновлен.');
+      await loadProducts();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function submitDelete(product: CoinProductResponse) {
+    if (!window.confirm(`Удалить товар "${product.name}"?`)) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setStatus('');
+
+    try {
+      await deleteCoinProduct(product.id);
+      if (editingProductId === product.id) {
+        cancelEdit();
+      }
+      setStatus('Товар удален.');
+      await loadProducts();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="surface-panel metric-management">
+      <div className="section-heading section-heading--split">
+        <div>
+          <div className="section-heading__title">
+            <Gift size={22} />
+            <h2>Управление товарами</h2>
+          </div>
+          <p>Создание, редактирование и удаление товаров за монетки.</p>
+        </div>
+        <button className="button-secondary button-compact" type="button" onClick={() => void loadProducts()}>
+          <RefreshCw size={17} />
+          Обновить
+        </button>
+      </div>
+
+      <div className="metric-create-form">
+        <label>
+          Название
+          <input value={newName} onChange={(event) => setNewName(event.target.value)} />
+        </label>
+        <label>
+          Цена
+          <input value={newPrice} inputMode="numeric" onChange={(event) => setNewPrice(event.target.value)} />
+        </label>
+        <button type="button" disabled={isSubmitting} onClick={() => void submitCreate()}>
+          <Plus size={17} />
+          Создать
+        </button>
+      </div>
+
+      {isLoading ? <p className="muted-text">Загружаем товары...</p> : null}
+      {error ? <p className="form-status form-status--error">{error}</p> : null}
+      {status ? <p className="form-status form-status--ok">{status}</p> : null}
+
+      {!isLoading && products.length === 0 ? (
+        <p className="muted-text">Товаров пока нет.</p>
+      ) : null}
+
+      <div className="metric-management-list">
+        {products.map((product) => {
+          const isEditing = editingProductId === product.id;
+
+          return (
+            <article className="metric-management-row" key={product.id}>
+              {isEditing ? (
+                <div className="metric-edit-form">
+                  <label>
+                    Название
+                    <input value={editName} onChange={(event) => setEditName(event.target.value)} />
+                  </label>
+                  <label>
+                    Цена
+                    <input value={editPrice} inputMode="numeric" onChange={(event) => setEditPrice(event.target.value)} />
+                  </label>
+                </div>
+              ) : (
+                <div className="metric-management-row__summary">
+                  <div>
+                    <h3>{product.name}</h3>
+                    <p>Цена: {product.price} монеток</p>
+                  </div>
+                  <span className={`status-pill ${product.isActive ? 'status-pill--ok' : ''}`}>
+                    {product.isActive ? 'Активен' : 'Выключен'}
+                  </span>
+                </div>
+              )}
+
+              <div className="metric-management-row__actions">
+                {isEditing ? (
+                  <>
+                    <button type="button" disabled={isSubmitting} onClick={() => void submitUpdate(product.id)}>
+                      <Save size={17} />
+                      Сохранить
+                    </button>
+                    <button className="button-secondary" type="button" disabled={isSubmitting} onClick={cancelEdit}>
+                      <X size={17} />
+                      Отмена
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button className="button-secondary" type="button" onClick={() => startEdit(product)}>
+                      <Edit3 size={17} />
+                      Редактировать
+                    </button>
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      disabled={isSubmitting || !product.isActive}
+                      onClick={() => void submitDelete(product)}
+                    >
+                      <Trash2 size={17} />
+                      Удалить
+                    </button>
+                  </>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function StaffManagementPanel({ brandId }: { brandId: string }) {
+  const [staff, setStaff] = useState<BrandStaffResponse[]>([]);
+  const [phoneNumber, setPhoneNumber] = useState(formatRuPhoneInput(''));
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState<StaffOperationResult | null>(null);
+
+  useEffect(() => {
+    void loadStaff();
+  }, [brandId]);
+
+  async function loadStaff() {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await getBrandStaff(brandId);
+      setStaff(response);
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function submitAdd() {
+    if (!isRuPhoneInputComplete(phoneNumber)) {
+      setError('Укажите телефон сотрудника.');
+      setResult(null);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setResult(null);
+
+    try {
+      const response = await addBrandStaffByPhone(brandId, phoneNumber.trim());
+      setPhoneNumber(formatRuPhoneInput(''));
+      setResult({ kind: 'add', response });
+      await loadStaff();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function submitRemove(staffMember: BrandStaffResponse) {
+    if (!window.confirm(`Удалить сотрудника "${staffMember.userName}"?`)) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setResult(null);
+
+    try {
+      const response = await removeBrandStaff(brandId, staffMember.userId);
+      setResult({
+        kind: 'remove',
+        response: {
+          userName: response.userName,
+          phoneNumber: response.phoneNumber
+        }
+      });
+      await loadStaff();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="surface-panel staff-management">
+      <div className="section-heading section-heading--split">
+        <div>
+          <div className="section-heading__title">
+            <Users size={22} />
+            <h2>Сотрудники</h2>
+          </div>
+          <p>Добавление сотрудников по телефону и управление доступом к бренду.</p>
+        </div>
+        <button className="button-secondary button-compact" type="button" onClick={() => void loadStaff()}>
+          <RefreshCw size={17} />
+          Обновить
+        </button>
+      </div>
+
+      <div className="staff-add-form">
+        <label>
+          Телефон сотрудника
+          <RuPhoneInput value={phoneNumber} onValueChange={setPhoneNumber} />
+        </label>
+        <button type="button" disabled={isSubmitting} onClick={() => void submitAdd()}>
+          <UserPlus size={17} />
+          Добавить
+        </button>
+      </div>
+
+      {isLoading ? <p className="muted-text">Загружаем сотрудников...</p> : null}
+      {error ? <p className="form-status form-status--error">{error}</p> : null}
+      <StaffFeedback result={result} />
+
+      {!isLoading && staff.length === 0 ? (
+        <p className="muted-text">Сотрудников пока нет.</p>
+      ) : null}
+
+      <div className="staff-list">
+        {staff.map((staffMember) => (
+          <article className="staff-row" key={staffMember.userId}>
+            <div>
+              <h3>{staffMember.userName}</h3>
+              <p>Телефон: {staffMember.phoneNumber || '-'}</p>
+              <p>Добавлен: {formatRuDateTime(staffMember.membershipCreatedAt)}</p>
+            </div>
+            <button
+              className="button-secondary"
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => void submitRemove(staffMember)}
+            >
+              <Trash2 size={17} />
+              Удалить
+            </button>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function StaffFeedback({ result }: { result: StaffOperationResult | null }) {
+  if (!result) {
+    return null;
+  }
+
+  const userName = result.response.userName;
+  const phoneNumber = result.response.phoneNumber || '-';
+
+  return (
+    <div className="operation-result">
+      <strong>{result.kind === 'add' ? 'Сотрудник добавлен' : 'Сотрудник удален'}</strong>
+      <span>{userName}</span>
+      <span>{phoneNumber}</span>
+    </div>
+  );
+}
+
+function BrandSettingsPanel({
+  workspace,
+  onWorkspaceUpdated
+}: {
+  workspace: BrandWorkspaceResponse;
+  onWorkspaceUpdated: (workspace: BrandWorkspaceResponse) => void;
+}) {
+  const [isMetricsEnabled, setIsMetricsEnabled] = useState(workspace.isMetricsEnabled);
+  const [isCoinsEnabled, setIsCoinsEnabled] = useState(workspace.isCoinsEnabled);
+  const [isCoinProductRedemptionEnabled, setIsCoinProductRedemptionEnabled] = useState(
+    workspace.isCoinProductRedemptionEnabled
+  );
+  const [isManualCoinRedemptionEnabled, setIsManualCoinRedemptionEnabled] = useState(
+    workspace.isManualCoinRedemptionEnabled
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
+
+  useEffect(() => {
+    setIsMetricsEnabled(workspace.isMetricsEnabled);
+    setIsCoinsEnabled(workspace.isCoinsEnabled);
+    setIsCoinProductRedemptionEnabled(workspace.isCoinProductRedemptionEnabled);
+    setIsManualCoinRedemptionEnabled(workspace.isManualCoinRedemptionEnabled);
+  }, [
+    workspace.brandId,
+    workspace.isMetricsEnabled,
+    workspace.isCoinsEnabled,
+    workspace.isCoinProductRedemptionEnabled,
+    workspace.isManualCoinRedemptionEnabled
+  ]);
+
+  useEffect(() => {
+    setError('');
+    setStatus('');
+  }, [workspace.brandId]);
+
+  const canSave = (isMetricsEnabled || isCoinsEnabled)
+    && (!isCoinsEnabled || isCoinProductRedemptionEnabled || isManualCoinRedemptionEnabled);
+
+  async function submit() {
+    if (!canSave) {
+      setError('Включите хотя бы один тип наград. Для монеток нужен хотя бы один способ списания.');
+      setStatus('');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setStatus('');
+
+    try {
+      const response = await updateBrandRewardSettings(workspace.brandId, {
+        isMetricsEnabled,
+        isCoinsEnabled,
+        isCoinProductRedemptionEnabled,
+        isManualCoinRedemptionEnabled
+      });
+      onWorkspaceUpdated(mapUpdatedBrandToWorkspace(workspace, response));
+      setStatus('Настройки сохранены.');
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="surface-panel brand-settings-panel">
+      <div className="section-heading section-heading--split">
+        <div>
+          <div className="section-heading__title">
+            <Settings size={22} />
+            <h2>Настройки бренда</h2>
+          </div>
+          <p>Включение метрик, монеток и способов списания.</p>
+        </div>
+        <button type="button" disabled={isSubmitting || !canSave} onClick={() => void submit()}>
+          <Save size={17} />
+          Сохранить
+        </button>
+      </div>
+
+      <div className="settings-grid">
+        <ToggleRow
+          title="Учитывать метрики"
+          description="Метрики доступны клиентам и сотрудникам."
+          checked={isMetricsEnabled}
+          onChange={setIsMetricsEnabled}
+        />
+        <ToggleRow
+          title="Учитывать монетки"
+          description="Монетки доступны для начислений, списаний и товаров."
+          checked={isCoinsEnabled}
+          onChange={setIsCoinsEnabled}
+        />
+        <ToggleRow
+          title="Списывать за товары"
+          description="Сотрудники могут выдавать товары за монетки."
+          checked={isCoinProductRedemptionEnabled}
+          onChange={setIsCoinProductRedemptionEnabled}
+        />
+        <ToggleRow
+          title="Списывать произвольно"
+          description="Сотрудники могут списывать произвольное количество монеток."
+          checked={isManualCoinRedemptionEnabled}
+          onChange={setIsManualCoinRedemptionEnabled}
+        />
+      </div>
+
+      {!canSave ? (
+        <p className="form-status form-status--error">
+          Включите хотя бы один тип наград. Для монеток нужен хотя бы один способ списания.
+        </p>
+      ) : null}
+      {error ? <p className="form-status form-status--error">{error}</p> : null}
+      {status ? <p className="form-status form-status--ok">{status}</p> : null}
+    </section>
+  );
+}
+
+function ToggleRow({
+  title,
+  description,
+  checked,
+  onChange
+}: {
+  title: string;
+  description: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="settings-toggle">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span className="settings-toggle__content">
+        <strong>{title}</strong>
+        <span>{description}</span>
+      </span>
+    </label>
+  );
+}
+
+function mapUpdatedBrandToWorkspace(
+  workspace: BrandWorkspaceResponse,
+  response: UpdateBrandResponse
+): BrandWorkspaceResponse {
+  return {
+    ...workspace,
+    brandName: response.brandName,
+    isMetricsEnabled: response.isMetricsEnabled,
+    isCoinsEnabled: response.isCoinsEnabled,
+    isCoinProductRedemptionEnabled: response.isCoinProductRedemptionEnabled,
+    isManualCoinRedemptionEnabled: response.isManualCoinRedemptionEnabled
+  };
 }
 
 function IssueMetricPanel({
@@ -605,6 +1446,82 @@ function PurchaseCoinProductPanel({ brandId }: { brandId: string }) {
         </div>
       ) : null}
       <OperationFeedback error={error} result={result} />
+    </OperationPanel>
+  );
+}
+
+function CustomerBalancesPanel({
+  brandId,
+  isMetricsEnabled,
+  isCoinsEnabled
+}: {
+  brandId: string;
+  isMetricsEnabled: boolean;
+  isCoinsEnabled: boolean;
+}) {
+  const [phoneNumber, setPhoneNumber] = useState(formatRuPhoneInput(''));
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [balances, setBalances] = useState<BrandCustomerBalancesResponse | null>(null);
+
+  async function loadBalances() {
+    if (!isRuPhoneInputComplete(phoneNumber)) {
+      setError('Укажите телефон клиента.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    setBalances(null);
+
+    try {
+      setBalances(await getCustomerBalances(brandId, phoneNumber.trim()));
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const activeBalances = balances?.balances.filter((balance) => balance.isActive) ?? [];
+
+  return (
+    <OperationPanel icon={<BarChart3 size={20} />} title="Балансы клиента">
+      <div className="work-form">
+        <label>
+          Телефон клиента
+          <RuPhoneInput
+            value={phoneNumber}
+            onValueChange={setPhoneNumber}
+          />
+        </label>
+        <button
+          className="button-secondary"
+          type="button"
+          disabled={isLoading}
+          onClick={() => void loadBalances()}
+        >
+          <Search size={17} />
+          Показать балансы
+        </button>
+      </div>
+
+      {balances ? (
+        <div className="operation-result">
+          <strong>Клиент: {balances.customerName}</strong>
+          {isMetricsEnabled && activeBalances.length === 0 ? <span>Активных метрик пока нет</span> : null}
+          {isMetricsEnabled
+            ? activeBalances.map((balance) => (
+                <span key={balance.metricDefinitionId}>
+                  {balance.metricName}: {balance.value}
+                </span>
+              ))
+            : null}
+          {isCoinsEnabled ? <span>Монетки: {balances.coinBalanceValue}</span> : null}
+        </div>
+      ) : null}
+
+      {error ? <p className="form-status form-status--error">{error}</p> : null}
     </OperationPanel>
   );
 }

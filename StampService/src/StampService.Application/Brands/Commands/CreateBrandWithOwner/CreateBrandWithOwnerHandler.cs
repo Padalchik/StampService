@@ -35,7 +35,7 @@ public class CreateBrandWithOwnerHandler : ICommandHandler<CreateBrandWithOwnerR
         CreateBrandWithOwnerCommand command,
         CancellationToken cancellationToken)
     {
-        if (!_adminAccessService.IsAdmin(command.AdminTelegramUserId))
+        if (!await _adminAccessService.IsAdminAsync(command.Admin, cancellationToken))
             return Result.Fail(AccessErrors.AdminRequired());
 
         var ownerPhoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(

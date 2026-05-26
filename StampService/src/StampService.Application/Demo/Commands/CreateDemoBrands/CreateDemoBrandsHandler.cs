@@ -44,13 +44,10 @@ public class CreateDemoBrandsHandler : ICommandHandler<bool, CreateDemoBrandsCom
         CreateDemoBrandsCommand command,
         CancellationToken cancellationToken)
     {
-        if (!_adminAccessService.IsAdmin(command.AdminTelegramUserId))
+        if (!await _adminAccessService.IsAdminAsync(command.Admin, cancellationToken))
             return Result.Fail(AccessErrors.AdminRequired());
 
-        var owner = await _userRepository.GetByIdentityAsync(
-            IdentityType.Telegram,
-            command.AdminTelegramUserId.ToString(),
-            cancellationToken);
+        var owner = await GetAdminUserAsync(command.Admin, cancellationToken);
         if (owner is null)
             return Result.Fail(UserErrors.NotFound());
 
@@ -121,6 +118,22 @@ public class CreateDemoBrandsHandler : ICommandHandler<bool, CreateDemoBrandsCom
         await _coinProductRepository.SaveAsync(cancellationToken);
 
         return Result.Ok(true);
+    }
+
+    private async Task<User?> GetAdminUserAsync(AdminActor admin, CancellationToken cancellationToken)
+    {
+        if (admin.UserId is { } userId)
+            return await _userRepository.GetByIdAsync(userId, cancellationToken);
+
+        if (admin.TelegramUserId is { } telegramUserId)
+        {
+            return await _userRepository.GetByIdentityAsync(
+                IdentityType.Telegram,
+                telegramUserId.ToString(),
+                cancellationToken);
+        }
+
+        return null;
     }
 
 }

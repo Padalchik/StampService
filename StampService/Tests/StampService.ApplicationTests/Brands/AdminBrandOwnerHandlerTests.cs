@@ -33,11 +33,45 @@ public class AdminBrandOwnerHandlerTests
             userRepository);
 
         var result = await handler.Handle(
-            new CreateBrandWithOwnerCommand(AdminTelegramUserId, "Coffee", ownerPhoneNumber),
+            new CreateBrandWithOwnerCommand(AdminActor.FromTelegram(AdminTelegramUserId), "Coffee", ownerPhoneNumber),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.True(await brandRepository.ExistsAsync(result.Value.BrandId, CancellationToken.None));
+        Assert.Equal(SystemRoles.Owner, await membershipRepository.GetRoleSystemNameAsync(
+            owner.Id,
+            result.Value.BrandId,
+            CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateBrandWithOwner_WhenWebAdminPhoneIsConfigured_ShouldCreateOwnerMembership()
+    {
+        var admin = User.Create("Admin").Value;
+        admin.AddIdentity(IdentityType.Phone, "+79214408362", "{}");
+        var owner = User.Create("Owner").Value;
+        var ownerPhoneNumber = "+79991234567";
+        owner.AddIdentity(IdentityType.Phone, ownerPhoneNumber, "{}");
+        var userRepository = new FakeUserRepository();
+        var brandRepository = new FakeBrandRepository();
+        var membershipRepository = new FakeBrandMembershipRepository();
+        userRepository.Add(admin);
+        userRepository.Add(owner);
+
+        var handler = new CreateBrandWithOwnerHandler(
+            new AdminAccessService(Options.Create(new AdminOptions
+            {
+                PhoneNumbers = ["+79214408362"]
+            }), userRepository),
+            brandRepository,
+            membershipRepository,
+            userRepository);
+
+        var result = await handler.Handle(
+            new CreateBrandWithOwnerCommand(AdminActor.FromUser(admin.Id), "Coffee", ownerPhoneNumber),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
         Assert.Equal(SystemRoles.Owner, await membershipRepository.GetRoleSystemNameAsync(
             owner.Id,
             result.Value.BrandId,
@@ -69,7 +103,7 @@ public class AdminBrandOwnerHandlerTests
             userRepository);
 
         var result = await handler.Handle(
-            new ReassignBrandOwnerCommand(AdminTelegramUserId, brandId, newOwnerPhoneNumber),
+            new ReassignBrandOwnerCommand(AdminActor.FromTelegram(AdminTelegramUserId), brandId, newOwnerPhoneNumber),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -172,11 +206,11 @@ public class AdminBrandOwnerHandlerTests
         Assert.False(brand.IsManualCoinRedemptionEnabled);
     }
 
-    private static AdminAccessService CreateAdminAccessService()
+    private static AdminAccessService CreateAdminAccessService(FakeUserRepository? userRepository = null)
     {
         return new AdminAccessService(Options.Create(new AdminOptions
         {
             TelegramUserIds = [AdminTelegramUserId]
-        }));
+        }), userRepository ?? new FakeUserRepository());
     }
 }
