@@ -12,14 +12,18 @@ import {
   Search,
   Store,
   TicketMinus,
+  Trash2,
   X
 } from 'lucide-react';
 import { getApiErrorMessage } from '../api/errorMessages';
 import {
+  createCoinProduct,
   createMetric,
+  deleteCoinProduct,
   getBrandWorkspace,
   getCoinProductPurchaseOptions,
   getIssueMetricOptions,
+  getManageCoinProducts,
   getManageMetrics,
   getMyBrands,
   getRedeemMetricOptions,
@@ -28,9 +32,11 @@ import {
   purchaseCoinProduct,
   redeemCoins,
   redeemMetric,
+  updateCoinProduct,
   updateMetric,
   type BrandWorkspaceResponse,
   type CoinOperationResponse,
+  type CoinProductResponse,
   type CoinProductPurchaseOptionsResponse,
   type IssueMetricResponse,
   type MetricResponse,
@@ -175,6 +181,8 @@ function BrandWorkspace({
 
   const hasClientActions = workspace.canIssue || workspace.canRedeem;
   const showMetricManagement = workspace.canManageMetrics && workspace.isMetricsEnabled;
+  const showCoinProductManagement =
+    workspace.canManageMetrics && workspace.isCoinsEnabled && workspace.isCoinProductRedemptionEnabled;
 
   return (
     <div className="brand-workspace-page">
@@ -228,6 +236,10 @@ function BrandWorkspace({
           brandId={workspace.brandId}
           onMetricsChanged={workspace.canIssue ? loadIssueMetrics : undefined}
         />
+      ) : null}
+
+      {showCoinProductManagement ? (
+        <CoinProductManagementPanel brandId={workspace.brandId} />
       ) : null}
     </div>
   );
@@ -438,6 +450,234 @@ function MetricManagementPanel({
                     <Edit3 size={17} />
                     Редактировать
                   </button>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function CoinProductManagementPanel({ brandId }: { brandId: string }) {
+  const [products, setProducts] = useState<CoinProductResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newPrice, setNewPrice] = useState('');
+  const [editingProductId, setEditingProductId] = useState('');
+  const [editName, setEditName] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+
+  useEffect(() => {
+    void loadProducts();
+  }, [brandId]);
+
+  async function loadProducts() {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await getManageCoinProducts(brandId);
+      setProducts(response);
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function submitCreate() {
+    const parsedPrice = Number(newPrice);
+    if (!newName.trim() || !Number.isInteger(parsedPrice) || parsedPrice <= 0) {
+      setError('Укажите название товара и положительную цену в монетках.');
+      setStatus('');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setStatus('');
+
+    try {
+      await createCoinProduct(brandId, {
+        name: newName.trim(),
+        price: parsedPrice
+      });
+      setNewName('');
+      setNewPrice('');
+      setStatus('Товар создан.');
+      await loadProducts();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function startEdit(product: CoinProductResponse) {
+    setEditingProductId(product.id);
+    setEditName(product.name);
+    setEditPrice(String(product.price));
+    setError('');
+    setStatus('');
+  }
+
+  function cancelEdit() {
+    setEditingProductId('');
+    setEditName('');
+    setEditPrice('');
+  }
+
+  async function submitUpdate(productId: string) {
+    const parsedPrice = Number(editPrice);
+    if (!editName.trim() || !Number.isInteger(parsedPrice) || parsedPrice <= 0) {
+      setError('Укажите название товара и положительную цену в монетках.');
+      setStatus('');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setStatus('');
+
+    try {
+      await updateCoinProduct(productId, {
+        name: editName.trim(),
+        price: parsedPrice
+      });
+      cancelEdit();
+      setStatus('Товар обновлен.');
+      await loadProducts();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function submitDelete(product: CoinProductResponse) {
+    if (!window.confirm(`Удалить товар "${product.name}"?`)) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setStatus('');
+
+    try {
+      await deleteCoinProduct(product.id);
+      if (editingProductId === product.id) {
+        cancelEdit();
+      }
+      setStatus('Товар удален.');
+      await loadProducts();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="surface-panel metric-management">
+      <div className="section-heading section-heading--split">
+        <div>
+          <div className="section-heading__title">
+            <Gift size={22} />
+            <h2>Управление товарами</h2>
+          </div>
+          <p>Создание, редактирование и удаление товаров за монетки.</p>
+        </div>
+        <button className="button-secondary button-compact" type="button" onClick={() => void loadProducts()}>
+          <RefreshCw size={17} />
+          Обновить
+        </button>
+      </div>
+
+      <div className="metric-create-form">
+        <label>
+          Название
+          <input value={newName} onChange={(event) => setNewName(event.target.value)} />
+        </label>
+        <label>
+          Цена
+          <input value={newPrice} inputMode="numeric" onChange={(event) => setNewPrice(event.target.value)} />
+        </label>
+        <button type="button" disabled={isSubmitting} onClick={() => void submitCreate()}>
+          <Plus size={17} />
+          Создать
+        </button>
+      </div>
+
+      {isLoading ? <p className="muted-text">Загружаем товары...</p> : null}
+      {error ? <p className="form-status form-status--error">{error}</p> : null}
+      {status ? <p className="form-status form-status--ok">{status}</p> : null}
+
+      {!isLoading && products.length === 0 ? (
+        <p className="muted-text">Товаров пока нет.</p>
+      ) : null}
+
+      <div className="metric-management-list">
+        {products.map((product) => {
+          const isEditing = editingProductId === product.id;
+
+          return (
+            <article className="metric-management-row" key={product.id}>
+              {isEditing ? (
+                <div className="metric-edit-form">
+                  <label>
+                    Название
+                    <input value={editName} onChange={(event) => setEditName(event.target.value)} />
+                  </label>
+                  <label>
+                    Цена
+                    <input value={editPrice} inputMode="numeric" onChange={(event) => setEditPrice(event.target.value)} />
+                  </label>
+                </div>
+              ) : (
+                <div className="metric-management-row__summary">
+                  <div>
+                    <h3>{product.name}</h3>
+                    <p>Цена: {product.price} монеток</p>
+                  </div>
+                  <span className={`status-pill ${product.isActive ? 'status-pill--ok' : ''}`}>
+                    {product.isActive ? 'Активен' : 'Выключен'}
+                  </span>
+                </div>
+              )}
+
+              <div className="metric-management-row__actions">
+                {isEditing ? (
+                  <>
+                    <button type="button" disabled={isSubmitting} onClick={() => void submitUpdate(product.id)}>
+                      <Save size={17} />
+                      Сохранить
+                    </button>
+                    <button className="button-secondary" type="button" disabled={isSubmitting} onClick={cancelEdit}>
+                      <X size={17} />
+                      Отмена
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button className="button-secondary" type="button" onClick={() => startEdit(product)}>
+                      <Edit3 size={17} />
+                      Редактировать
+                    </button>
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      disabled={isSubmitting || !product.isActive}
+                      onClick={() => void submitDelete(product)}
+                    >
+                      <Trash2 size={17} />
+                      Удалить
+                    </button>
+                  </>
                 )}
               </div>
             </article>

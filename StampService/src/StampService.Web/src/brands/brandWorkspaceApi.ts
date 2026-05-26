@@ -87,6 +87,15 @@ export type CoinOperationResponse = {
   createdAt: string;
 };
 
+export type CoinProductResponse = {
+  id: string;
+  brandId: string;
+  name: string;
+  price: number;
+  isActive: boolean;
+  createdAt: string;
+};
+
 export type CoinProductPurchaseOptionResponse = {
   productId: string;
   productName: string;
@@ -184,6 +193,36 @@ export function redeemCoins(
   return apiRequest<CoinOperationResponse>(`/api/brands/${brandId}/coins/redeem`, {
     method: 'POST',
     body: request
+  });
+}
+
+export function getManageCoinProducts(brandId: string): Promise<CoinProductResponse[]> {
+  return apiRequest<CoinProductResponse[]>(`/api/brands/${brandId}/coin-products`);
+}
+
+export function createCoinProduct(
+  brandId: string,
+  request: { name: string; price: number }
+): Promise<CoinProductResponse> {
+  return apiRequest<CoinProductResponse>(`/api/brands/${brandId}/coin-products`, {
+    method: 'POST',
+    body: request
+  });
+}
+
+export function updateCoinProduct(
+  productId: string,
+  request: { name: string; price: number }
+): Promise<CoinProductResponse> {
+  return apiRequest<CoinProductResponse>(`/api/coin-products/${productId}`, {
+    method: 'PUT',
+    body: request
+  });
+}
+
+export function deleteCoinProduct(productId: string): Promise<CoinProductResponse> {
+  return apiRequest<CoinProductResponse>(`/api/coin-products/${productId}`, {
+    method: 'DELETE'
   });
 }
 
