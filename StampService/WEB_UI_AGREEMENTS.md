@@ -177,7 +177,7 @@ Telegram parity не означает буквальное совпадение 
 
 ## Web: рабочие бренды и клиентские операции
 
-Раздел `Рабочие бренды` реализован как первая web-поверхность для сотрудника/owner. Цель раздела - дать web-аналог Telegram-механизма выдачи и списания метрик, монеток и товаров.
+Раздел `Рабочие бренды` реализован как первая web-поверхность для сотрудника/owner. Цель раздела - дать web-аналог Telegram-механизма работы с клиентами и базовых owner-операций бренда.
 
 Архитектурная модель:
 
@@ -186,7 +186,8 @@ Telegram parity не означает буквальное совпадение 
 - UI скрывает действия, которые недоступны по роли или отключены настройками бренда;
 - frontend не знает бизнес-правил балансов и не меняет их напрямую;
 - API endpoints остаются тонким слоем поверх Application use cases;
-- все операции с балансами проходят через существующие Application handlers и ledger-сервисы.
+- все операции с балансами проходят через существующие Application handlers и ledger-сервисы;
+- управление доступами и настройками также остается в Application; React только собирает ввод, показывает состояние и вызывает HTTP API.
 
 Текущие web-сценарии:
 
@@ -194,11 +195,19 @@ Telegram parity не означает буквальное совпадение 
 - списание метрики по одноразовому коду списания клиента;
 - начисление монеток по номеру телефона клиента;
 - ручное списание монеток по одноразовому коду списания;
-- выдача товара за монетки по одноразовому коду списания.
+- выдача товара за монетки по одноразовому коду списания;
+- управление метриками бренда: список, создание, редактирование;
+- управление товарами за монетки: список, создание, редактирование, удаление/deactivate;
+- управление сотрудниками бренда: список, добавление по телефону, удаление;
+- настройки бренда: включение/выключение метрик, монеток и способов списания.
 
 Web API/types для этих операций должны оставаться синхронизированы с phone-first моделью: DTO результатов не включают `customerCode`, а React не должен добавлять это поле в локальные типы или UI. Если нужен контекст клиента на экране результата, достаточно имени клиента и данных операции; идентификация клиента для новых операций идет через телефон или одноразовый код списания в зависимости от сценария.
 
-Управление сотрудниками бренда в web еще должно развиваться как отдельная рабочая поверхность owner/staff-management. Архитектурное правило уже определено Telegram/Application-реализацией: пользовательский ввод - телефон сотрудника; Application use case - `AddBrandStaffByPhoneCommand`; auto-create пользователя не выполняется; отображение сотрудников должно использовать телефон, имя и роль, но не `CustomerCode`.
+Управление сотрудниками бренда в web реализовано как часть brand workspace. Архитектурное правило соответствует Telegram/Application-реализации: пользовательский ввод - телефон сотрудника; Application use case - `AddBrandStaffByPhoneCommand`; auto-create пользователя не выполняется; отображение сотрудников использует телефон и имя, но не `CustomerCode`. Внутренний `UserId` может использоваться только для действий с уже загруженным сотрудником, например удаления через `RemoveBrandStaffCommand`, и не должен становиться пользовательским вводом.
+
+Управление метриками и товарами за монетки в web использует существующие Application use cases через thin API endpoints. Frontend не принимает доменные решения об активности, доступах или валидации; он делает раннюю UX-проверку обязательных полей и положительных чисел, а backend/Application остаются источником истины.
+
+Настройки бренда в web управляют только feature toggles: `IsMetricsEnabled`, `IsCoinsEnabled`, `IsCoinProductRedemptionEnabled`, `IsManualCoinRedemptionEnabled`. UI повторяет Telegram-правило: должен быть включен хотя бы один тип наград, а если монетки включены, нужен хотя бы один способ списания. Сохранение идет через `UpdateBrandRewardSettingsCommand`; после успешного ответа workspace обновляет локальное состояние, чтобы скрыть недоступные секции.
 
 Важное отличие web от Telegram: Telegram flow хранит промежуточное состояние в bot session, а web делает обычные HTTP-запросы из React state. Поэтому для web добавлены endpoints, которые принимают web-friendly входные данные. Например, выдача метрики принимает номер телефона клиента и передает его в `IssueMetricByPhoneCommand`; Application сам нормализует телефон, находит или создает клиента и проводит начисление. Web не должен принимать или показывать внутренний `UserId` клиента.
 
@@ -208,18 +217,29 @@ Web API/types для этих операций должны оставаться
 
 - `GET /api/brands/mine`;
 - `GET /api/brands/{brandId}/workspace`;
+- `GET /api/brands/{brandId}/metrics`;
+- `POST /api/brands/{brandId}/metrics`;
+- `PUT /api/metrics/{metricDefinitionId}`;
 - `GET /api/brands/{brandId}/metrics/issue-options`;
 - `GET /api/brands/{brandId}/metrics/redeem-options?redemptionCode=...`;
 - `POST /api/metrics/{metricDefinitionId}/issue-by-phone` - web-friendly thin endpoint поверх `IssueMetricByPhoneCommand`;
 - `POST /api/metrics/{metricDefinitionId}/redeem`;
 - `POST /api/brands/{brandId}/coins/issue-by-phone` - web-friendly thin endpoint поверх `IssueCoinsByPhoneCommand`;
 - `POST /api/brands/{brandId}/coins/redeem`;
+- `GET /api/brands/{brandId}/coin-products`;
+- `POST /api/brands/{brandId}/coin-products`;
+- `PUT /api/coin-products/{productId}`;
+- `DELETE /api/coin-products/{productId}`;
 - `GET /api/brands/{brandId}/coin-products/purchase-options?redemptionCode=...`;
-- `POST /api/brands/{brandId}/coin-products/{productId}/purchase`.
+- `POST /api/brands/{brandId}/coin-products/{productId}/purchase`;
+- `GET /api/brands/{brandId}/staff`;
+- `POST /api/brands/{brandId}/staff/by-phone`;
+- `DELETE /api/brands/{brandId}/staff/{staffUserId}`;
+- `PUT /api/brands/{brandId}/reward-settings`.
 
 Ключевые frontend места:
 
-- `src/StampService.Web/src/brands/BrandWorkspacePage.tsx` - экран рабочих брендов, workspace и формы операций;
+- `src/StampService.Web/src/brands/BrandWorkspacePage.tsx` - экран рабочих брендов, workspace, формы клиентских операций, управление метриками, товарами, сотрудниками и настройками;
 - `src/StampService.Web/src/brands/brandWorkspaceApi.ts` - typed API calls;
 - `src/StampService.Web/src/validation/phoneNumber.ts` - frontend-маска и нормализация телефонного ввода;
 - `src/StampService.Web/src/app/App.tsx` - подключение раздела в основной layout;
@@ -233,8 +253,8 @@ Web API/types для этих операций должны оставаться
 2. Телефонный вход.
 3. Профиль, первичная привязка телефона при необходимости и привязка Telegram.
 4. Кошелёк клиента с кодом списания, наградами и историей.
-5. Brand workspace для сотрудника/owner. Базовая клиентская работа уже добавлена: выдача/списание метрик, монеток и товаров через thin API + Application use cases.
-6. Управление метриками, товарами, сотрудниками и настройками бренда.
+5. Brand workspace для сотрудника/owner. Базовая клиентская работа добавлена: выдача/списание метрик, монеток и товаров через thin API + Application use cases.
+6. Управление метриками, товарами, сотрудниками и настройками бренда добавлено в тот же workspace через thin API + Application use cases.
 
 ## Web: личный кабинет
 

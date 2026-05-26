@@ -188,32 +188,46 @@ Web и Telegram могут иметь разные UI labels для одного
 
 ### Web brand workspace и операции с клиентами
 
-В web добавлен первый рабочий сценарий для сотрудника/владельца бренда: раздел `Рабочие бренды` в React-приложении. Он концептуально повторяет Telegram-сценарии работы с клиентами, но остается web-native UI без Telegram session/navigation.
+В web развивается рабочая поверхность для сотрудника/владельца бренда: раздел `Рабочие бренды` в React-приложении. Он концептуально повторяет Telegram-сценарии работы с клиентами и owner-операции бренда, но остается web-native UI без Telegram session/navigation.
 
-Ключевое правило: web не реализует бизнес-логику выдачи/списания сам. Он вызывает тонкие HTTP endpoints, а те используют существующие Application commands/queries и ledger-сервисы. Балансы метрик и монет нельзя менять напрямую из frontend или controllers.
+Ключевое правило: web не реализует бизнес-логику выдачи/списания, управления ролями или настроек сам. Он вызывает тонкие HTTP endpoints, а те используют существующие Application commands/queries и ledger-сервисы. Балансы метрик и монет нельзя менять напрямую из frontend или controllers.
+
+Текущее покрытие web workspace:
+
+- клиентские операции сотрудника/owner: выдача/списание метрик, начисление/списание монеток, выдача товара за монетки;
+- управление метриками бренда: список, создание, редактирование;
+- управление товарами за монетки: список, создание, редактирование, soft-delete/deactivate;
+- управление сотрудниками: список, добавление по телефону через `AddBrandStaffByPhoneCommand`, удаление через `RemoveBrandStaffCommand`;
+- настройки бренда: переключение `IsMetricsEnabled`, `IsCoinsEnabled`, `IsCoinProductRedemptionEnabled`, `IsManualCoinRedemptionEnabled` через `UpdateBrandRewardSettingsCommand`.
+
+Web-управление сотрудниками следует phone-first модели. Пользовательский ввод - телефон сотрудника, auto-create не выполняется, внутренний `UserId` используется только как системный идентификатор уже выбранного/возвращенного сотрудника, а не как пользовательский ввод.
 
 Основные backend endpoints для web workspace:
 
 - `GET /api/brands/mine` - список брендов текущего пользователя через `GetMyBrandsQuery`;
 - `GET /api/brands/{brandId}/workspace` - рабочий контекст бренда, роли, permissions и feature toggles через `GetBrandWorkspaceQuery`;
+- `GET /api/brands/{brandId}/metrics`, `POST /api/brands/{brandId}/metrics`, `PUT /api/metrics/{metricDefinitionId}` - управление метриками через existing Application use cases;
 - `GET /api/brands/{brandId}/metrics/issue-options` - активные метрики, доступные для выдачи, через `GetBrandIssueMetricsQuery`;
 - `GET /api/brands/{brandId}/metrics/redeem-options?redemptionCode=...` - варианты списания метрик по коду списания через `GetRedeemMetricOptionsQuery`;
 - `POST /api/metrics/{metricDefinitionId}/issue-by-phone` - основной web-friendly сценарий выдачи метрики по номеру телефона клиента через `IssueMetricByPhoneCommand`; Application находит или создает `User` по `Phone` identity и проводит ledger-начисление;
 - `POST /api/metrics/{metricDefinitionId}/redeem` - списание метрики через существующий `RedeemMetricCommand`;
 - `POST /api/brands/{brandId}/coins/issue-by-phone` - основной web-friendly сценарий начисления монеток по номеру телефона клиента через `IssueCoinsByPhoneCommand`; Application находит или создает `User` по `Phone` identity и проводит ledger-начисление;
 - `POST /api/brands/{brandId}/coins/redeem` - ручное списание монеток через `RedeemCoinsCommand`;
-- `GET /api/brands/{brandId}/coin-products/purchase-options?redemptionCode=...` и `POST /api/brands/{brandId}/coin-products/{productId}/purchase` - выдача товара за монетки через существующие CoinProduct use cases.
+- `GET /api/brands/{brandId}/coin-products/purchase-options?redemptionCode=...` и `POST /api/brands/{brandId}/coin-products/{productId}/purchase` - выдача товара за монетки через существующие CoinProduct use cases;
+- `GET /api/brands/{brandId}/coin-products`, `POST /api/brands/{brandId}/coin-products`, `PUT /api/coin-products/{productId}`, `DELETE /api/coin-products/{productId}` - управление товарами за монетки;
+- `GET /api/brands/{brandId}/staff`, `POST /api/brands/{brandId}/staff/by-phone`, `DELETE /api/brands/{brandId}/staff/{staffUserId}` - управление сотрудниками бренда;
+- `PUT /api/brands/{brandId}/reward-settings` - управление feature toggles бренда.
 
 Ключевые frontend места:
 
 - `src/StampService.Web/src/app/App.tsx` - раздел `Рабочие бренды` включен в основную навигацию;
 - `src/StampService.Web/src/app/navigationLabels.ts` - повторяемые web labels навигации;
-- `src/StampService.Web/src/brands/BrandWorkspacePage.tsx` - рабочий UI бренда и формы клиентских операций;
+- `src/StampService.Web/src/brands/BrandWorkspacePage.tsx` - рабочий UI бренда: клиентские операции, управление метриками, товарами, сотрудниками и настройками бренда;
 - `src/StampService.Web/src/brands/brandWorkspaceApi.ts` - typed API client для brand workspace;
 - `src/StampService.Web/src/validation/phoneNumber.ts` - единая frontend-нормализация и маска телефона для web-полей;
 - `src/StampService.Web/src/styles.css` - стили рабочего интерфейса.
 
-Действия в web workspace скрываются по `CanIssue`, `CanRedeem` и feature toggles бренда: `IsMetricsEnabled`, `IsCoinsEnabled`, `IsCoinProductRedemptionEnabled`, `IsManualCoinRedemptionEnabled`. Backend всё равно остается авторитетным источником проверок доступа.
+Действия в web workspace скрываются по permissions (`CanIssue`, `CanRedeem`, `CanManageMetrics`, `CanManageStaff`, `CanManageBrand`) и feature toggles бренда: `IsMetricsEnabled`, `IsCoinsEnabled`, `IsCoinProductRedemptionEnabled`, `IsManualCoinRedemptionEnabled`. Backend всё равно остается авторитетным источником проверок доступа.
 
 ## Бренды, роли и доступы
 
