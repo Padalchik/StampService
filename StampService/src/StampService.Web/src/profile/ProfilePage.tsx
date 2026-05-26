@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, MessageSquareText, Phone, RefreshCw, Send, UserRound } from 'lucide-react';
 import { ApiRequestError } from '../api/apiClient';
+import { RuPhoneInput } from '../components/RuPhoneInput';
 import { formatRuPhoneInput, isRuPhoneInputComplete, normalizePhoneNumber } from '../validation/phoneNumber';
 import { formatRuTime } from '../format/dateTime';
 import {
@@ -170,14 +171,10 @@ export function ProfilePage() {
           {phoneStep === 'idle' ? (
             <form className="auth-form" onSubmit={handleRequestPhoneCode}>
               <label htmlFor="profilePhone">Телефон</label>
-              <input
+              <RuPhoneInput
                 id="profilePhone"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                placeholder="+7 (999) 123-45-67"
                 value={phoneNumber}
-                onChange={(event) => setPhoneNumber(formatRuPhoneInput(event.target.value))}
+                onValueChange={setPhoneNumber}
                 required
               />
               <button type="submit" disabled={isPhoneSubmitting || !isRuPhoneInputComplete(phoneNumber)}>

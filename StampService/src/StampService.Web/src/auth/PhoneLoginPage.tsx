@@ -5,6 +5,7 @@ import { useAuth } from './AuthContext';
 import { requestPhoneAuthCode, verifyPhoneAuthCode } from './authApi';
 import { formatRuPhoneInput, isRuPhoneInputComplete, normalizePhoneNumber } from '../validation/phoneNumber';
 import { formatRuTime } from '../format/dateTime';
+import { RuPhoneInput } from '../components/RuPhoneInput';
 
 type LoginStep = 'phone' | 'code';
 
@@ -89,15 +90,11 @@ export function PhoneLoginPage() {
         {step === 'phone' ? (
           <form className="auth-form" onSubmit={handleRequestCode}>
             <label htmlFor="phoneNumber">Телефон</label>
-            <input
+            <RuPhoneInput
               id="phoneNumber"
               name="phoneNumber"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              placeholder="+7 (999) 123-45-67"
               value={phoneNumber}
-              onChange={(event) => setPhoneNumber(formatRuPhoneInput(event.target.value))}
+              onValueChange={setPhoneNumber}
               required
             />
 
