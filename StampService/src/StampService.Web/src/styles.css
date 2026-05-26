@@ -29,6 +29,7 @@ button {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  max-width: 100%;
   min-height: 42px;
   border: 1px solid #1769aa;
   border-radius: 6px;
@@ -36,6 +37,8 @@ button {
   background: #1769aa;
   color: #fff;
   font-weight: 700;
+  text-align: center;
+  white-space: normal;
   cursor: pointer;
 }
 
@@ -44,6 +47,7 @@ button {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  max-width: 100%;
   min-height: 42px;
   border: 1px solid #1769aa;
   border-radius: 6px;
@@ -51,7 +55,9 @@ button {
   background: #1769aa;
   color: #fff;
   font-weight: 700;
+  text-align: center;
   text-decoration: none;
+  white-space: normal;
 }
 
 .button-link--disabled {
@@ -241,6 +247,10 @@ p {
   margin-bottom: 22px;
 }
 
+.workspace__header > div {
+  min-width: 0;
+}
+
 .empty-state {
   max-width: 760px;
   border: 1px solid #d8e0e8;
@@ -329,6 +339,7 @@ p {
   display: flex;
   align-items: flex-start;
   gap: 14px;
+  min-width: 0;
 }
 
 .wallet-code-panel__icon {
@@ -407,6 +418,10 @@ p {
   margin-bottom: 14px;
 }
 
+.wallet-brand-card__header > div {
+  min-width: 0;
+}
+
 .wallet-brand-card h3 {
   margin: 0 0 8px;
   font-size: 18px;
@@ -473,6 +488,10 @@ p {
   display: flex;
   align-items: flex-start;
   gap: 14px;
+}
+
+.brand-details__header > div {
+  min-width: 0;
 }
 
 .brand-details__header h2 {
@@ -661,6 +680,10 @@ p {
   justify-content: space-between;
 }
 
+.section-heading--split > div {
+  min-width: 0;
+}
+
 .section-heading--split p {
   margin: 6px 0 0;
 }
@@ -694,6 +717,7 @@ p {
 .brand-list-item h3 {
   margin: 0 0 6px;
   font-size: 18px;
+  overflow-wrap: anywhere;
 }
 
 .brand-list-item p {
@@ -704,6 +728,10 @@ p {
   display: flex;
   align-items: flex-start;
   gap: 14px;
+}
+
+.brand-workspace-header > div {
+  min-width: 0;
 }
 
 .brand-workspace-header h2 {
@@ -753,6 +781,10 @@ p {
   align-items: center;
   gap: 10px;
   color: #1f2933;
+}
+
+.operation-panel__heading h3 {
+  min-width: 0;
 }
 
 .operation-panel__heading h3 {
@@ -900,6 +932,7 @@ p {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
+  min-width: 0;
 }
 
 .metric-management-row h3 {
@@ -1569,6 +1602,15 @@ p {
   .sidebar {
     border-right: 0;
     border-bottom: 1px solid #d8e0e8;
+    padding: 14px;
+  }
+
+  .sidebar__brand {
+    margin: 0 0 12px;
+  }
+
+  .sidebar__nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .workspace,
@@ -1580,22 +1622,51 @@ p {
   .auth-panel__header,
   .wallet-code-panel,
   .wallet-code-panel__main,
+  .wallet-brand-card__header,
   .brand-details__header,
+  .section-heading--split,
   .brand-list-item,
   .brand-workspace-header,
+  .reward-block li,
   .operation-option,
   .metric-management-row__summary,
   .staff-row {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .auth-panel {
     padding: 22px;
   }
 
+  .surface-panel,
+  .wallet-code-panel,
+  .operation-panel,
+  .detail-block {
+    padding: 16px;
+  }
+
+  .form-actions button,
+  .section-heading--split button,
+  .wallet-code-panel button,
+  .wallet-brand-card__header button,
+  .brand-list-item button,
+  .operation-option button,
+  .admin-owner-form button,
+  .metric-management-row__actions button,
+  .staff-row button {
+    width: 100%;
+  }
+
+  .redemption-code {
+    width: 100%;
+    justify-content: center;
+    font-size: 24px;
+  }
+
   .profile-fields,
   .profile-actions-grid,
-  .admin-brand-card,
+  .brand-list-item.admin-brand-card,
   .brand-details__grid,
   .history-sections,
   .settings-grid,
@@ -1649,9 +1720,45 @@ p {
     justify-content: start;
   }
 
+  .variant-workspace,
+  .variant-shell--client,
+  .variant-shell--counter,
+  .variant-shell--owner {
+    padding: 14px;
+  }
+
   .counter-search,
   .operation-table__head,
   .operation-table__row {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .sidebar__nav {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace,
+  .auth-page,
+  .design-preview {
+    padding: 12px;
+  }
+
+  .auth-panel,
+  .surface-panel,
+  .wallet-code-panel,
+  .wallet-brand-card,
+  .operation-panel,
+  .detail-block {
+    padding: 14px;
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+
+  h2 {
+    font-size: 18px;
   }
 }
