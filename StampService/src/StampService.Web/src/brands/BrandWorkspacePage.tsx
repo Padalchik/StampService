@@ -27,6 +27,7 @@ import {
   getBrandStaff,
   getBrandWorkspace,
   getCoinProductPurchaseOptions,
+  getCustomerBalances,
   getIssueMetricOptions,
   getManageCoinProducts,
   getManageMetrics,
@@ -42,6 +43,7 @@ import {
   updateCoinProduct,
   updateMetric,
   type AddBrandStaffByPhoneResponse,
+  type BrandCustomerBalancesResponse,
   type BrandStaffResponse,
   type BrandWorkspaceResponse,
   type CoinOperationResponse,
@@ -66,16 +68,36 @@ type StaffOperationResult =
   | { kind: 'add'; response: AddBrandStaffByPhoneResponse }
   | { kind: 'remove'; response: { userName: string; phoneNumber?: string | null } };
 
-export function BrandWorkspacePage() {
-  const [brands, setBrands] = useState<MyBrandResponse[]>([]);
+type BrandWorkspacePageProps = {
+  initialBrandId?: string;
+  initialBrands?: MyBrandResponse[];
+};
+
+export function BrandWorkspacePage({
+  initialBrandId,
+  initialBrands
+}: BrandWorkspacePageProps = {}) {
+  const [brands, setBrands] = useState<MyBrandResponse[]>(() => initialBrands ?? []);
   const [workspace, setWorkspace] = useState<BrandWorkspaceResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialBrands);
   const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    void loadBrands();
-  }, []);
+    if (initialBrands) {
+      setBrands(initialBrands);
+      setIsLoading(false);
+    }
+
+    if (initialBrandId) {
+      void openWorkspace(initialBrandId);
+      return;
+    }
+
+    if (!initialBrands) {
+      void loadBrands();
+    }
+  }, [initialBrandId, initialBrands]);
 
   async function loadBrands() {
     setIsLoading(true);
@@ -197,7 +219,7 @@ function BrandWorkspace({
     }
   }
 
-  const hasClientActions = workspace.canIssue || workspace.canRedeem;
+  const hasClientActions = workspace.canIssue || workspace.canRedeem || workspace.canViewBalances;
   const showMetricManagement = workspace.canManageMetrics && workspace.isMetricsEnabled;
   const showCoinProductManagement =
     workspace.canManageMetrics && workspace.isCoinsEnabled && workspace.isCoinProductRedemptionEnabled;
@@ -248,6 +270,14 @@ function BrandWorkspace({
 
         {workspace.isCoinsEnabled && workspace.canRedeem && workspace.isCoinProductRedemptionEnabled ? (
           <PurchaseCoinProductPanel brandId={workspace.brandId} />
+        ) : null}
+
+        {workspace.canViewBalances && (workspace.isMetricsEnabled || workspace.isCoinsEnabled) ? (
+          <CustomerBalancesPanel
+            brandId={workspace.brandId}
+            isMetricsEnabled={workspace.isMetricsEnabled}
+            isCoinsEnabled={workspace.isCoinsEnabled}
+          />
         ) : null}
       </div>
 
@@ -1416,6 +1446,82 @@ function PurchaseCoinProductPanel({ brandId }: { brandId: string }) {
         </div>
       ) : null}
       <OperationFeedback error={error} result={result} />
+    </OperationPanel>
+  );
+}
+
+function CustomerBalancesPanel({
+  brandId,
+  isMetricsEnabled,
+  isCoinsEnabled
+}: {
+  brandId: string;
+  isMetricsEnabled: boolean;
+  isCoinsEnabled: boolean;
+}) {
+  const [phoneNumber, setPhoneNumber] = useState(formatRuPhoneInput(''));
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [balances, setBalances] = useState<BrandCustomerBalancesResponse | null>(null);
+
+  async function loadBalances() {
+    if (!isRuPhoneInputComplete(phoneNumber)) {
+      setError('Укажите телефон клиента.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    setBalances(null);
+
+    try {
+      setBalances(await getCustomerBalances(brandId, phoneNumber.trim()));
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const activeBalances = balances?.balances.filter((balance) => balance.isActive) ?? [];
+
+  return (
+    <OperationPanel icon={<BarChart3 size={20} />} title="Балансы клиента">
+      <div className="work-form">
+        <label>
+          Телефон клиента
+          <RuPhoneInput
+            value={phoneNumber}
+            onValueChange={setPhoneNumber}
+          />
+        </label>
+        <button
+          className="button-secondary"
+          type="button"
+          disabled={isLoading}
+          onClick={() => void loadBalances()}
+        >
+          <Search size={17} />
+          Показать балансы
+        </button>
+      </div>
+
+      {balances ? (
+        <div className="operation-result">
+          <strong>Клиент: {balances.customerName}</strong>
+          {isMetricsEnabled && activeBalances.length === 0 ? <span>Активных метрик пока нет</span> : null}
+          {isMetricsEnabled
+            ? activeBalances.map((balance) => (
+                <span key={balance.metricDefinitionId}>
+                  {balance.metricName}: {balance.value}
+                </span>
+              ))
+            : null}
+          {isCoinsEnabled ? <span>Монетки: {balances.coinBalanceValue}</span> : null}
+        </div>
+      ) : null}
+
+      {error ? <p className="form-status form-status--error">{error}</p> : null}
     </OperationPanel>
   );
 }

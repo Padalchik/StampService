@@ -144,6 +144,22 @@ export type CoinProductPurchaseOptionsResponse = {
   products: CoinProductPurchaseOptionResponse[];
 };
 
+export type BrandCustomerMetricBalanceResponse = {
+  metricDefinitionId: string;
+  metricName: string;
+  value: number;
+  isActive: boolean;
+};
+
+export type BrandCustomerBalancesResponse = {
+  brandId: string;
+  customerUserId: string;
+  customerName: string;
+  customerPhoneNumber: string;
+  coinBalanceValue: number;
+  balances: BrandCustomerMetricBalanceResponse[];
+};
+
 export function getMyBrands(): Promise<MyBrandsResponse> {
   return apiRequest<MyBrandsResponse>('/api/brands/mine');
 }
@@ -224,6 +240,15 @@ export function getRedeemMetricOptions(
 ): Promise<RedeemMetricOptionsResponse> {
   return apiRequest<RedeemMetricOptionsResponse>(
     `/api/brands/${brandId}/metrics/redeem-options?redemptionCode=${encodeURIComponent(redemptionCode)}`
+  );
+}
+
+export function getCustomerBalances(
+  brandId: string,
+  customerPhoneNumber: string
+): Promise<BrandCustomerBalancesResponse> {
+  return apiRequest<BrandCustomerBalancesResponse>(
+    `/api/brands/${brandId}/customer-balances?customerPhoneNumber=${encodeURIComponent(customerPhoneNumber)}`
   );
 }
 

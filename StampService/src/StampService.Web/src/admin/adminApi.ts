@@ -35,6 +35,10 @@ export type ReassignBrandOwnerResponse = {
   removedOwnerUserId?: string | null;
 };
 
+export function getAdminAccess(): Promise<boolean> {
+  return apiRequest<boolean>('/api/admin/access');
+}
+
 export function getAdminBrands(): Promise<AdminBrandResponse[]> {
   return apiRequest<AdminBrandResponse[]>('/api/admin/brands');
 }

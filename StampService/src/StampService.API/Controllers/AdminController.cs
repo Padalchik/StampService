@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using FluentResults;
 using StampService.API.EndpointResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Administration;
@@ -19,6 +20,22 @@ namespace StampService.API.Controllers;
 [Route("api/admin")]
 public class AdminController : ApiControllerBase
 {
+    [HttpGet("access")]
+    public async Task<EndpointResult<bool>> GetAccess(
+        [FromServices] IAdminAccessService adminAccessService,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<bool>();
+
+        var isAdmin = await adminAccessService.IsAdminAsync(
+            AdminActor.FromUser(userIdResult.Value),
+            cancellationToken);
+
+        return Result.Ok(isAdmin);
+    }
+
     [HttpGet("brands")]
     public async Task<EndpointResult<IReadOnlyCollection<AdminBrandResponse>>> GetBrands(
         [FromServices] IQueryHandler<IReadOnlyCollection<AdminBrandResponse>, GetAdminBrandsQuery> handler,

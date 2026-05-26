@@ -78,12 +78,12 @@ public sealed class MainMenuScreen : IScreen
         {
             var brand = brandsResult.Value.Brands.Single();
             view.Row().Button<OpenBrandWorkspaceAction, OpenBrandWorkspacePayload>(
-                $"Бренд: {brand.BrandName}",
+                BotMenuLabels.Work,
                 new OpenBrandWorkspacePayload(brand.BrandId));
             return view.Row().NavigateButton<ProfileScreen>(BotMenuLabels.AccountSettings);
         }
 
-        view.Row().NavigateButton<MyBrandsScreen>("Рабочие бренды");
+        view.Row().NavigateButton<MyBrandsScreen>(BotMenuLabels.Workspaces);
         return view.Row().NavigateButton<ProfileScreen>(BotMenuLabels.AccountSettings);
     }
 }
