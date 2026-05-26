@@ -27,6 +27,29 @@ export type BrandWorkspaceResponse = {
   canManageStaff: boolean;
 };
 
+export type BrandStaffResponse = {
+  userId: string;
+  userName: string;
+  phoneNumber?: string | null;
+  membershipCreatedAt: string;
+};
+
+export type AddBrandStaffByPhoneResponse = {
+  brandId: string;
+  userId: string;
+  userName: string;
+  phoneNumber: string;
+  membershipId: string;
+  membershipCreatedAt: string;
+};
+
+export type RemoveBrandStaffResponse = {
+  brandId: string;
+  userId: string;
+  userName: string;
+  phoneNumber?: string | null;
+};
+
 export type MetricResponse = {
   id: string;
   brandId: string;
@@ -117,6 +140,29 @@ export function getMyBrands(): Promise<MyBrandsResponse> {
 
 export function getBrandWorkspace(brandId: string): Promise<BrandWorkspaceResponse> {
   return apiRequest<BrandWorkspaceResponse>(`/api/brands/${brandId}/workspace`);
+}
+
+export function getBrandStaff(brandId: string): Promise<BrandStaffResponse[]> {
+  return apiRequest<BrandStaffResponse[]>(`/api/brands/${brandId}/staff`);
+}
+
+export function addBrandStaffByPhone(
+  brandId: string,
+  phoneNumber: string
+): Promise<AddBrandStaffByPhoneResponse> {
+  return apiRequest<AddBrandStaffByPhoneResponse>(`/api/brands/${brandId}/staff/by-phone`, {
+    method: 'POST',
+    body: { phoneNumber }
+  });
+}
+
+export function removeBrandStaff(
+  brandId: string,
+  staffUserId: string
+): Promise<RemoveBrandStaffResponse> {
+  return apiRequest<RemoveBrandStaffResponse>(`/api/brands/${brandId}/staff/${staffUserId}`, {
+    method: 'DELETE'
+  });
 }
 
 export function getIssueMetricOptions(brandId: string): Promise<MetricResponse[]> {

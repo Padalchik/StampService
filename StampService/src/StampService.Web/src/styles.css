@@ -884,6 +884,66 @@ p {
   color: #17613d;
 }
 
+.staff-management {
+  display: grid;
+  gap: 16px;
+}
+
+.staff-add-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.staff-add-form label {
+  display: grid;
+  gap: 6px;
+  color: #526171;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.staff-add-form input {
+  width: 100%;
+  height: 42px;
+  border: 1px solid #c8d2dc;
+  border-radius: 6px;
+  padding: 0 12px;
+  color: #1f2933;
+  background: #fff;
+}
+
+.staff-add-form input:focus {
+  border-color: #1769aa;
+  outline: 3px solid rgba(23, 105, 170, 0.16);
+}
+
+.staff-list {
+  display: grid;
+  gap: 10px;
+}
+
+.staff-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfcfd;
+}
+
+.staff-row h3 {
+  margin: 0 0 5px;
+  font-size: 17px;
+}
+
+.staff-row p {
+  margin-bottom: 0;
+}
+
 .design-preview {
   min-height: 100vh;
   padding: 28px;
@@ -1428,7 +1488,8 @@ p {
   .brand-list-item,
   .brand-workspace-header,
   .operation-option,
-  .metric-management-row__summary {
+  .metric-management-row__summary,
+  .staff-row {
     flex-direction: column;
   }
 
@@ -1472,6 +1533,7 @@ p {
   .metric-create-form,
   .metric-edit-form,
   .metric-management-row,
+  .staff-add-form,
   .client-grid,
   .counter-actions,
   .counter-client,

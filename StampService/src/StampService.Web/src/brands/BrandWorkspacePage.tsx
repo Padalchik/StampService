@@ -13,13 +13,17 @@ import {
   Store,
   TicketMinus,
   Trash2,
+  UserPlus,
+  Users,
   X
 } from 'lucide-react';
 import { getApiErrorMessage } from '../api/errorMessages';
 import {
+  addBrandStaffByPhone,
   createCoinProduct,
   createMetric,
   deleteCoinProduct,
+  getBrandStaff,
   getBrandWorkspace,
   getCoinProductPurchaseOptions,
   getIssueMetricOptions,
@@ -32,8 +36,11 @@ import {
   purchaseCoinProduct,
   redeemCoins,
   redeemMetric,
+  removeBrandStaff,
   updateCoinProduct,
   updateMetric,
+  type AddBrandStaffByPhoneResponse,
+  type BrandStaffResponse,
   type BrandWorkspaceResponse,
   type CoinOperationResponse,
   type CoinProductResponse,
@@ -46,10 +53,15 @@ import {
 } from './brandWorkspaceApi';
 import { formatRuPhoneInput, isRuPhoneInputComplete } from '../validation/phoneNumber';
 import { RuPhoneInput } from '../components/RuPhoneInput';
+import { formatRuDateTime } from '../format/dateTime';
 
 type OperationResult =
   | { kind: 'metric'; title: string; response: IssueMetricResponse | RedeemMetricResponse }
   | { kind: 'coins'; title: string; response: CoinOperationResponse };
+
+type StaffOperationResult =
+  | { kind: 'add'; response: AddBrandStaffByPhoneResponse }
+  | { kind: 'remove'; response: { userName: string; phoneNumber?: string | null } };
 
 export function BrandWorkspacePage() {
   const [brands, setBrands] = useState<MyBrandResponse[]>([]);
@@ -183,6 +195,7 @@ function BrandWorkspace({
   const showMetricManagement = workspace.canManageMetrics && workspace.isMetricsEnabled;
   const showCoinProductManagement =
     workspace.canManageMetrics && workspace.isCoinsEnabled && workspace.isCoinProductRedemptionEnabled;
+  const showStaffManagement = workspace.canManageStaff;
 
   return (
     <div className="brand-workspace-page">
@@ -240,6 +253,10 @@ function BrandWorkspace({
 
       {showCoinProductManagement ? (
         <CoinProductManagementPanel brandId={workspace.brandId} />
+      ) : null}
+
+      {showStaffManagement ? (
+        <StaffManagementPanel brandId={workspace.brandId} />
       ) : null}
     </div>
   );
@@ -685,6 +702,157 @@ function CoinProductManagementPanel({ brandId }: { brandId: string }) {
         })}
       </div>
     </section>
+  );
+}
+
+function StaffManagementPanel({ brandId }: { brandId: string }) {
+  const [staff, setStaff] = useState<BrandStaffResponse[]>([]);
+  const [phoneNumber, setPhoneNumber] = useState(formatRuPhoneInput(''));
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState<StaffOperationResult | null>(null);
+
+  useEffect(() => {
+    void loadStaff();
+  }, [brandId]);
+
+  async function loadStaff() {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await getBrandStaff(brandId);
+      setStaff(response);
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function submitAdd() {
+    if (!isRuPhoneInputComplete(phoneNumber)) {
+      setError('Укажите телефон сотрудника.');
+      setResult(null);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setResult(null);
+
+    try {
+      const response = await addBrandStaffByPhone(brandId, phoneNumber.trim());
+      setPhoneNumber(formatRuPhoneInput(''));
+      setResult({ kind: 'add', response });
+      await loadStaff();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function submitRemove(staffMember: BrandStaffResponse) {
+    if (!window.confirm(`Удалить сотрудника "${staffMember.userName}"?`)) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setResult(null);
+
+    try {
+      const response = await removeBrandStaff(brandId, staffMember.userId);
+      setResult({
+        kind: 'remove',
+        response: {
+          userName: response.userName,
+          phoneNumber: response.phoneNumber
+        }
+      });
+      await loadStaff();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="surface-panel staff-management">
+      <div className="section-heading section-heading--split">
+        <div>
+          <div className="section-heading__title">
+            <Users size={22} />
+            <h2>Сотрудники</h2>
+          </div>
+          <p>Добавление сотрудников по телефону и управление доступом к бренду.</p>
+        </div>
+        <button className="button-secondary button-compact" type="button" onClick={() => void loadStaff()}>
+          <RefreshCw size={17} />
+          Обновить
+        </button>
+      </div>
+
+      <div className="staff-add-form">
+        <label>
+          Телефон сотрудника
+          <RuPhoneInput value={phoneNumber} onValueChange={setPhoneNumber} />
+        </label>
+        <button type="button" disabled={isSubmitting} onClick={() => void submitAdd()}>
+          <UserPlus size={17} />
+          Добавить
+        </button>
+      </div>
+
+      {isLoading ? <p className="muted-text">Загружаем сотрудников...</p> : null}
+      {error ? <p className="form-status form-status--error">{error}</p> : null}
+      <StaffFeedback result={result} />
+
+      {!isLoading && staff.length === 0 ? (
+        <p className="muted-text">Сотрудников пока нет.</p>
+      ) : null}
+
+      <div className="staff-list">
+        {staff.map((staffMember) => (
+          <article className="staff-row" key={staffMember.userId}>
+            <div>
+              <h3>{staffMember.userName}</h3>
+              <p>Телефон: {staffMember.phoneNumber || '-'}</p>
+              <p>Добавлен: {formatRuDateTime(staffMember.membershipCreatedAt)}</p>
+            </div>
+            <button
+              className="button-secondary"
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => void submitRemove(staffMember)}
+            >
+              <Trash2 size={17} />
+              Удалить
+            </button>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function StaffFeedback({ result }: { result: StaffOperationResult | null }) {
+  if (!result) {
+    return null;
+  }
+
+  const userName = result.response.userName;
+  const phoneNumber = result.response.phoneNumber || '-';
+
+  return (
+    <div className="operation-result">
+      <strong>{result.kind === 'add' ? 'Сотрудник добавлен' : 'Сотрудник удален'}</strong>
+      <span>{userName}</span>
+      <span>{phoneNumber}</span>
+    </div>
   );
 }
 
