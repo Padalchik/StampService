@@ -604,6 +604,53 @@ p {
   gap: 18px;
 }
 
+.admin-page {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-create-panel {
+  margin-top: 16px;
+}
+
+.brand-list-item.admin-brand-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+}
+
+.admin-brand-card__flags {
+  margin-top: 10px;
+}
+
+.admin-owner-form {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.admin-owner-form label {
+  display: grid;
+  gap: 6px;
+  color: #526171;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-owner-form input {
+  width: 100%;
+  height: 42px;
+  border: 1px solid #c8d2dc;
+  border-radius: 6px;
+  padding: 0 12px;
+  color: #1f2933;
+  background: #fff;
+}
+
+.admin-owner-form input:focus {
+  border-color: #1769aa;
+  outline: 3px solid rgba(23, 105, 170, 0.16);
+}
+
 .section-heading--split {
   align-items: flex-start;
   justify-content: space-between;
@@ -1543,6 +1590,7 @@ p {
 
   .profile-fields,
   .profile-actions-grid,
+  .admin-brand-card,
   .brand-details__grid,
   .history-sections,
   .settings-grid,

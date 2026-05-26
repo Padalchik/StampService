@@ -1,4 +1,5 @@
 using StampService.Application.Abstractions;
+using StampService.Application.Administration;
 using StampService.Application.Brands.Queries.GetAdminBrands;
 using StampService.Contracts.DTOs.Brands;
 using StampService.TelegramBot.Common.Errors;
@@ -20,7 +21,7 @@ public sealed class AdminPanelScreen : IScreen
     public async ValueTask<ScreenView> RenderAsync(UpdateContext ctx)
     {
         var brandsResult = await _brandsHandler.Handle(
-            new GetAdminBrandsQuery(ctx.UserId),
+            new GetAdminBrandsQuery(AdminActor.FromTelegram(ctx.UserId)),
             ctx.CancellationToken);
 
         if (brandsResult.IsFailed)

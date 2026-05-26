@@ -1,6 +1,7 @@
-import { LogOut, Settings, WalletCards, Workflow } from 'lucide-react';
+import { LogOut, Settings, ShieldCheck, WalletCards, Workflow } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { AdminPage } from '../admin/AdminPage';
 import { AuthProvider, useAuth } from '../auth/AuthContext';
 import { PhoneLoginPage } from '../auth/PhoneLoginPage';
 import { BrandWorkspacePage } from '../brands/BrandWorkspacePage';
@@ -9,7 +10,7 @@ import { ProfilePage } from '../profile/ProfilePage';
 import { WalletPage } from '../wallet/WalletPage';
 import { navigationLabels } from './navigationLabels';
 
-type ActiveSection = 'profile' | 'wallet' | 'brands';
+type ActiveSection = 'profile' | 'wallet' | 'brands' | 'admin';
 
 export function App() {
   return (
@@ -87,6 +88,14 @@ function AppShell() {
             <Settings size={18} />
             {navigationLabels.accountSettings}
           </button>
+          <button
+            className={`sidebar__item ${activeSection === 'admin' ? 'sidebar__item--active' : ''}`}
+            type="button"
+            onClick={() => setActiveSection('admin')}
+          >
+            <ShieldCheck size={18} />
+            {navigationLabels.adminPanel}
+          </button>
         </nav>
       </aside>
 
@@ -105,6 +114,7 @@ function AppShell() {
         {activeSection === 'profile' ? <ProfilePage /> : null}
         {activeSection === 'wallet' ? <WalletPage /> : null}
         {activeSection === 'brands' ? <BrandWorkspacePage /> : null}
+        {activeSection === 'admin' ? <AdminPage /> : null}
       </main>
     </div>
   );
@@ -119,6 +129,10 @@ function getPageTitle(activeSection: ActiveSection): string {
     return navigationLabels.brandWorkspaces;
   }
 
+  if (activeSection === 'admin') {
+    return navigationLabels.adminPanel;
+  }
+
   return navigationLabels.myWallet;
 }
 
@@ -129,6 +143,10 @@ function getPageDescription(activeSection: ActiveSection): string {
 
   if (activeSection === 'brands') {
     return 'Выдача и списание метрик, монеток и товаров.';
+  }
+
+  if (activeSection === 'admin') {
+    return 'Глобальное управление брендами и владельцами.';
   }
 
   return 'Балансы, доступные награды и код для списания.';

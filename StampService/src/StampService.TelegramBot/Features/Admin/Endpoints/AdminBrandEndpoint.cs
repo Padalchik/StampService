@@ -1,5 +1,6 @@
 using System.Net;
 using StampService.Application.Abstractions;
+using StampService.Application.Administration;
 using StampService.Application.Auth;
 using StampService.Application.Brands.Commands.CreateBrandWithOwner;
 using StampService.Application.Brands.Commands.ReassignBrandOwner;
@@ -89,7 +90,7 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
             return BotResults.ShowView(new ScreenView("Сценарий создания бренда устарел. Начните заново.").BackButton());
 
         var result = await handler.Handle(
-            new CreateBrandWithOwnerCommand(ctx.UserId, brandName, ownerPhoneNumber),
+            new CreateBrandWithOwnerCommand(AdminActor.FromTelegram(ctx.UserId), brandName, ownerPhoneNumber),
             ctx.CancellationToken);
 
         if (result.IsFailed)
@@ -151,7 +152,7 @@ public sealed class AdminBrandEndpoint : IBotEndpoint
             return BotResults.ShowView(new ScreenView("Сценарий смены владельца устарел. Начните заново.").BackButton());
 
         var result = await handler.Handle(
-            new ReassignBrandOwnerCommand(ctx.UserId, brandId, ownerPhoneNumber),
+            new ReassignBrandOwnerCommand(AdminActor.FromTelegram(ctx.UserId), brandId, ownerPhoneNumber),
             ctx.CancellationToken);
 
         if (result.IsFailed)

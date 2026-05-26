@@ -4,6 +4,7 @@ using Serilog.Events;
 using StampService.API.Extensions;
 using StampService.API.Middlewares;
 using StampService.Application;
+using StampService.Application.Administration;
 using StampService.Application.Services;
 using StampService.Infrastructure;
 using StampService.Infrastructure.Seeding;
@@ -48,6 +49,7 @@ try
     builder.Services.AddControllers();
     builder.Services.AddApiOpenApi();
     builder.Services.AddJwtAuthentication(builder.Configuration);
+    builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("Admin"));
     builder.Services.Configure<TelegramOptions>(builder.Configuration.GetSection("Telegram"));
 
     builder.Services.AddApplication();

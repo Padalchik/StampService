@@ -34,7 +34,7 @@ public class ReassignBrandOwnerHandler : ICommandHandler<ReassignBrandOwnerRespo
         ReassignBrandOwnerCommand command,
         CancellationToken cancellationToken)
     {
-        if (!_adminAccessService.IsAdmin(command.AdminTelegramUserId))
+        if (!await _adminAccessService.IsAdminAsync(command.Admin, cancellationToken))
             return Result.Fail(AccessErrors.AdminRequired());
 
         var brandExists = await _brandRepository.ExistsAsync(command.BrandId, cancellationToken);

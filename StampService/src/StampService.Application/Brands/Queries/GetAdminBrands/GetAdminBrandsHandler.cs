@@ -23,7 +23,7 @@ public class GetAdminBrandsHandler : IQueryHandler<IReadOnlyCollection<AdminBran
         GetAdminBrandsQuery query,
         CancellationToken cancellationToken)
     {
-        if (!_adminAccessService.IsAdmin(query.AdminTelegramUserId))
+        if (!await _adminAccessService.IsAdminAsync(query.Admin, cancellationToken))
             return Result.Fail(AccessErrors.AdminRequired());
 
         var brands = await _brandRepository.GetAdminBrandsAsync(cancellationToken);

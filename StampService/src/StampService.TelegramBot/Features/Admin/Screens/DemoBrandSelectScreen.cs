@@ -1,4 +1,5 @@
 using StampService.Application.Abstractions;
+using StampService.Application.Administration;
 using StampService.Application.Brands.Queries.GetAdminBrands;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Brands;
@@ -36,7 +37,7 @@ public sealed class DemoBrandSelectScreen : IScreen
             return new ScreenView($"Не удалось определить пользователя: {BotErrorFormatter.Format(userResult.Errors)}").BackButton();
 
         var brandsResult = await _brandsHandler.Handle(
-            new GetAdminBrandsQuery(ctx.UserId),
+            new GetAdminBrandsQuery(AdminActor.FromTelegram(ctx.UserId)),
             ctx.CancellationToken);
         if (brandsResult.IsFailed)
             return new ScreenView($"Нет доступа к брендам: {BotErrorFormatter.Format(brandsResult.Errors)}").BackButton();
