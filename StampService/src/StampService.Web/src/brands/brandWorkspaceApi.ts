@@ -50,6 +50,16 @@ export type RemoveBrandStaffResponse = {
   phoneNumber?: string | null;
 };
 
+export type UpdateBrandResponse = {
+  brandId: string;
+  brandName: string;
+  isMetricsEnabled: boolean;
+  isCoinsEnabled: boolean;
+  isCoinProductRedemptionEnabled: boolean;
+  isManualCoinRedemptionEnabled: boolean;
+  updatedAt?: string | null;
+};
+
 export type MetricResponse = {
   id: string;
   brandId: string;
@@ -162,6 +172,21 @@ export function removeBrandStaff(
 ): Promise<RemoveBrandStaffResponse> {
   return apiRequest<RemoveBrandStaffResponse>(`/api/brands/${brandId}/staff/${staffUserId}`, {
     method: 'DELETE'
+  });
+}
+
+export function updateBrandRewardSettings(
+  brandId: string,
+  request: {
+    isMetricsEnabled: boolean;
+    isCoinsEnabled: boolean;
+    isCoinProductRedemptionEnabled: boolean;
+    isManualCoinRedemptionEnabled: boolean;
+  }
+): Promise<UpdateBrandResponse> {
+  return apiRequest<UpdateBrandResponse>(`/api/brands/${brandId}/reward-settings`, {
+    method: 'PUT',
+    body: request
   });
 }
 

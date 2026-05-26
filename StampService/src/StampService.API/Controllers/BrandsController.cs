@@ -5,6 +5,7 @@ using StampService.Application.Abstractions;
 using StampService.Application.Brands.Commands.AddBrandStaff;
 using StampService.Application.Brands.Commands.AddBrandStaffByPhone;
 using StampService.Application.Brands.Commands.RemoveBrandStaff;
+using StampService.Application.Brands.Commands.UpdateBrandRewardSettings;
 using StampService.Application.Brands.Queries.GetBrandStaff;
 using StampService.Application.Brands.Queries.GetBrandWorkspace;
 using StampService.Application.Brands.Queries.GetMyBrands;
@@ -75,6 +76,28 @@ public class BrandsController : ApiControllerBase
         var command = new AddBrandStaffCommand(brandId, userIdResult.Value, request);
 
         return await handler.Handle(command, cancellationToken);
+    }
+
+    [HttpPut("{brandId:guid}/reward-settings")]
+    public async Task<EndpointResult<UpdateBrandResponse>> UpdateRewardSettings(
+        Guid brandId,
+        UpdateBrandRewardSettingsRequest request,
+        [FromServices] ICommandHandler<UpdateBrandResponse, UpdateBrandRewardSettingsCommand> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<UpdateBrandResponse>();
+
+        return await handler.Handle(
+            new UpdateBrandRewardSettingsCommand(
+                userIdResult.Value,
+                brandId,
+                request.IsMetricsEnabled,
+                request.IsCoinsEnabled,
+                request.IsCoinProductRedemptionEnabled,
+                request.IsManualCoinRedemptionEnabled),
+            cancellationToken);
     }
 
     [HttpPost("{brandId:guid}/staff/by-phone")]

@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Save,
   Search,
+  Settings,
   Store,
   TicketMinus,
   Trash2,
@@ -37,6 +38,7 @@ import {
   redeemCoins,
   redeemMetric,
   removeBrandStaff,
+  updateBrandRewardSettings,
   updateCoinProduct,
   updateMetric,
   type AddBrandStaffByPhoneResponse,
@@ -49,7 +51,8 @@ import {
   type MetricResponse,
   type MyBrandResponse,
   type RedeemMetricOptionsResponse,
-  type RedeemMetricResponse
+  type RedeemMetricResponse,
+  type UpdateBrandResponse
 } from './brandWorkspaceApi';
 import { formatRuPhoneInput, isRuPhoneInputComplete } from '../validation/phoneNumber';
 import { RuPhoneInput } from '../components/RuPhoneInput';
@@ -106,6 +109,7 @@ export function BrandWorkspacePage() {
     return (
       <BrandWorkspace
         workspace={workspace}
+        onWorkspaceUpdated={(updatedWorkspace) => setWorkspace(updatedWorkspace)}
         onBack={() => {
           setWorkspace(null);
           setError('');
@@ -163,9 +167,11 @@ export function BrandWorkspacePage() {
 
 function BrandWorkspace({
   workspace,
+  onWorkspaceUpdated,
   onBack
 }: {
   workspace: BrandWorkspaceResponse;
+  onWorkspaceUpdated: (workspace: BrandWorkspaceResponse) => void;
   onBack: () => void;
 }) {
   const [metrics, setMetrics] = useState<MetricResponse[]>([]);
@@ -196,6 +202,7 @@ function BrandWorkspace({
   const showCoinProductManagement =
     workspace.canManageMetrics && workspace.isCoinsEnabled && workspace.isCoinProductRedemptionEnabled;
   const showStaffManagement = workspace.canManageStaff;
+  const showBrandSettings = workspace.canManageBrand;
 
   return (
     <div className="brand-workspace-page">
@@ -257,6 +264,10 @@ function BrandWorkspace({
 
       {showStaffManagement ? (
         <StaffManagementPanel brandId={workspace.brandId} />
+      ) : null}
+
+      {showBrandSettings ? (
+        <BrandSettingsPanel workspace={workspace} onWorkspaceUpdated={onWorkspaceUpdated} />
       ) : null}
     </div>
   );
@@ -854,6 +865,167 @@ function StaffFeedback({ result }: { result: StaffOperationResult | null }) {
       <span>{phoneNumber}</span>
     </div>
   );
+}
+
+function BrandSettingsPanel({
+  workspace,
+  onWorkspaceUpdated
+}: {
+  workspace: BrandWorkspaceResponse;
+  onWorkspaceUpdated: (workspace: BrandWorkspaceResponse) => void;
+}) {
+  const [isMetricsEnabled, setIsMetricsEnabled] = useState(workspace.isMetricsEnabled);
+  const [isCoinsEnabled, setIsCoinsEnabled] = useState(workspace.isCoinsEnabled);
+  const [isCoinProductRedemptionEnabled, setIsCoinProductRedemptionEnabled] = useState(
+    workspace.isCoinProductRedemptionEnabled
+  );
+  const [isManualCoinRedemptionEnabled, setIsManualCoinRedemptionEnabled] = useState(
+    workspace.isManualCoinRedemptionEnabled
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
+
+  useEffect(() => {
+    setIsMetricsEnabled(workspace.isMetricsEnabled);
+    setIsCoinsEnabled(workspace.isCoinsEnabled);
+    setIsCoinProductRedemptionEnabled(workspace.isCoinProductRedemptionEnabled);
+    setIsManualCoinRedemptionEnabled(workspace.isManualCoinRedemptionEnabled);
+  }, [
+    workspace.brandId,
+    workspace.isMetricsEnabled,
+    workspace.isCoinsEnabled,
+    workspace.isCoinProductRedemptionEnabled,
+    workspace.isManualCoinRedemptionEnabled
+  ]);
+
+  useEffect(() => {
+    setError('');
+    setStatus('');
+  }, [workspace.brandId]);
+
+  const canSave = (isMetricsEnabled || isCoinsEnabled)
+    && (!isCoinsEnabled || isCoinProductRedemptionEnabled || isManualCoinRedemptionEnabled);
+
+  async function submit() {
+    if (!canSave) {
+      setError('Включите хотя бы один тип наград. Для монеток нужен хотя бы один способ списания.');
+      setStatus('');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setStatus('');
+
+    try {
+      const response = await updateBrandRewardSettings(workspace.brandId, {
+        isMetricsEnabled,
+        isCoinsEnabled,
+        isCoinProductRedemptionEnabled,
+        isManualCoinRedemptionEnabled
+      });
+      onWorkspaceUpdated(mapUpdatedBrandToWorkspace(workspace, response));
+      setStatus('Настройки сохранены.');
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="surface-panel brand-settings-panel">
+      <div className="section-heading section-heading--split">
+        <div>
+          <div className="section-heading__title">
+            <Settings size={22} />
+            <h2>Настройки бренда</h2>
+          </div>
+          <p>Включение метрик, монеток и способов списания.</p>
+        </div>
+        <button type="button" disabled={isSubmitting || !canSave} onClick={() => void submit()}>
+          <Save size={17} />
+          Сохранить
+        </button>
+      </div>
+
+      <div className="settings-grid">
+        <ToggleRow
+          title="Учитывать метрики"
+          description="Метрики доступны клиентам и сотрудникам."
+          checked={isMetricsEnabled}
+          onChange={setIsMetricsEnabled}
+        />
+        <ToggleRow
+          title="Учитывать монетки"
+          description="Монетки доступны для начислений, списаний и товаров."
+          checked={isCoinsEnabled}
+          onChange={setIsCoinsEnabled}
+        />
+        <ToggleRow
+          title="Списывать за товары"
+          description="Сотрудники могут выдавать товары за монетки."
+          checked={isCoinProductRedemptionEnabled}
+          onChange={setIsCoinProductRedemptionEnabled}
+        />
+        <ToggleRow
+          title="Списывать произвольно"
+          description="Сотрудники могут списывать произвольное количество монеток."
+          checked={isManualCoinRedemptionEnabled}
+          onChange={setIsManualCoinRedemptionEnabled}
+        />
+      </div>
+
+      {!canSave ? (
+        <p className="form-status form-status--error">
+          Включите хотя бы один тип наград. Для монеток нужен хотя бы один способ списания.
+        </p>
+      ) : null}
+      {error ? <p className="form-status form-status--error">{error}</p> : null}
+      {status ? <p className="form-status form-status--ok">{status}</p> : null}
+    </section>
+  );
+}
+
+function ToggleRow({
+  title,
+  description,
+  checked,
+  onChange
+}: {
+  title: string;
+  description: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="settings-toggle">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span className="settings-toggle__content">
+        <strong>{title}</strong>
+        <span>{description}</span>
+      </span>
+    </label>
+  );
+}
+
+function mapUpdatedBrandToWorkspace(
+  workspace: BrandWorkspaceResponse,
+  response: UpdateBrandResponse
+): BrandWorkspaceResponse {
+  return {
+    ...workspace,
+    brandName: response.brandName,
+    isMetricsEnabled: response.isMetricsEnabled,
+    isCoinsEnabled: response.isCoinsEnabled,
+    isCoinProductRedemptionEnabled: response.isCoinProductRedemptionEnabled,
+    isManualCoinRedemptionEnabled: response.isManualCoinRedemptionEnabled
+  };
 }
 
 function IssueMetricPanel({

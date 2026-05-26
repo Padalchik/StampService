@@ -944,6 +944,50 @@ p {
   margin-bottom: 0;
 }
 
+.brand-settings-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-toggle {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: flex-start;
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfcfd;
+  cursor: pointer;
+}
+
+.settings-toggle input {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: #1769aa;
+}
+
+.settings-toggle__content {
+  display: grid;
+  gap: 5px;
+}
+
+.settings-toggle__content strong {
+  color: #1f2933;
+}
+
+.settings-toggle__content span {
+  color: #526171;
+  line-height: 1.45;
+}
+
 .design-preview {
   min-height: 100vh;
   padding: 28px;
@@ -1501,6 +1545,7 @@ p {
   .profile-actions-grid,
   .brand-details__grid,
   .history-sections,
+  .settings-grid,
   .operation-grid {
     grid-template-columns: 1fr;
   }
