@@ -20,6 +20,7 @@ public class GetUserWalletBrandDetailsHandlerTests
         var productRepository = new FakeCoinProductRepository();
         var walletRepository = new FakeCoinWalletRepository();
         var coinTransactionRepository = new FakeCoinTransactionRepository();
+        var metricRepository = new FakeLoyaltyMetricRepository();
         var metricBalanceRepository = new FakeMetricBalanceRepository();
         var stampTransactionRepository = new FakeStampTransactionRepository();
         userRepository.Add(user);
@@ -34,7 +35,12 @@ public class GetUserWalletBrandDetailsHandlerTests
         productRepository.Add(availableProduct);
         productRepository.Add(unavailableProduct);
 
-        var metricBalance = MetricBalance.Create(user.Id, brand.Id, Guid.NewGuid()).Value;
+        var metric = LoyaltyMetricDefinition.Create(brand.Id, "Visit", 5).Value;
+        var zeroMetric = LoyaltyMetricDefinition.Create(brand.Id, "Massage", 4).Value;
+        metricRepository.AddExisting(metric);
+        metricRepository.AddExisting(zeroMetric);
+
+        var metricBalance = MetricBalance.Create(user.Id, brand.Id, metric.Id).Value;
         metricBalance.SetMaterializedValue(2);
         metricBalanceRepository.SetMetricReadModel(metricBalance.MetricDefinitionId, "Visit", 5);
         metricBalanceRepository.Add(metricBalance);
@@ -52,6 +58,7 @@ public class GetUserWalletBrandDetailsHandlerTests
             coinTransactionRepository,
             walletRepository,
             brandRepository,
+            metricRepository,
             metricBalanceRepository,
             stampTransactionRepository,
             userRepository);
@@ -70,9 +77,15 @@ public class GetUserWalletBrandDetailsHandlerTests
         Assert.Contains(coinSection.Items, item => item.Name == "Cake" && item.StatusText == "не хватает 2");
 
         var metricSection = Assert.Single(result.Value.RewardSections, section => section.Kind == "Metrics");
-        var metricItem = Assert.Single(metricSection.Items);
+        Assert.Equal(2, metricSection.Items.Count);
+        var metricItem = Assert.Single(metricSection.Items, item => item.Name == "Visit");
         Assert.Equal("2/5", metricItem.ProgressText);
         Assert.Equal("не хватает 3", metricItem.StatusText);
+        Assert.Contains(metricSection.Items, item =>
+            item.Name == "Massage"
+            && item.ProgressText == "0/4"
+            && item.StatusText == "не хватает 4"
+            && item.IsAvailable == false);
 
         var coinHistory = Assert.Single(result.Value.History.Groups, group => group.Kind == "Coin");
         var coinHistoryItem = Assert.Single(coinHistory.Items);
@@ -94,6 +107,7 @@ public class GetUserWalletBrandDetailsHandlerTests
             new FakeCoinTransactionRepository(),
             new FakeCoinWalletRepository(),
             new FakeBrandRepository(),
+            new FakeLoyaltyMetricRepository(),
             new FakeMetricBalanceRepository(),
             new FakeStampTransactionRepository(),
             new FakeUserRepository());

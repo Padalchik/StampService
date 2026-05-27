@@ -8,6 +8,7 @@ using StampService.Application.Metrics;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Wallet;
 using StampService.Domain.Coins;
+using StampService.Domain.Loyalty;
 
 namespace StampService.Application.Wallet.Queries.GetUserWalletBrandDetails;
 
@@ -20,6 +21,7 @@ public class GetUserWalletBrandDetailsHandler
     private readonly ICoinTransactionRepository _coinTransactionRepository;
     private readonly ICoinWalletRepository _coinWalletRepository;
     private readonly IBrandRepository _brandRepository;
+    private readonly ILoyaltyMetricRepository _metricRepository;
     private readonly IMetricBalanceRepository _metricBalanceRepository;
     private readonly IStampTransactionRepository _stampTransactionRepository;
     private readonly IUserRepository _userRepository;
@@ -29,6 +31,7 @@ public class GetUserWalletBrandDetailsHandler
         ICoinTransactionRepository coinTransactionRepository,
         ICoinWalletRepository coinWalletRepository,
         IBrandRepository brandRepository,
+        ILoyaltyMetricRepository metricRepository,
         IMetricBalanceRepository metricBalanceRepository,
         IStampTransactionRepository stampTransactionRepository,
         IUserRepository userRepository)
@@ -37,6 +40,7 @@ public class GetUserWalletBrandDetailsHandler
         _coinTransactionRepository = coinTransactionRepository;
         _coinWalletRepository = coinWalletRepository;
         _brandRepository = brandRepository;
+        _metricRepository = metricRepository;
         _metricBalanceRepository = metricBalanceRepository;
         _stampTransactionRepository = stampTransactionRepository;
         _userRepository = userRepository;
@@ -62,6 +66,12 @@ public class GetUserWalletBrandDetailsHandler
                 .Where(balance => balance.BrandId == query.BrandId)
                 .ToArray()
             : Array.Empty<UserMetricBalanceReadModel>();
+
+        var metrics = brand.IsMetricsEnabled
+            ? (await _metricRepository.GetByBrandAsync(query.BrandId, cancellationToken))
+                .Where(metric => metric.IsActive)
+                .ToArray()
+            : Array.Empty<LoyaltyMetricDefinition>();
 
         var wallet = brand.IsCoinsEnabled
             ? await _coinWalletRepository.GetByUserAndBrandAsync(
@@ -99,6 +109,7 @@ public class GetUserWalletBrandDetailsHandler
                 brand.IsCoinProductRedemptionEnabled,
                 coinBalance,
                 products,
+                metrics,
                 balances),
             BuildHistorySection(brand.IsCoinsEnabled, brand.IsMetricsEnabled, historyItems),
             "Чтобы получить награду, покажите код для списания сотруднику."));
@@ -159,6 +170,7 @@ public class GetUserWalletBrandDetailsHandler
         bool isCoinProductRedemptionEnabled,
         int coinBalance,
         IEnumerable<CoinProduct> products,
+        IEnumerable<LoyaltyMetricDefinition> metrics,
         IEnumerable<UserMetricBalanceReadModel> balances)
     {
         var sections = new List<UserWalletBrandRewardSectionResponse>();
@@ -192,20 +204,25 @@ public class GetUserWalletBrandDetailsHandler
 
         if (isMetricsEnabled)
         {
+            var balancesByMetric = balances.ToDictionary(balance => balance.MetricDefinitionId);
+
             sections.Add(new UserWalletBrandRewardSectionResponse(
                 "Metrics",
                 "Метрики",
                 null,
-                "Пока нет балансов по метрикам.",
-                balances
-                    .OrderBy(balance => balance.MetricName)
-                    .Select(balance =>
+                "Пока нет метрик.",
+                metrics
+                    .OrderBy(metric => metric.Name)
+                    .Select(metric =>
                     {
-                        var missingAmount = Math.Max(0, balance.RedemptionAmount - balance.Value);
+                        balancesByMetric.TryGetValue(metric.Id, out var balance);
+                        var currentValue = balance?.Value ?? 0;
+                        var missingAmount = Math.Max(0, metric.RedemptionAmount - currentValue);
+
                         return new UserWalletBrandRewardItemResponse(
-                            balance.MetricDefinitionId,
-                            balance.MetricName,
-                            $"{balance.Value}/{balance.RedemptionAmount}",
+                            metric.Id,
+                            metric.Name,
+                            $"{currentValue}/{metric.RedemptionAmount}",
                             missingAmount == 0 ? "доступно" : $"не хватает {missingAmount}",
                             missingAmount == 0);
                     })
