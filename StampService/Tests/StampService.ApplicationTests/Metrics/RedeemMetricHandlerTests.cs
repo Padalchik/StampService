@@ -1,9 +1,11 @@
 using StampService.Application.Access;
+using StampService.Application.CustomerNotifications;
 using StampService.Application.Errors;
 using StampService.Application.Metrics;
 using StampService.Application.Metrics.Commands.RedeemMetric;
 using StampService.Application.Users.Commands.UseRedemptionCode;
 using StampService.ApplicationTests.Fakes;
+using StampService.Contracts.DTOs.Coins;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Access;
 using StampService.Domain.Brand;
@@ -48,6 +50,7 @@ public class RedeemMetricHandlerTests
         var useCodeHandler = new UseRedemptionCodeHandler(
             codeRepository,
             new FixedTimeProvider(now));
+        var notificationService = new RecordingCustomerNotificationService();
         var validationService = new RedeemMetricValidationService(
             new BrandAccessService(membershipRepository),
             brandRepository,
@@ -60,7 +63,8 @@ public class RedeemMetricHandlerTests
         var handler = new RedeemMetricHandler(
             new MetricLedgerService(balanceRepository, transactionRepository),
             validationService,
-            useCodeHandler);
+            useCodeHandler,
+            notificationService);
 
         var result = await handler.Handle(
             new RedeemMetricCommand(
@@ -74,6 +78,7 @@ public class RedeemMetricHandlerTests
         Assert.Equal(3, result.Value.Amount);
         Assert.Equal(7, result.Value.BalanceValue);
         Assert.NotNull(redemptionCode.UsedAtUtc);
+        Assert.Equal(result.Value, notificationService.MetricRedeemed);
     }
 
     [Fact]
@@ -223,5 +228,44 @@ public class RedeemMetricHandlerTests
 
         Assert.True(result.IsFailed);
         Assert.Equal(AppErrorCodes.Brand.MetricsDisabled, result.Errors[0].Metadata["error_code"]);
+    }
+
+    private sealed class RecordingCustomerNotificationService : ICustomerNotificationService
+    {
+        public RedeemMetricResponse? MetricRedeemed { get; private set; }
+
+        public Task NotifyCoinsIssuedAsync(CoinOperationResponse operation, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyMetricIssuedAsync(IssueMetricResponse operation, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyCoinsRedeemedAsync(
+            CoinOperationResponse operation,
+            string comment,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyCoinProductPurchasedAsync(
+            CoinOperationResponse operation,
+            string productName,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyMetricRedeemedAsync(
+            RedeemMetricResponse operation,
+            CancellationToken cancellationToken)
+        {
+            MetricRedeemed = operation;
+            return Task.CompletedTask;
+        }
     }
 }

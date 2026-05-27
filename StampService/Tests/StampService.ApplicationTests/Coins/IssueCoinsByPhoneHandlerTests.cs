@@ -135,5 +135,28 @@ public class IssueCoinsByPhoneHandlerTests
         {
             return Task.CompletedTask;
         }
+
+        public Task NotifyCoinsRedeemedAsync(
+            CoinOperationResponse operation,
+            string comment,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyCoinProductPurchasedAsync(
+            CoinOperationResponse operation,
+            string productName,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyMetricRedeemedAsync(
+            StampService.Contracts.DTOs.Metrics.RedeemMetricResponse operation,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
     }
 }

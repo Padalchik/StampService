@@ -1,9 +1,12 @@
 ﻿using StampService.Application.Access;
 using StampService.Application.Coins;
 using StampService.Application.Coins.Commands.RedeemCoins;
+using StampService.Application.CustomerNotifications;
 using StampService.Application.Errors;
 using StampService.Application.Users.Commands.UseRedemptionCode;
 using StampService.ApplicationTests.Fakes;
+using StampService.Contracts.DTOs.Coins;
+using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Access;
 using StampService.Domain.Brand;
 using StampService.Domain.Coins;
@@ -32,6 +35,8 @@ public class RedeemCoinsHandlerTests
         Assert.Equal(6, result.Value.Amount);
         Assert.Equal(4, result.Value.BalanceValue);
         Assert.NotNull(fixture.RedemptionCode.UsedAtUtc);
+        Assert.Equal(result.Value, fixture.NotificationService.CoinsRedeemed);
+        Assert.Equal("Receipt", fixture.NotificationService.CoinsRedeemedComment);
 
         var redeemTransaction = fixture.TransactionRepository.Transactions
             .Single(transaction => transaction.Type == CoinTransactionType.Redeem);
@@ -204,6 +209,7 @@ public class RedeemCoinsHandlerTests
         var transactionRepository = new FakeCoinTransactionRepository();
         var codeRepository = new FakeRedemptionCodeRepository();
         var userRepository = new FakeUserRepository();
+        var notificationService = new RecordingCustomerNotificationService();
 
         brandRepository.AddExisting(brand);
         if (grantAccess)
@@ -231,7 +237,8 @@ public class RedeemCoinsHandlerTests
             codeRepository,
             userRepository,
             new UseRedemptionCodeHandler(codeRepository, new FixedTimeProvider(now)),
-            new FixedTimeProvider(now));
+            new FixedTimeProvider(now),
+            notificationService);
 
         return new Fixture(
             handler,
@@ -239,7 +246,8 @@ public class RedeemCoinsHandlerTests
             staffUserId,
             customer,
             redemptionCode,
-            transactionRepository);
+            transactionRepository,
+            notificationService);
     }
 
     private sealed record Fixture(
@@ -248,5 +256,46 @@ public class RedeemCoinsHandlerTests
         Guid StaffUserId,
         User Customer,
         RedemptionCode RedemptionCode,
-        FakeCoinTransactionRepository TransactionRepository);
+        FakeCoinTransactionRepository TransactionRepository,
+        RecordingCustomerNotificationService NotificationService);
+
+    private sealed class RecordingCustomerNotificationService : ICustomerNotificationService
+    {
+        public CoinOperationResponse? CoinsRedeemed { get; private set; }
+
+        public string? CoinsRedeemedComment { get; private set; }
+
+        public Task NotifyCoinsIssuedAsync(CoinOperationResponse operation, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyMetricIssuedAsync(IssueMetricResponse operation, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyCoinsRedeemedAsync(
+            CoinOperationResponse operation,
+            string comment,
+            CancellationToken cancellationToken)
+        {
+            CoinsRedeemed = operation;
+            CoinsRedeemedComment = comment;
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyCoinProductPurchasedAsync(
+            CoinOperationResponse operation,
+            string productName,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyMetricRedeemedAsync(RedeemMetricResponse operation, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+    }
 }

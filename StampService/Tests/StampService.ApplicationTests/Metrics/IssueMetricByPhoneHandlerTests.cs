@@ -146,5 +146,28 @@ public class IssueMetricByPhoneHandlerTests
             MetricIssued = operation;
             return Task.CompletedTask;
         }
+
+        public Task NotifyCoinsRedeemedAsync(
+            StampService.Contracts.DTOs.Coins.CoinOperationResponse operation,
+            string comment,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyCoinProductPurchasedAsync(
+            StampService.Contracts.DTOs.Coins.CoinOperationResponse operation,
+            string productName,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyMetricRedeemedAsync(
+            RedeemMetricResponse operation,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
     }
 }

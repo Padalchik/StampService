@@ -8,7 +8,6 @@ using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.CoinProducts;
 using StampService.Contracts.DTOs.Coins;
 using StampService.TelegramBot.Common.Errors;
-using StampService.TelegramBot.Common.Notifications;
 using StampService.TelegramBot.Common.Routing;
 using StampService.TelegramBot.Features.Brands.Screens;
 using StampService.TelegramBot.Features.CoinProducts.Actions;
@@ -270,8 +269,7 @@ public sealed class CoinProductEndpoint : IBotEndpoint
         UpdateContext ctx,
         PurchaseCoinProductPayload payload,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        ICommandHandler<CoinOperationResponse, PurchaseCoinProductCommand> purchaseHandler,
-        ICustomerNotificationService customerNotificationService)
+        ICommandHandler<CoinOperationResponse, PurchaseCoinProductCommand> purchaseHandler)
     {
         if (!payload.CanPurchase)
             return BotResults.NavigateTo<PurchaseCoinProductSelectScreen>();
@@ -296,14 +294,6 @@ public sealed class CoinProductEndpoint : IBotEndpoint
 
         if (result.IsFailed)
             return ErrorView($"Не удалось оформить покупку: {BotErrorFormatter.Format(result.Errors)}");
-
-        var brandName = ctx.Session?.Data.GetString(BrandWorkspaceScreen.BrandNameSessionKey) ?? "бренд";
-        var productName = ctx.Session?.Data.GetString(CoinProductSessionKeys.PurchaseProductName) ?? "товар";
-        await customerNotificationService.NotifyCoinProductPurchasedAsync(
-            result.Value,
-            brandName,
-            productName,
-            ctx.CancellationToken);
 
         ClearPurchaseSession(ctx);
         return BotResults.ShowView(new ScreenView(
