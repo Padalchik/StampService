@@ -172,7 +172,7 @@ function AppShell() {
         <header className="workspace__header">
           <div>
             <h1>{pageTitle}</h1>
-            <p>{pageDescription}</p>
+            {pageDescription ? <p>{pageDescription}</p> : null}
           </div>
           <div className="workspace__header-actions">
             {activeSection === 'profile' ? (
@@ -261,5 +261,5 @@ function getPageDescription(activeSection: ActiveSection): string {
     return 'Глобальное управление брендами и владельцами.';
   }
 
-  return 'Балансы, доступные награды и код для списания.';
+  return '';
 }
