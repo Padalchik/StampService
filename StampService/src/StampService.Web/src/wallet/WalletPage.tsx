@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, BarChart3, ChevronRight, Gift, History, RefreshCw, Ticket, WalletCards } from 'lucide-react';
+import { ArrowLeft, BarChart3, Gift, History, RefreshCw } from 'lucide-react';
 import { getApiErrorMessage } from '../api/errorMessages';
-import { formatRuDateTime, formatRuTime } from '../format/dateTime';
+import { formatRuDateTime } from '../format/dateTime';
 import {
   getBrandDetails,
   openUserWallet,
@@ -76,57 +76,49 @@ export function WalletPage() {
 
   return (
     <div className="wallet-page">
-      <section className="wallet-code-panel">
-        <div className="wallet-code-panel__main">
-          <div className="wallet-code-panel__icon" aria-hidden="true">
-            <Ticket size={26} />
+      <div className="wallet-layout">
+        <section className="wallet-code-card wallet-sticky-code" aria-label="Код для списания">
+          <div className="wallet-code-card__content">
+            <span className="wallet-code-card__label">Код для списания</span>
+            <div className="wallet-code-card__row">
+              <div className="redemption-code wallet-code-card__code">{wallet?.redemptionCode.code ?? '----'}</div>
+              <button
+                className="wallet-code-card__refresh"
+                type="button"
+                aria-label="Обновить код"
+                disabled={isRefreshingCode}
+                onClick={() => void loadWallet(true)}
+              >
+                <RefreshCw size={20} aria-hidden="true" />
+              </button>
+            </div>
           </div>
-          <div>
-            <h2>Код для списания</h2>
-            <p>Покажите этот код сотруднику бренда для операции списания.</p>
-            <div className="redemption-code">{wallet?.redemptionCode.code ?? '----'}</div>
-            {wallet?.redemptionCode.expiresAtUtc ? (
-              <div className="wallet-code-panel__expires">
-                Действует до {formatRuTime(wallet.redemptionCode.expiresAtUtc)}
-              </div>
-            ) : null}
+
+          {error ? <p className="form-status form-status--error">{error}</p> : null}
+        </section>
+
+        <section className="wallet-brands-panel">
+          <div className="section-heading section-heading--wallet">
+            <h2>Мои бренды</h2>
+            {wallet ? <span>{formatBrandCount(wallet.brands.length)}</span> : null}
           </div>
-        </div>
-        <button
-          className="button-secondary"
-          type="button"
-          disabled={isRefreshingCode}
-          onClick={() => void loadWallet(true)}
-        >
-          <RefreshCw size={18} />
-          Обновить код
-        </button>
-      </section>
 
-      {error ? <p className="form-status form-status--error">{error}</p> : null}
-
-      <section className="surface-panel">
-        <div className="section-heading">
-          <WalletCards size={22} />
-          <h2>Балансы и доступные награды</h2>
-        </div>
-
-        {!wallet || wallet.brands.length === 0 ? (
-          <p className="muted-text">У вас пока нет балансов.</p>
-        ) : (
-          <div className="wallet-brand-list">
-            {wallet.brands.map((brand) => (
-              <WalletBrandCard
-                key={brand.brandId}
-                brand={brand}
-                isSelected={brand.brandId === selectedBrandId}
-                onOpen={() => void loadBrandDetails(brand.brandId)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
+          {!wallet || wallet.brands.length === 0 ? (
+            <p className="muted-text">У вас пока нет брендов.</p>
+          ) : (
+            <div className="wallet-brand-list">
+              {wallet.brands.map((brand) => (
+                <WalletBrandCard
+                  key={brand.brandId}
+                  brand={brand}
+                  isSelected={brand.brandId === selectedBrandId}
+                  onOpen={() => void loadBrandDetails(brand.brandId)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 
@@ -156,59 +148,103 @@ function WalletBrandCard({
   isSelected: boolean;
   onOpen: () => void;
 }) {
-  const hasCoinProducts = brand.isCoinsEnabled && brand.availableCoinProducts.length > 0;
-  const hasMetrics = brand.isMetricsEnabled && brand.availableMetrics.length > 0;
-  const hasRewards = hasCoinProducts || hasMetrics;
+  const rewards = getVisibleRewards(brand);
+  const visibleRewards = rewards.slice(0, 3);
+  const hiddenRewardCount = rewards.length - visibleRewards.length;
+  const metaText = getBrandMetaText(brand, rewards.length);
 
   return (
     <article className={`wallet-brand-card ${isSelected ? 'wallet-brand-card--selected' : ''}`}>
-      <header className="wallet-brand-card__header">
-        <div>
+      <header className="wallet-brand-card__top">
+        <div className="wallet-brand-card__title">
           <h3>{brand.brandName}</h3>
-          <div className="wallet-brand-card__toggles">
-            {brand.isCoinsEnabled ? <span>Монетки: {brand.coinBalance}</span> : null}
-            {brand.isMetricsEnabled ? <span>Метрики включены</span> : null}
-          </div>
+          <p className="wallet-brand-card__meta">{metaText}</p>
         </div>
-        <button className="button-secondary button-compact" type="button" onClick={onOpen}>
-          Подробнее
-          <ChevronRight size={17} />
+        <button className="wallet-brand-card__open" type="button" onClick={onOpen}>
+          Открыть
         </button>
       </header>
 
-      {hasCoinProducts ? (
-        <div className="reward-block">
-          <h4>Доступные товары</h4>
-          <ul>
-            {brand.availableCoinProducts.map((product) => (
-              <li key={product.productId}>
-                <span>{product.productName}</span>
-                <strong>{product.price} монеток</strong>
-              </li>
-            ))}
-          </ul>
+      {visibleRewards.length > 0 ? (
+        <div className="wallet-reward-chips" aria-label="Доступные награды">
+          {visibleRewards.map((reward) => (
+            <span className="wallet-reward-chip" key={reward.key}>
+              {reward.name}
+            </span>
+          ))}
+          {hiddenRewardCount > 0 ? (
+            <span className="wallet-reward-chip wallet-reward-chip--more">+{hiddenRewardCount} ещё</span>
+          ) : null}
         </div>
       ) : null}
-
-      {hasMetrics ? (
-        <div className="reward-block">
-          <h4>Доступные метрики</h4>
-          <ul>
-            {brand.availableMetrics.map((metric) => (
-              <li key={metric.metricDefinitionId}>
-                <span>{metric.metricName}</span>
-                <strong>
-                  {metric.currentBalance}/{metric.requiredAmount}
-                </strong>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {!hasRewards ? <p className="muted-text">Доступных наград пока нет.</p> : null}
     </article>
   );
+}
+
+function getVisibleRewards(brand: UserWalletBrandOverviewResponse): Array<{ key: string; name: string }> {
+  const coinProductRewards = brand.isCoinsEnabled
+    ? brand.availableCoinProducts
+        .filter((product) => product.isAvailable)
+        .map((product) => ({
+          key: `coin-${product.productId}`,
+          name: product.productName
+        }))
+    : [];
+
+  const metricRewards = brand.isMetricsEnabled
+    ? brand.availableMetrics
+        .filter((metric) => metric.isAvailable)
+        .map((metric) => ({
+          key: `metric-${metric.metricDefinitionId}`,
+          name: metric.metricName
+        }))
+    : [];
+
+  return [...coinProductRewards, ...metricRewards];
+}
+
+function getBrandMetaText(brand: UserWalletBrandOverviewResponse, rewardCount: number): string {
+  if (brand.isCoinsEnabled) {
+    return formatCoinCount(brand.coinBalance);
+  }
+
+  if (rewardCount > 0) {
+    return formatRewardCount(rewardCount);
+  }
+
+  return 'Пока нет доступных наград';
+}
+
+function formatBrandCount(count: number): string {
+  return `${count} ${getRuPlural(count, 'бренд', 'бренда', 'брендов')}`;
+}
+
+function formatCoinCount(count: number): string {
+  return `${count} ${getRuPlural(count, 'монета', 'монеты', 'монет')}`;
+}
+
+function formatRewardCount(count: number): string {
+  return `${count} ${getRuPlural(count, 'доступная награда', 'доступные награды', 'доступных наград')}`;
+}
+
+function getRuPlural(count: number, one: string, few: string, many: string): string {
+  const absoluteCount = Math.abs(count);
+  const lastTwoDigits = absoluteCount % 100;
+  const lastDigit = absoluteCount % 10;
+
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
+    return many;
+  }
+
+  if (lastDigit === 1) {
+    return one;
+  }
+
+  if (lastDigit >= 2 && lastDigit <= 4) {
+    return few;
+  }
+
+  return many;
 }
 
 function BrandDetailsScreen({

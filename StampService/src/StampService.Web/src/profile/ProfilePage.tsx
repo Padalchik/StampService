@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, MessageSquareText, Phone, RefreshCw, Send, UserRound } from 'lucide-react';
+import { CheckCircle2, LogOut, MessageSquareText, Phone, RefreshCw, Send, UserRound } from 'lucide-react';
 import { ApiRequestError } from '../api/apiClient';
 import { RuPhoneInput } from '../components/RuPhoneInput';
 import { formatRuPhoneInput, isRuPhoneInputComplete, normalizePhoneNumber } from '../validation/phoneNumber';
@@ -14,7 +14,7 @@ import {
 
 type PhoneStep = 'idle' | 'code';
 
-export function ProfilePage() {
+export function ProfilePage({ onSignOut }: { onSignOut: () => void }) {
   const [profile, setProfile] = useState<MyProfileResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -250,6 +250,18 @@ export function ProfilePage() {
           {telegramError ? <p className="form-status form-status--error">{telegramError}</p> : null}
         </div>
         ) : null}
+      </section>
+
+      <section className="surface-panel profile-action-panel">
+        <div className="section-heading">
+          <LogOut size={22} />
+          <h2>Сессия</h2>
+        </div>
+
+        <button className="button-secondary" type="button" onClick={onSignOut}>
+          <LogOut size={18} />
+          Выйти из аккаунта
+        </button>
       </section>
     </div>
   );

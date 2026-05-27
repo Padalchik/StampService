@@ -1,26 +1,29 @@
-import { FlaskConical, LogOut, Settings, ShieldCheck, WalletCards, Workflow } from 'lucide-react';
+import { Settings, ShieldCheck, WalletCards, Workflow, type LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AdminPage } from '../admin/AdminPage';
 import { getAdminAccess } from '../admin/adminApi';
 import { AuthProvider, useAuth } from '../auth/AuthContext';
-import { PhoneLoginHeroUIPage } from '../auth/PhoneLoginHeroUIPage';
 import { PhoneLoginPage } from '../auth/PhoneLoginPage';
 import { BrandWorkspacePage } from '../brands/BrandWorkspacePage';
 import { getMyBrands, type MyBrandResponse } from '../brands/brandWorkspaceApi';
 import { DesignVariantsPage } from '../design/DesignVariantsPage';
-import { ProfileHeroUIFormsPage } from '../profile/ProfileHeroUIFormsPage';
 import { ProfilePage } from '../profile/ProfilePage';
-import { WalletHeroUIPage } from '../wallet/WalletHeroUIPage';
 import { WalletPage } from '../wallet/WalletPage';
 import { navigationLabels } from './navigationLabels';
 
 type ActiveSection = 'profile' | 'wallet' | 'brands' | 'admin';
-type UiVersion = 'default' | 'heroui';
 
 type NavigationAccess = {
   brands: MyBrandResponse[];
   isAdmin: boolean;
+};
+
+type NavigationItem = {
+  section: ActiveSection;
+  desktopLabel: string;
+  mobileLabel: string;
+  icon: LucideIcon;
 };
 
 export function App() {
@@ -29,7 +32,6 @@ export function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/design-variants" element={<DesignVariantsPage />} />
-          <Route path="/login-heroui" element={<HeroUILoginRoute />} />
           <Route path="/login" element={<LoginRoute />} />
           <Route
             path="/*"
@@ -55,16 +57,6 @@ function LoginRoute() {
   return <PhoneLoginPage />;
 }
 
-function HeroUILoginRoute() {
-  const auth = useAuth();
-
-  if (auth.isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-
-  return <PhoneLoginHeroUIPage />;
-}
-
 function RequireAuth({ children }: { children: ReactNode }) {
   const auth = useAuth();
 
@@ -78,8 +70,6 @@ function RequireAuth({ children }: { children: ReactNode }) {
 function AppShell() {
   const auth = useAuth();
   const [activeSection, setActiveSection] = useState<ActiveSection>('wallet');
-  const [profileVersion, setProfileVersion] = useState<UiVersion>('default');
-  const [walletVersion, setWalletVersion] = useState<UiVersion>('default');
   const [navigationAccess, setNavigationAccess] = useState<NavigationAccess>({
     brands: [],
     isAdmin: false
@@ -87,9 +77,13 @@ function AppShell() {
   const singleBrand = navigationAccess.brands.length === 1 ? navigationAccess.brands[0] : null;
   const pageTitle = getPageTitle(activeSection, singleBrand !== null);
   const pageDescription = getPageDescription(activeSection);
-  const availableSections = useMemo(
-    () => getAvailableSections(navigationAccess),
+  const navigationItems = useMemo(
+    () => getNavigationItems(navigationAccess),
     [navigationAccess]
+  );
+  const availableSections = useMemo(
+    () => navigationItems.map((item) => item.section),
+    [navigationItems]
   );
 
   useEffect(() => {
@@ -125,87 +119,23 @@ function AppShell() {
   }, [activeSection, availableSections]);
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar" aria-label="Основное меню">
-        <div className="sidebar__brand">StampService</div>
-        <nav className="sidebar__nav">
-          <button
-            className={`sidebar__item ${activeSection === 'wallet' ? 'sidebar__item--active' : ''}`}
-            type="button"
-            onClick={() => setActiveSection('wallet')}
-          >
-            <WalletCards size={18} />
-            {navigationLabels.myWallet}
-          </button>
-          {navigationAccess.brands.length > 0 ? (
-            <button
-              className={`sidebar__item ${activeSection === 'brands' ? 'sidebar__item--active' : ''}`}
-              type="button"
-              onClick={() => setActiveSection('brands')}
-            >
-              <Workflow size={18} />
-              {singleBrand ? navigationLabels.work : navigationLabels.brandWorkspaces}
-            </button>
-          ) : null}
-          <button
-            className={`sidebar__item ${activeSection === 'profile' ? 'sidebar__item--active' : ''}`}
-            type="button"
-            onClick={() => setActiveSection('profile')}
-          >
-            <Settings size={18} />
-            {navigationLabels.accountSettings}
-          </button>
-          {navigationAccess.isAdmin ? (
-            <button
-              className={`sidebar__item ${activeSection === 'admin' ? 'sidebar__item--active' : ''}`}
-              type="button"
-              onClick={() => setActiveSection('admin')}
-            >
-              <ShieldCheck size={18} />
-              {navigationLabels.adminPanel}
-            </button>
-          ) : null}
-        </nav>
-      </aside>
+    <div className="app-shell app-shell--with-bottom-nav">
+      <DesktopNavigation
+        activeSection={activeSection}
+        items={navigationItems}
+        onNavigate={setActiveSection}
+      />
 
       <main className="workspace">
         <header className="workspace__header">
           <div>
             <h1>{pageTitle}</h1>
-            <p>{pageDescription}</p>
-          </div>
-          <div className="workspace__header-actions">
-            {activeSection === 'profile' ? (
-              <button
-                className="button-secondary"
-                type="button"
-                onClick={() => setProfileVersion((version) => (version === 'default' ? 'heroui' : 'default'))}
-              >
-                <FlaskConical size={18} />
-                {profileVersion === 'default' ? 'Сменить на HeroUI версию' : 'Сменить на обычную версию'}
-              </button>
-            ) : null}
-            {activeSection === 'wallet' ? (
-              <button
-                className="button-secondary"
-                type="button"
-                onClick={() => setWalletVersion((version) => (version === 'default' ? 'heroui' : 'default'))}
-              >
-                <FlaskConical size={18} />
-                {walletVersion === 'default' ? 'Сменить на HeroUI версию' : 'Сменить на обычную версию'}
-              </button>
-            ) : null}
-            <button className="button-secondary" type="button" onClick={auth.signOut}>
-              <LogOut size={18} />
-              Выйти
-            </button>
+            {pageDescription ? <p>{pageDescription}</p> : null}
           </div>
         </header>
 
-        {activeSection === 'profile' && profileVersion === 'default' ? <ProfilePage /> : null}
-        {activeSection === 'profile' && profileVersion === 'heroui' ? <ProfileHeroUIFormsPage /> : null}
-        {activeSection === 'wallet' && walletVersion === 'default' ? <WalletPage /> : null}
-        {activeSection === 'wallet' && walletVersion === 'heroui' ? <WalletHeroUIPage /> : null}
+        {activeSection === 'profile' ? <ProfilePage onSignOut={auth.signOut} /> : null}
+        {activeSection === 'wallet' ? <WalletPage /> : null}
         {activeSection === 'brands' && navigationAccess.brands.length > 0 ? (
           <BrandWorkspacePage
             initialBrands={navigationAccess.brands}
@@ -214,22 +144,120 @@ function AppShell() {
         ) : null}
         {activeSection === 'admin' && navigationAccess.isAdmin ? <AdminPage /> : null}
       </main>
+
+      <MobileBottomNavigation
+        activeSection={activeSection}
+        items={navigationItems}
+        onNavigate={setActiveSection}
+      />
     </div>
   );
 }
 
-function getAvailableSections(navigationAccess: NavigationAccess): ActiveSection[] {
-  const sections: ActiveSection[] = ['wallet', 'profile'];
+function DesktopNavigation({
+  activeSection,
+  items,
+  onNavigate
+}: {
+  activeSection: ActiveSection;
+  items: NavigationItem[];
+  onNavigate: (section: ActiveSection) => void;
+}) {
+  return (
+    <aside className="sidebar" aria-label="Основное меню">
+      <div className="sidebar__brand">StampService</div>
+      <nav className="sidebar__nav">
+        {items.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeSection === item.section;
+
+          return (
+            <button
+              className={`sidebar__item ${isActive ? 'sidebar__item--active' : ''}`}
+              type="button"
+              key={item.section}
+              onClick={() => onNavigate(item.section)}
+            >
+              <Icon size={18} aria-hidden="true" />
+              {item.desktopLabel}
+            </button>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+}
+
+function MobileBottomNavigation({
+  activeSection,
+  items,
+  onNavigate
+}: {
+  activeSection: ActiveSection;
+  items: NavigationItem[];
+  onNavigate: (section: ActiveSection) => void;
+}) {
+  return (
+    <nav className="mobile-bottom-nav" aria-label="Основная навигация">
+      {items.map((item) => {
+        const Icon = item.icon;
+        const isActive = activeSection === item.section;
+
+        return (
+          <button
+            className={`mobile-bottom-nav__item ${isActive ? 'mobile-bottom-nav__item--active' : ''}`}
+            type="button"
+            key={item.section}
+            aria-current={isActive ? 'page' : undefined}
+            onClick={() => onNavigate(item.section)}
+          >
+            <Icon size={20} aria-hidden="true" />
+            <span>{item.mobileLabel}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+function getNavigationItems(navigationAccess: NavigationAccess): NavigationItem[] {
+  const items: NavigationItem[] = [
+    {
+      section: 'wallet',
+      desktopLabel: navigationLabels.myWallet,
+      mobileLabel: navigationLabels.wallet,
+      icon: WalletCards
+    }
+  ];
 
   if (navigationAccess.brands.length > 0) {
-    sections.push('brands');
+    const hasSingleBrand = navigationAccess.brands.length === 1;
+
+    items.push({
+      section: 'brands',
+      desktopLabel: hasSingleBrand ? navigationLabels.work : navigationLabels.brandWorkspaces,
+      mobileLabel: hasSingleBrand ? navigationLabels.work : navigationLabels.brands,
+      icon: Workflow
+    });
   }
 
   if (navigationAccess.isAdmin) {
-    sections.push('admin');
+    items.push({
+      section: 'admin',
+      desktopLabel: navigationLabels.adminPanel,
+      mobileLabel: navigationLabels.adminPanel,
+      icon: ShieldCheck
+    });
   }
 
-  return sections;
+  items.push({
+    section: 'profile',
+    desktopLabel: navigationLabels.accountSettings,
+    mobileLabel: navigationLabels.account,
+    icon: Settings
+  });
+
+  return items;
 }
 
 function getPageTitle(activeSection: ActiveSection, hasSingleBrand: boolean): string {
@@ -261,5 +289,5 @@ function getPageDescription(activeSection: ActiveSection): string {
     return 'Глобальное управление брендами и владельцами.';
   }
 
-  return 'Балансы, доступные награды и код для списания.';
+  return '';
 }
