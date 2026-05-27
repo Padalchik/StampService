@@ -450,7 +450,7 @@ Application use cases:
 - `src/StampService.Web/src/auth/PhoneLoginHeroUIPage.tsx` - копия телефонной формы входа, доступна по `/login-heroui`; обычная форма входа остается основной и содержит ссылку на HeroUI-копию;
 - `src/StampService.Web/src/profile/ProfileHeroUIFormsPage.tsx` - копия части профиля/привязки телефона, включается кнопкой смены версии в разделе `Настройки аккаунта`;
 - `src/StampService.Web/src/wallet/WalletHeroUIPage.tsx` - копия раздела `Мой кошелек` и детализации бренда, включается кнопкой смены версии в разделе `Мой кошелек`;
-- `src/StampService.Web/src/app/App.tsx` подключает экспериментальные маршруты/разделы, не удаляя основные экраны.
+- `src/StampService.Web/src/app/App.tsx` подключает экспериментальный маршрут входа и переключатели версий внутри существующих разделов, не удаляя основные экраны.
 
 Архитектурное правило для HeroUI:
 
