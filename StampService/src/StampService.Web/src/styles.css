@@ -235,6 +235,10 @@ p {
   background: #eef3f7;
 }
 
+.mobile-bottom-nav {
+  display: none;
+}
+
 .workspace {
   padding: 28px;
 }
@@ -1795,22 +1799,65 @@ p {
   }
 
   .sidebar {
-    border-right: 0;
-    border-bottom: 1px solid #d8e0e8;
-    padding: 14px;
-  }
-
-  .sidebar__brand {
-    margin: 0 0 12px;
-  }
-
-  .sidebar__nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: none;
   }
 
   .workspace,
   .auth-page {
     padding: 16px;
+  }
+
+  .app-shell--with-bottom-nav .workspace {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 4px;
+    border-top: 1px solid #d8e0e8;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    background: #fff;
+    box-shadow: 0 -8px 22px rgba(31, 41, 51, 0.08);
+  }
+
+  .mobile-bottom-nav__item {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 58px;
+    border-color: transparent;
+    border-radius: 8px;
+    padding: 6px 4px;
+    background: transparent;
+    color: #526171;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
+  .mobile-bottom-nav__item svg {
+    color: currentColor;
+  }
+
+  .mobile-bottom-nav__item span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-bottom-nav__item--active {
+    border-color: #d8e0e8;
+    background: #eef3f7;
+    color: #1769aa;
   }
 
   .workspace__header,
@@ -1967,14 +2014,27 @@ p {
 }
 
 @media (max-width: 420px) {
-  .sidebar__nav {
-    grid-template-columns: 1fr;
-  }
-
   .workspace,
   .auth-page,
   .design-preview {
     padding: 12px;
+  }
+
+  .app-shell--with-bottom-nav .workspace {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-bottom-nav {
+    gap: 2px;
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+
+  .mobile-bottom-nav__item {
+    min-height: 56px;
+    padding-right: 2px;
+    padding-left: 2px;
+    font-size: 11px;
   }
 
   .auth-panel,
