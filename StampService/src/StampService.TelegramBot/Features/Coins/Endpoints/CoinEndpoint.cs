@@ -8,7 +8,6 @@ using StampService.Application.Coins.Queries.GetCoinHistory;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
 using StampService.Contracts.DTOs.Coins;
 using StampService.TelegramBot.Common.Errors;
-using StampService.TelegramBot.Common.Notifications;
 using StampService.TelegramBot.Common.Routing;
 using StampService.TelegramBot.Features.Brands.Screens;
 using StampService.TelegramBot.Features.Coins.Actions;
@@ -133,8 +132,7 @@ public sealed class CoinEndpoint : IBotEndpoint
     private static async Task<IEndpointResult> ConfirmRedeemAsync(
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        ICommandHandler<CoinOperationResponse, RedeemCoinsCommand> redeemHandler,
-        ICustomerNotificationService customerNotificationService)
+        ICommandHandler<CoinOperationResponse, RedeemCoinsCommand> redeemHandler)
     {
         var brandId = GetBrandId(ctx);
         var redemptionCode = ctx.Session?.Data.GetString(CoinSessionKeys.RedemptionCode) ?? string.Empty;
@@ -154,13 +152,6 @@ public sealed class CoinEndpoint : IBotEndpoint
 
         if (result.IsFailed)
             return BotResults.ShowView(new ScreenView($"Не удалось списать монетки: {BotErrorFormatter.Format(result.Errors)}").BackButton());
-
-        var brandName = ctx.Session?.Data.GetString(BrandWorkspaceScreen.BrandNameSessionKey) ?? "бренд";
-        await customerNotificationService.NotifyCoinsRedeemedAsync(
-            result.Value,
-            brandName,
-            comment,
-            ctx.CancellationToken);
 
         ClearOperation(ctx);
         return BotResults.ShowView(OperationResultView("Монетки списаны", result.Value));

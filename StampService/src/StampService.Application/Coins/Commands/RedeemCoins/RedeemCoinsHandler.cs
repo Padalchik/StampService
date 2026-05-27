@@ -2,6 +2,7 @@ using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
 using StampService.Application.Brands;
+using StampService.Application.CustomerNotifications;
 using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Application.Users.Commands.UseRedemptionCode;
@@ -17,6 +18,7 @@ public class RedeemCoinsHandler : ICommandHandler<CoinOperationResponse, RedeemC
     private readonly IBrandAccessService _brandAccessService;
     private readonly IBrandRepository _brandRepository;
     private readonly ICoinLedgerService _coinLedgerService;
+    private readonly ICustomerNotificationService _customerNotificationService;
     private readonly ICoinTransactionRepository _coinTransactionRepository;
     private readonly ICoinWalletRepository _coinWalletRepository;
     private readonly IRedemptionCodeRepository _redemptionCodeRepository;
@@ -33,11 +35,13 @@ public class RedeemCoinsHandler : ICommandHandler<CoinOperationResponse, RedeemC
         IRedemptionCodeRepository redemptionCodeRepository,
         IUserRepository userRepository,
         ICommandHandler<UseRedemptionCodeResponse, UseRedemptionCodeCommand> useRedemptionCodeHandler,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ICustomerNotificationService? customerNotificationService = null)
     {
         _brandAccessService = brandAccessService;
         _brandRepository = brandRepository;
         _coinLedgerService = coinLedgerService;
+        _customerNotificationService = customerNotificationService ?? NullCustomerNotificationService.Instance;
         _coinTransactionRepository = coinTransactionRepository;
         _coinWalletRepository = coinWalletRepository;
         _redemptionCodeRepository = redemptionCodeRepository;
@@ -130,7 +134,7 @@ public class RedeemCoinsHandler : ICommandHandler<CoinOperationResponse, RedeemC
             return Result.Fail(operationResult.Errors);
 
         var operation = operationResult.Value;
-        return Result.Ok(new CoinOperationResponse(
+        var response = new CoinOperationResponse(
             operation.Transaction.Id,
             operation.Wallet.Id,
             operation.Wallet.BrandId,
@@ -139,6 +143,10 @@ public class RedeemCoinsHandler : ICommandHandler<CoinOperationResponse, RedeemC
             operation.Transaction.Type.ToString(),
             operation.Transaction.Amount,
             operation.Wallet.Value,
-            operation.Transaction.CreatedAt));
+            operation.Transaction.CreatedAt);
+
+        await _customerNotificationService.NotifyCoinsRedeemedAsync(response, comment, cancellationToken);
+
+        return Result.Ok(response);
     }
 }

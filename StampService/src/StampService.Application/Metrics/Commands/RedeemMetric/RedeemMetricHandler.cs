@@ -1,5 +1,6 @@
 using FluentResults;
 using StampService.Application.Abstractions;
+using StampService.Application.CustomerNotifications;
 using StampService.Application.Users.Commands.UseRedemptionCode;
 using StampService.Contracts.DTOs.Metrics;
 
@@ -8,15 +9,18 @@ namespace StampService.Application.Metrics.Commands.RedeemMetric;
 public class RedeemMetricHandler : ICommandHandler<RedeemMetricResponse, RedeemMetricCommand>
 {
     private readonly IMetricLedgerService _metricLedgerService;
+    private readonly ICustomerNotificationService _customerNotificationService;
     private readonly IRedeemMetricValidationService _redeemMetricValidationService;
     private readonly ICommandHandler<UseRedemptionCodeResponse, UseRedemptionCodeCommand> _useRedemptionCodeHandler;
 
     public RedeemMetricHandler(
         IMetricLedgerService metricLedgerService,
         IRedeemMetricValidationService redeemMetricValidationService,
-        ICommandHandler<UseRedemptionCodeResponse, UseRedemptionCodeCommand> useRedemptionCodeHandler)
+        ICommandHandler<UseRedemptionCodeResponse, UseRedemptionCodeCommand> useRedemptionCodeHandler,
+        ICustomerNotificationService? customerNotificationService = null)
     {
         _metricLedgerService = metricLedgerService;
+        _customerNotificationService = customerNotificationService ?? NullCustomerNotificationService.Instance;
         _redeemMetricValidationService = redeemMetricValidationService;
         _useRedemptionCodeHandler = useRedemptionCodeHandler;
     }
@@ -67,6 +71,8 @@ public class RedeemMetricHandler : ICommandHandler<RedeemMetricResponse, RedeemM
             transaction.Amount,
             balance.Value,
             transaction.CreatedAt);
+
+        await _customerNotificationService.NotifyMetricRedeemedAsync(response, cancellationToken);
 
         return Result.Ok(response);
     }

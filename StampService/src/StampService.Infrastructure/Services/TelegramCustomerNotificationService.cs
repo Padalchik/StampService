@@ -103,6 +103,51 @@ public sealed class TelegramCustomerNotificationService : ICustomerNotificationS
         await SendToUserAsync(operation.UserId, text, cancellationToken);
     }
 
+    public async Task NotifyCoinsRedeemedAsync(
+        CoinOperationResponse operation,
+        string comment,
+        CancellationToken cancellationToken)
+    {
+        var brandName = await GetBrandNameAsync(operation.BrandId, cancellationToken);
+        var text =
+            $"<b>{Html(brandName)}</b>\n\n" +
+            $"Списано: {operation.Amount} монеток.\n" +
+            $"Назначение: {Html(comment)}.\n" +
+            $"Баланс: {operation.BalanceValue}";
+
+        await SendToUserAsync(operation.UserId, text, cancellationToken);
+    }
+
+    public async Task NotifyCoinProductPurchasedAsync(
+        CoinOperationResponse operation,
+        string productName,
+        CancellationToken cancellationToken)
+    {
+        var brandName = await GetBrandNameAsync(operation.BrandId, cancellationToken);
+        var text =
+            $"<b>{Html(brandName)}</b>\n\n" +
+            $"Покупка оформлена: {Html(productName)}.\n" +
+            $"Списано: {operation.Amount} монеток.\n" +
+            $"Баланс: {operation.BalanceValue}";
+
+        await SendToUserAsync(operation.UserId, text, cancellationToken);
+    }
+
+    public async Task NotifyMetricRedeemedAsync(
+        RedeemMetricResponse operation,
+        CancellationToken cancellationToken)
+    {
+        var details = await GetMetricDetailsAsync(operation.MetricDefinitionId, cancellationToken);
+        var brandName = details?.BrandName ?? "бренд";
+        var metricName = details?.MetricName ?? "метрика";
+        var text =
+            $"<b>{Html(brandName)}</b>\n\n" +
+            $"Списано {operation.Amount} {Html(metricName)}.\n" +
+            $"Баланс: {operation.BalanceValue}";
+
+        await SendToUserAsync(operation.UserId, text, cancellationToken);
+    }
+
     private async Task<IReadOnlyCollection<ReachedProduct>> GetNewlyReachedProductsAsync(
         Guid brandId,
         int previousBalance,
@@ -121,6 +166,31 @@ public sealed class TelegramCustomerNotificationService : ICustomerNotificationS
             .Take(MaxReachedProducts)
             .Select(product => new ReachedProduct(product.Name, product.Price))
             .ToArray();
+    }
+
+    private async Task<string> GetBrandNameAsync(Guid brandId, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Brands
+            .AsNoTracking()
+            .Where(brand => brand.Id == brandId)
+            .Select(brand => brand.Name)
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? "бренд";
+    }
+
+    private async Task<MetricDetails?> GetMetricDetailsAsync(
+        Guid metricDefinitionId,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.LoyaltyMetricDefinitions
+            .AsNoTracking()
+            .Where(metric => metric.Id == metricDefinitionId)
+            .Join(
+                _dbContext.Brands.AsNoTracking(),
+                metric => metric.BrandId,
+                brand => brand.Id,
+                (metric, brand) => new MetricDetails(brand.Name, metric.Name))
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     private async Task SendToUserAsync(
@@ -184,6 +254,8 @@ public sealed class TelegramCustomerNotificationService : ICustomerNotificationS
     }
 
     private sealed record ReachedProduct(string Name, int Price);
+
+    private sealed record MetricDetails(string BrandName, string MetricName);
 
     private sealed record SendMessageRequest(
         [property: JsonPropertyName("chat_id")] long ChatId,

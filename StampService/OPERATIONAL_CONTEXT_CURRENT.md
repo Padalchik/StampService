@@ -101,14 +101,14 @@ Auto-create клиента по телефону применяется толь
 
 Ключевые Application use cases для нового flow: `IssueMetricByPhoneCommand` / `IssueMetricByPhoneHandler` и `IssueCoinsByPhoneCommand` / `IssueCoinsByPhoneHandler`. Web controllers и Telegram endpoints должны вызывать эти сценарии, а не делать предварительный resolve клиента по телефону в UI/API слое.
 
-Уведомления клиенту о начислении теперь являются частью этих Application-сценариев, а не ответственностью конкретного входного канала. После успешного начисления `IssueMetricByPhoneHandler` и `IssueCoinsByPhoneHandler` вызывают `StampService.Application.CustomerNotifications.ICustomerNotificationService`. Поэтому клиент получает Telegram-сообщение о начислении независимо от того, пришла операция из Telegram-бота или из web/API.
+Уведомления клиенту о reward-операциях являются частью Application-сценариев, а не ответственностью конкретного входного канала. После успешного начисления `IssueMetricByPhoneHandler` и `IssueCoinsByPhoneHandler` вызывают `StampService.Application.CustomerNotifications.ICustomerNotificationService`. То же правило применено к списаниям: `RedeemMetricHandler`, `RedeemCoinsHandler` и `PurchaseCoinProductHandler` отправляют уведомление после успешного ledger-действия. Поэтому клиент получает Telegram-сообщение о начислении или списании независимо от того, пришла операция из Telegram-бота или из web/API.
 
 Архитектурная раскладка уведомлений:
 
-- `src/StampService.Application/CustomerNotifications/ICustomerNotificationService.cs` - порт Application-слоя для бизнес-уведомлений о начислении;
+- `src/StampService.Application/CustomerNotifications/ICustomerNotificationService.cs` - порт Application-слоя для бизнес-уведомлений о начислении и списании;
 - `src/StampService.Infrastructure/Services/TelegramCustomerNotificationService.cs` - инфраструктурная доставка для API/web через Telegram Bot API по активной `Telegram` identity клиента;
 - `src/StampService.TelegramBot/Common/Notifications/CustomerNotificationApplicationAdapter.cs` - адаптер TelegramBot host, который сохраняет существующее session-aware поведение бота и не дает дублировать отправку в endpoint-ах;
-- Telegram endpoints выдачи метрик и начисления монеток больше не должны отправлять уведомление вручную после handler-а, иначе появятся дубли.
+- Telegram endpoints начисления/списания больше не должны отправлять уведомление вручную после handler-а, иначе появятся дубли.
 
 Просмотр балансов и истории клиента сотрудником также использует телефон как внешний идентификатор, но без auto-create: Application нормализует номер, ищет существующего пользователя по активной `Phone` identity и возвращает отказ, если клиент не найден. Это касается `GetBrandCustomerMetricBalancesQuery`, `GetCoinBalanceQuery` и `GetCoinHistoryQuery`. Auto-create по телефону остается только для начислений.
 
