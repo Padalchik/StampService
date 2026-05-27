@@ -4,7 +4,6 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using StampService.Application.CoinProducts;
 using StampService.Application.CustomerNotifications;
 using StampService.Contracts.DTOs.Coins;
 using StampService.Contracts.DTOs.Metrics;
@@ -14,23 +13,18 @@ namespace StampService.Infrastructure.Services;
 
 public sealed class TelegramCustomerNotificationService : ICustomerNotificationService
 {
-    private const int MaxReachedProducts = 3;
-
     private readonly AppDbContext _dbContext;
-    private readonly ICoinProductRepository _coinProductRepository;
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
     private readonly ILogger<TelegramCustomerNotificationService> _logger;
 
     public TelegramCustomerNotificationService(
         AppDbContext dbContext,
-        ICoinProductRepository coinProductRepository,
         HttpClient httpClient,
         IConfiguration configuration,
         ILogger<TelegramCustomerNotificationService> logger)
     {
         _dbContext = dbContext;
-        _coinProductRepository = coinProductRepository;
         _httpClient = httpClient;
         _configuration = configuration;
         _logger = logger;
@@ -51,26 +45,15 @@ public sealed class TelegramCustomerNotificationService : ICustomerNotificationS
             .FirstOrDefaultAsync(cancellationToken);
 
         var brandName = brand?.Name ?? "бренд";
-        var previousBalance = operation.BalanceValue - operation.Amount;
-        var reachedProducts = brand?.IsCoinProductRedemptionEnabled == true
-            ? await GetNewlyReachedProductsAsync(
-                operation.BrandId,
-                previousBalance,
-                operation.BalanceValue,
-                cancellationToken)
-            : [];
-
         var text =
             $"<b>{Html(brandName)}</b>\n\n" +
             $"Вам начислили {operation.Amount} монеток.\n" +
-            $"Баланс: {operation.BalanceValue}";
-
-        if (reachedProducts.Count > 0)
-        {
-            text += "\n\nТеперь можно получить:\n" +
-                string.Join("\n", reachedProducts.Select(product =>
-                    $"- {Html(product.Name)} за {product.Price} монеток"));
-        }
+            $"Баланс: {operation.BalanceValue}" +
+            await CustomerAvailableRewardsFormatter.BuildSectionAsync(
+                _dbContext,
+                operation.UserId,
+                operation.BrandId,
+                cancellationToken);
 
         await SendToUserAsync(operation.UserId, text, cancellationToken);
     }
@@ -98,7 +81,12 @@ public sealed class TelegramCustomerNotificationService : ICustomerNotificationS
         var text =
             $"<b>{Html(brandName)}</b>\n\n" +
             $"Вам начислили {operation.Amount} {Html(metricName)}.\n" +
-            $"Баланс: {operation.BalanceValue}";
+            $"Баланс: {operation.BalanceValue}" +
+            await CustomerAvailableRewardsFormatter.BuildSectionAsync(
+                _dbContext,
+                operation.UserId,
+                operation.BrandId,
+                cancellationToken);
 
         await SendToUserAsync(operation.UserId, text, cancellationToken);
     }
@@ -113,7 +101,12 @@ public sealed class TelegramCustomerNotificationService : ICustomerNotificationS
             $"<b>{Html(brandName)}</b>\n\n" +
             $"Списано: {operation.Amount} монеток.\n" +
             $"Назначение: {Html(comment)}.\n" +
-            $"Баланс: {operation.BalanceValue}";
+            $"Баланс: {operation.BalanceValue}" +
+            await CustomerAvailableRewardsFormatter.BuildSectionAsync(
+                _dbContext,
+                operation.UserId,
+                operation.BrandId,
+                cancellationToken);
 
         await SendToUserAsync(operation.UserId, text, cancellationToken);
     }
@@ -128,7 +121,12 @@ public sealed class TelegramCustomerNotificationService : ICustomerNotificationS
             $"<b>{Html(brandName)}</b>\n\n" +
             $"Покупка оформлена: {Html(productName)}.\n" +
             $"Списано: {operation.Amount} монеток.\n" +
-            $"Баланс: {operation.BalanceValue}";
+            $"Баланс: {operation.BalanceValue}" +
+            await CustomerAvailableRewardsFormatter.BuildSectionAsync(
+                _dbContext,
+                operation.UserId,
+                operation.BrandId,
+                cancellationToken);
 
         await SendToUserAsync(operation.UserId, text, cancellationToken);
     }
@@ -143,29 +141,14 @@ public sealed class TelegramCustomerNotificationService : ICustomerNotificationS
         var text =
             $"<b>{Html(brandName)}</b>\n\n" +
             $"Списано {operation.Amount} {Html(metricName)}.\n" +
-            $"Баланс: {operation.BalanceValue}";
+            $"Баланс: {operation.BalanceValue}" +
+            await CustomerAvailableRewardsFormatter.BuildSectionAsync(
+                _dbContext,
+                operation.UserId,
+                operation.BrandId,
+                cancellationToken);
 
         await SendToUserAsync(operation.UserId, text, cancellationToken);
-    }
-
-    private async Task<IReadOnlyCollection<ReachedProduct>> GetNewlyReachedProductsAsync(
-        Guid brandId,
-        int previousBalance,
-        int currentBalance,
-        CancellationToken cancellationToken)
-    {
-        if (currentBalance <= previousBalance)
-            return [];
-
-        var products = await _coinProductRepository.GetActiveByBrandAsync(brandId, cancellationToken);
-
-        return products
-            .Where(product => product.Price > previousBalance && product.Price <= currentBalance)
-            .OrderBy(product => product.Price)
-            .ThenBy(product => product.Name)
-            .Take(MaxReachedProducts)
-            .Select(product => new ReachedProduct(product.Name, product.Price))
-            .ToArray();
     }
 
     private async Task<string> GetBrandNameAsync(Guid brandId, CancellationToken cancellationToken)
@@ -252,8 +235,6 @@ public sealed class TelegramCustomerNotificationService : ICustomerNotificationS
     {
         return WebUtility.HtmlEncode(value);
     }
-
-    private sealed record ReachedProduct(string Name, int Price);
 
     private sealed record MetricDetails(string BrandName, string MetricName);
 
