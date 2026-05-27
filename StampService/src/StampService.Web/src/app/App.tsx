@@ -70,6 +70,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
 function AppShell() {
   const auth = useAuth();
   const [activeSection, setActiveSection] = useState<ActiveSection>('wallet');
+  const [walletHomeNavigationKey, setWalletHomeNavigationKey] = useState(0);
   const [navigationAccess, setNavigationAccess] = useState<NavigationAccess>({
     brands: [],
     isAdmin: false
@@ -118,12 +119,20 @@ function AppShell() {
     }
   }, [activeSection, availableSections]);
 
+  function handleNavigate(section: ActiveSection) {
+    if (section === 'wallet') {
+      setWalletHomeNavigationKey((currentKey) => currentKey + 1);
+    }
+
+    setActiveSection(section);
+  }
+
   return (
     <div className="app-shell app-shell--with-bottom-nav">
       <DesktopNavigation
         activeSection={activeSection}
         items={navigationItems}
-        onNavigate={setActiveSection}
+        onNavigate={handleNavigate}
       />
 
       <main className="workspace">
@@ -135,7 +144,7 @@ function AppShell() {
         </header>
 
         {activeSection === 'profile' ? <ProfilePage onSignOut={auth.signOut} /> : null}
-        {activeSection === 'wallet' ? <WalletPage /> : null}
+        {activeSection === 'wallet' ? <WalletPage homeNavigationKey={walletHomeNavigationKey} /> : null}
         {activeSection === 'brands' && navigationAccess.brands.length > 0 ? (
           <BrandWorkspacePage
             initialBrands={navigationAccess.brands}
@@ -148,7 +157,7 @@ function AppShell() {
       <MobileBottomNavigation
         activeSection={activeSection}
         items={navigationItems}
-        onNavigate={setActiveSection}
+        onNavigate={handleNavigate}
       />
     </div>
   );

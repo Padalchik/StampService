@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, BarChart3, Gift, History, RefreshCw } from 'lucide-react';
+import { ArrowLeft, RefreshCw, X } from 'lucide-react';
 import { getApiErrorMessage } from '../api/errorMessages';
 import { formatRuDateTime } from '../format/dateTime';
 import {
   getBrandDetails,
   openUserWallet,
   type UserWalletBrandDetailsResponse,
-  type UserWalletBrandHistoryGroupResponse,
+  type UserWalletBrandHistoryItemDetailsResponse,
   type UserWalletBrandOverviewResponse,
+  type UserWalletBrandRewardItemResponse,
   type UserWalletBrandRewardSectionResponse,
   type UserWalletResponse
 } from './walletApi';
 
-export function WalletPage() {
+export function WalletPage({ homeNavigationKey }: { homeNavigationKey: number }) {
   const [wallet, setWallet] = useState<UserWalletResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingCode, setIsRefreshingCode] = useState(false);
@@ -31,6 +32,13 @@ export function WalletPage() {
     hasRequestedInitialWallet.current = true;
     void loadWallet(false);
   }, []);
+
+  useEffect(() => {
+    setSelectedBrandId(null);
+    setBrandDetails(null);
+    setBrandError('');
+    setIsBrandLoading(false);
+  }, [homeNavigationKey]);
 
   async function loadWallet(forceRefreshCode: boolean) {
     setError('');
@@ -258,119 +266,363 @@ function BrandDetailsScreen({
   error: string;
   onBack: () => void;
 }) {
+  const [activeTab, setActiveTab] = useState<BrandDetailsTab>('products');
+  const [isProductsExpanded, setIsProductsExpanded] = useState(false);
+  const [isMetricsExpanded, setIsMetricsExpanded] = useState(false);
+  const [selectedHistorySource, setSelectedHistorySource] = useState<HistorySource | null>(null);
   const brandName = details?.brandName || 'Бренд';
+  const productsSection = details ? findRewardSection(details.rewardSections, 'products') : null;
+  const metricsSection = details ? findRewardSection(details.rewardSections, 'metrics') : null;
+  const products = productsSection ? sortRewardItems(productsSection.items) : [];
+  const metrics = metricsSection ? sortRewardItems(metricsSection.items) : [];
+  const historySources = details ? getHistorySources(details.history.groups.flatMap((group) => group.items)) : [];
+  const metaText = details ? getBrandDetailsMetaText(details, productsSection, metricsSection) : 'Загрузка данных';
 
   return (
     <div className="brand-detail-page">
-      <section className="surface-panel brand-details">
-        <div className="brand-details__header">
-          <button className="button-secondary button-compact" type="button" onClick={onBack}>
-            <ArrowLeft size={17} />
-            Назад
+      <div className="brand-details-topline">
+        <button className="button-secondary button-compact" type="button" onClick={onBack}>
+          <ArrowLeft size={17} />
+          Назад
+        </button>
+      </div>
+
+      <section className="brand-details-hero">
+        <h2>{brandName}</h2>
+        <p>{metaText}</p>
+      </section>
+
+      {isLoading ? (
+        <section className="brand-details-content">
+          <p className="muted-text">Загружаем бренд...</p>
+        </section>
+      ) : null}
+
+      {error ? (
+        <section className="brand-details-content">
+          <p className="form-status form-status--error">{error}</p>
+        </section>
+      ) : null}
+
+      {!isLoading && details ? (
+        <>
+          <section className="brand-details-tabs-card">
+            <div className="brand-details-tabs" role="tablist" aria-label="Разделы бренда">
+              <button
+                className={activeTab === 'products' ? 'brand-details-tabs__item brand-details-tabs__item--active' : 'brand-details-tabs__item'}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'products'}
+                onClick={() => setActiveTab('products')}
+              >
+                Товары
+              </button>
+              <button
+                className={activeTab === 'metrics' ? 'brand-details-tabs__item brand-details-tabs__item--active' : 'brand-details-tabs__item'}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'metrics'}
+                onClick={() => setActiveTab('metrics')}
+              >
+                Метрики
+              </button>
+              <button
+                className={activeTab === 'history' ? 'brand-details-tabs__item brand-details-tabs__item--active' : 'brand-details-tabs__item'}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'history'}
+                onClick={() => setActiveTab('history')}
+              >
+                История
+              </button>
+            </div>
+          </section>
+
+          <section className="brand-details-content">
+            {activeTab === 'products' ? (
+              <RewardTab
+                emptyText="Пока нет товаров"
+                items={products}
+                isExpanded={isProductsExpanded}
+                onToggleExpanded={() => setIsProductsExpanded((value) => !value)}
+              />
+            ) : null}
+
+            {activeTab === 'metrics' ? (
+              <RewardTab
+                emptyText="Пока нет метрик"
+                items={metrics}
+                isExpanded={isMetricsExpanded}
+                onToggleExpanded={() => setIsMetricsExpanded((value) => !value)}
+              />
+            ) : null}
+
+            {activeTab === 'history' ? (
+              <HistoryTab
+                emptyText={details.history.emptyText || 'Пока нет операций'}
+                sources={historySources}
+                onSelectSource={setSelectedHistorySource}
+              />
+            ) : null}
+          </section>
+        </>
+      ) : null}
+
+      {selectedHistorySource ? (
+        <HistoryBottomSheet source={selectedHistorySource} onClose={() => setSelectedHistorySource(null)} />
+      ) : null}
+    </div>
+  );
+}
+
+type BrandDetailsTab = 'products' | 'metrics' | 'history';
+
+type RewardTabProps = {
+  emptyText: string;
+  items: UserWalletBrandRewardItemResponse[];
+  isExpanded: boolean;
+  onToggleExpanded: () => void;
+};
+
+function RewardTab({ emptyText, items, isExpanded, onToggleExpanded }: RewardTabProps) {
+  const visibleLimit = 3;
+  const visibleItems = isExpanded ? items : items.slice(0, visibleLimit);
+  const hiddenCount = items.length - visibleItems.length;
+
+  if (items.length === 0) {
+    return <p className="brand-details-empty">{emptyText}</p>;
+  }
+
+  return (
+    <div className="brand-reward-list">
+      {visibleItems.map((item) => (
+        <RewardCard key={item.itemId} item={item} />
+      ))}
+
+      {hiddenCount > 0 || isExpanded ? (
+        <button className="button-secondary brand-details-more" type="button" onClick={onToggleExpanded}>
+          {isExpanded ? 'Свернуть' : hiddenCount <= visibleLimit ? `Показать ещё ${hiddenCount}` : 'Показать все'}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function RewardCard({ item }: { item: UserWalletBrandRewardItemResponse }) {
+  const progress = getProgress(item.progressText);
+  const showProgress = !item.isAvailable && progress !== null;
+  const progressText = getRewardProgressText(item.progressText);
+
+  return (
+    <article className={item.isAvailable ? 'brand-reward-card brand-reward-card--available' : 'brand-reward-card'}>
+      <div className="brand-reward-card__top">
+        <h3>{item.name}</h3>
+        <span className={item.isAvailable ? 'status-pill status-pill--ok' : 'status-pill status-pill--warning'}>
+          {getRewardStatusText(item)}
+        </span>
+      </div>
+
+      {progressText ? <p className="brand-reward-card__progress-text">{progressText}</p> : null}
+
+      {showProgress ? (
+        <progress className="brand-reward-progress" value={progress.value} max={progress.max}>
+          {progressText}
+        </progress>
+      ) : null}
+    </article>
+  );
+}
+
+type HistorySource = {
+  key: string;
+  title: string;
+  items: UserWalletBrandHistoryItemDetailsResponse[];
+};
+
+function HistoryTab({
+  emptyText,
+  sources,
+  onSelectSource
+}: {
+  emptyText: string;
+  sources: HistorySource[];
+  onSelectSource: (source: HistorySource) => void;
+}) {
+  if (sources.length === 0) {
+    return <p className="brand-details-empty">{emptyText}</p>;
+  }
+
+  return (
+    <div className="brand-history-sources">
+      {sources.map((source) => (
+        <button className="brand-history-source" key={source.key} type="button" onClick={() => onSelectSource(source)}>
+          <span>{source.title}</span>
+          <strong>{formatOperationCount(source.items.length)}</strong>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function HistoryBottomSheet({ source, onClose }: { source: HistorySource; onClose: () => void }) {
+  return (
+    <div className="brand-history-sheet" role="dialog" aria-modal="true" aria-labelledby="brand-history-sheet-title">
+      <button className="brand-history-sheet__backdrop" type="button" aria-label="Закрыть историю" onClick={onClose} />
+      <section className="brand-history-sheet__panel">
+        <div className="brand-history-sheet__handle" aria-hidden="true" />
+        <header className="brand-history-sheet__header">
+          <h3 id="brand-history-sheet-title">{source.title}</h3>
+          <button className="button-secondary button-compact brand-history-sheet__close" type="button" onClick={onClose}>
+            <X size={16} />
+            Закрыть
           </button>
-          <div>
-            <h2>{brandName}</h2>
-            <p>Доступные награды и история операций.</p>
-          </div>
-        </div>
+        </header>
 
-        {isLoading ? <p className="muted-text">Загружаем бренд...</p> : null}
-        {error ? <p className="form-status form-status--error">{error}</p> : null}
-
-        {!isLoading && details ? <BrandRewards details={details} /> : null}
-        {!isLoading && details ? <BrandHistory history={details.history} /> : null}
+        {source.items.length === 0 ? (
+          <p className="muted-text">По этому элементу пока нет операций</p>
+        ) : (
+          <ul className="brand-history-list">
+            {source.items.map((item) => (
+              <li key={`${source.key}-${item.createdAt}-${item.amount}-${item.amountText}`}>
+                <strong>{item.amountText}</strong>
+                <span>{formatRuDateTime(item.createdAt)}</span>
+                {item.hasVisibleComment && item.comment ? <p>{item.comment}</p> : null}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );
 }
 
-function BrandRewards({ details }: { details: UserWalletBrandDetailsResponse }) {
-  return (
-    <div className="brand-details__grid">
-      {details.rewardSections.map((section) => (
-        <RewardSection key={section.kind} section={section} />
-      ))}
+function findRewardSection(
+  sections: UserWalletBrandRewardSectionResponse[],
+  target: 'products' | 'metrics'
+): UserWalletBrandRewardSectionResponse | null {
+  const exactKind = target === 'products' ? 'CoinProducts' : 'Metrics';
+  const exactMatch = sections.find((section) => section.kind === exactKind);
 
-      <p className="brand-details__hint">{details.hintText}</p>
-    </div>
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  return (
+    sections.find((section) => {
+      const kind = section.kind.toLocaleLowerCase('ru-RU');
+      const title = section.title.toLocaleLowerCase('ru-RU');
+
+      if (target === 'products') {
+        return kind.includes('coin') || title.includes('товар') || title.includes('монет');
+      }
+
+      return kind.includes('metric') || title.includes('метрик');
+    }) ?? null
   );
 }
 
-function RewardSection({ section }: { section: UserWalletBrandRewardSectionResponse }) {
-  const Icon = section.kind === 'Metrics' ? BarChart3 : Gift;
+function sortRewardItems(items: UserWalletBrandRewardItemResponse[]): UserWalletBrandRewardItemResponse[] {
+  return [...items].sort((left, right) => {
+    if (left.isAvailable !== right.isAvailable) {
+      return Number(right.isAvailable) - Number(left.isAvailable);
+    }
 
-  return (
-    <section className="detail-block">
-      <div className="detail-block__heading">
-        <Icon size={19} />
-        <h3>{section.title}</h3>
-      </div>
-      {section.balanceText ? <p className="detail-block__balance">{section.balanceText}</p> : null}
-      {section.items.length > 0 ? (
-        <ul className="detail-list">
-          {section.items.map((item) => (
-            <li key={item.itemId}>
-              <span className={item.isAvailable ? 'reward-marker reward-marker--available' : 'reward-marker'} />
-              <span>{item.name}</span>
-              <strong>{item.progressText}</strong>
-              <em>{item.statusText}</em>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="muted-text">{section.emptyText}</p>
-      )}
-    </section>
-  );
+    if (!left.isAvailable && !right.isAvailable) {
+      const leftProgress = getProgress(left.progressText);
+      const rightProgress = getProgress(right.progressText);
+
+      if (leftProgress && rightProgress) {
+        const leftMissing = leftProgress.max - leftProgress.value;
+        const rightMissing = rightProgress.max - rightProgress.value;
+
+        if (leftMissing !== rightMissing) {
+          return leftMissing - rightMissing;
+        }
+      }
+    }
+
+    return 0;
+  });
 }
 
-function BrandHistory({ history }: { history: UserWalletBrandDetailsResponse['history'] }) {
-  const hasItems = history.groups.some((group) => group.items.length > 0);
+function getRewardStatusText(item: UserWalletBrandRewardItemResponse): string {
+  if (item.isAvailable) {
+    return 'доступно';
+  }
 
-  return (
-    <section className="detail-block detail-block--wide">
-      <div className="detail-block__heading">
-        <History size={19} />
-        <h3>{history.title}</h3>
-      </div>
+  if (item.statusText.toLocaleLowerCase('ru-RU').includes('не хватает')) {
+    return item.statusText;
+  }
 
-      {!hasItems ? (
-        <p className="muted-text">{history.emptyText}</p>
-      ) : (
-        <div className="history-sections">
-          {history.groups.map((group) => (
-            <HistorySection key={group.kind} group={group} />
-          ))}
-        </div>
-      )}
-    </section>
-  );
+  return item.statusText || 'недоступно';
 }
 
-function HistorySection({ group }: { group: UserWalletBrandHistoryGroupResponse }) {
-  return (
-    <div className="history-section">
-      <h4>{group.title}</h4>
-      {group.items.length === 0 ? (
-        <p className="muted-text">{group.emptyText}</p>
-      ) : (
-        <ul className="history-list">
-          {group.items.map((item) => (
-            <li key={`${item.sourceType}-${item.sourceName}-${item.createdAt}-${item.amount}`}>
-              <span className={item.transactionType === 'Issue' ? 'history-sign history-sign--issue' : 'history-sign'} />
-              <div>
-                <strong>{item.amountText}</strong>
-                <p>
-                  {formatRuDateTime(item.createdAt)}
-                  {item.hasVisibleComment && item.comment ? ` - ${item.comment}` : ''}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+function getProgress(progressText: string): { value: number; max: number } | null {
+  const match = progressText.match(/^\s*(\d+)\s*(?:\/|из)\s*(\d+)/i);
+
+  if (!match) {
+    return null;
+  }
+
+  const value = Number(match[1]);
+  const max = Number(match[2]);
+
+  if (!Number.isFinite(value) || !Number.isFinite(max) || max <= 0) {
+    return null;
+  }
+
+  return { value: Math.min(value, max), max };
+}
+
+function getRewardProgressText(progressText: string): string {
+  const match = progressText.match(/^\s*(\d+)\s*\/\s*(\d+)\s*$/);
+
+  if (!match) {
+    return progressText;
+  }
+
+  return `${match[1]} из ${match[2]}`;
+}
+
+function getHistorySources(items: UserWalletBrandHistoryItemDetailsResponse[]): HistorySource[] {
+  const sources = new Map<string, HistorySource>();
+
+  for (const item of items) {
+    const key = `${item.sourceType}::${item.sourceName}`;
+    const title = item.sourceType === 'Coin' ? 'Монетки' : item.sourceName || 'История';
+    const source = sources.get(key);
+
+    if (source) {
+      source.items.push(item);
+    } else {
+      sources.set(key, {
+        key,
+        title,
+        items: [item]
+      });
+    }
+  }
+
+  return Array.from(sources.values());
+}
+
+function getBrandDetailsMetaText(
+  details: UserWalletBrandDetailsResponse,
+  productsSection: UserWalletBrandRewardSectionResponse | null,
+  metricsSection: UserWalletBrandRewardSectionResponse | null
+): string {
+  const availableCount = details.rewardSections.reduce(
+    (count, section) => count + section.items.filter((item) => item.isAvailable).length,
+    0
   );
+  const balanceText = productsSection?.balanceText || metricsSection?.balanceText || '';
+  const rewardText = availableCount > 0 ? formatRewardCount(availableCount) : 'пока нет доступных наград';
+
+  return [balanceText, rewardText].filter(Boolean).join(' · ');
+}
+
+function formatOperationCount(count: number): string {
+  return `${count} ${getRuPlural(count, 'операция', 'операции', 'операций')}`;
 }
 
 function getUserMessage(error: unknown): string {

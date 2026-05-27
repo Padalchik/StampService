@@ -121,6 +121,8 @@ Auto-create клиента по телефону применяется толь
 
 Основной web-экран `Мой кошелёк` в `src/StampService.Web/src/wallet/WalletPage.tsx` переработан как быстрый client-facing mobile-first экран: сверху остается только заголовок раздела без описания, сразу под ним sticky-карточка кода списания с icon-only обновлением, ниже - секция `Мои бренды`. Главный список брендов не показывает историю, подробную детализацию или технические поля; он показывает название бренда, короткую meta-строку и до трех чипов конкретных доступных наград из `availableCoinProducts`/`availableMetrics` с учетом `isAvailable`, плюс чип `+N ещё`. Подробности бренда остаются отдельным экраном внутри кошелька через существующий `getBrandDetails` flow и кнопку `Открыть`. Backend/API/Application и `walletApi.ts` для этого UX не менялись.
 
+Навигационно `Мой кошелёк` считается домашним экраном раздела кошелька. Если пользователь находится внутри детализации бренда и снова нажимает пункт `Мой кошелёк` в desktop/sidebar или mobile bottom navigation, web должен вернуться к основному списку брендов, даже если active section уже равен `wallet`. Это реализовано во frontend без изменения API: `src/StampService.Web/src/app/App.tsx` генерирует отдельный сигнал повторного перехода в кошелёк, а `WalletPage` по нему сбрасывает только внутренний state детализации бренда (`selectedBrandId`, details/error/loading), не перезагружая бизнес-данные кошелька без необходимости.
+
 ## Телефонная авторизация и привязка
 
 Реализованы два связанных сценария:
@@ -453,3 +455,53 @@ Admin HTTP API:
 - frontend остается thin UI поверх typed API clients и HTTP/Application сценариев, без переноса бизнес-правил в React;
 - общий визуальный слой сейчас опирается на существующий `src/StampService.Web/src/styles.css` и локальные паттерны проекта;
 - если в будущем будет выбрана UI-библиотека, ее нужно вводить через локальный app UI layer (`AppButton`, `AppCard`, `AppInput` и т.п.), а не через параллельные копии бизнес-экранов.
+
+## Web UI: детализация бренда в кошельке
+
+Экран детализации бренда внутри `Мой кошелёк` переработан как mobile-first клиентский экран поверх единого details-сценария.
+
+Ключевое архитектурное решение:
+
+- Web и Telegram по-прежнему используют общий Application query `GetUserWalletBrandDetailsQuery`;
+- Web получает данные через тонкий endpoint `GET /api/wallet/brands/{brandId}/details`;
+- `WalletPage.tsx` только рендерит presentation-friendly DTO и не вычисляет бизнес-правила наград;
+- `walletApi.ts` остается typed API client без дополнительной логики;
+- technical ids/debug/userId/brandId/actorUserId не выводятся пользователю.
+
+Текущая структура web-экрана:
+
+- `BrandDetailsScreen` остается отдельным экраном внутри `WalletPage`;
+- верхняя строка содержит компактную кнопку `Назад`;
+- название бренда и meta вынесены в отдельную hero-плашку;
+- вкладки `Товары`, `Метрики`, `История` вынесены в отдельный segmented-control block;
+- содержимое вкладки рендерится ниже без общей большой `surface-panel`;
+- карточками являются сами товары/метрики/источники истории;
+- `details.hintText` в web-детализации бренда не показывается.
+
+Награды:
+
+- вкладка `Товары` показывает секцию `CoinProducts`;
+- вкладка `Метрики` показывает секцию `Metrics`;
+- доступные элементы идут первыми, затем недоступные;
+- на frontend допускается только UI-сортировка/раскрытие списка, без переноса бизнес-расчетов;
+- `progressText` и `statusText` приходят из Application и используются как пользовательские presentation-тексты;
+- доступные элементы показывают status `доступно`, недоступные - готовый текст вида `не хватает N`;
+- progress bar показывается только когда `progressText` безопасно парсится как прогресс.
+
+Application details-сценарий дополнен так, чтобы секция `Metrics` включала все активные метрики бренда, включая метрики без существующего `MetricBalance` у пользователя. Для таких метрик Application возвращает presentation item с текущим значением `0`, поэтому frontend просто рендерит готовый DTO.
+
+История:
+
+- вкладка `История` группирует операции по человекочитаемым источникам;
+- для монеток используется имя `Монетки`;
+- для товаров/метрик используется `sourceName`;
+- детали выбранного источника открываются в bottom sheet/modal layer;
+- операции показывают `amountText`, дату через `formatRuDateTime(createdAt)` и видимый комментарий, если он есть;
+- `actorUserId`, raw `sourceType` и служебные значения в UI не выводятся.
+
+Основные файлы:
+
+- `src/StampService.Web/src/wallet/WalletPage.tsx`;
+- `src/StampService.Web/src/styles.css`;
+- `src/StampService.Application/Wallet/Queries/GetUserWalletBrandDetails/GetUserWalletBrandDetailsHandler.cs`;
+- `Tests/StampService.ApplicationTests/Wallet/GetUserWalletBrandDetailsHandlerTests.cs`.
