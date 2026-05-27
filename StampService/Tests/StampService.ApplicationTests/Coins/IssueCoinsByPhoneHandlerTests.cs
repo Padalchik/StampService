@@ -1,6 +1,7 @@
 using StampService.Application.Access;
 using StampService.Application.Coins;
 using StampService.Application.Coins.Commands.IssueCoins;
+using StampService.Application.CustomerNotifications;
 using StampService.Application.Users;
 using StampService.ApplicationTests.Fakes;
 using StampService.Contracts.DTOs.Coins;
@@ -22,6 +23,7 @@ public class IssueCoinsByPhoneHandlerTests
         var userRepository = new FakeUserRepository();
         var walletRepository = new FakeCoinWalletRepository();
         var transactionRepository = new FakeCoinTransactionRepository();
+        var notificationService = new RecordingCustomerNotificationService();
         brandRepository.AddExisting(brand);
         membershipRepository.SetRole(actorUserId, brand.Id, SystemRoles.Staff);
 
@@ -29,7 +31,8 @@ public class IssueCoinsByPhoneHandlerTests
             new BrandAccessService(membershipRepository),
             brandRepository,
             new CoinLedgerService(walletRepository, transactionRepository),
-            CreatePhoneAccountService(userRepository));
+            CreatePhoneAccountService(userRepository),
+            notificationService);
 
         var result = await handler.Handle(
             new IssueCoinsByPhoneCommand(
@@ -46,6 +49,7 @@ public class IssueCoinsByPhoneHandlerTests
         Assert.Equal(15, result.Value.BalanceValue);
         Assert.Single(walletRepository.Wallets);
         Assert.Single(transactionRepository.Transactions);
+        Assert.Equal(result.Value, notificationService.CoinsIssued);
     }
 
     [Fact]
@@ -111,5 +115,25 @@ public class IssueCoinsByPhoneHandlerTests
     private sealed class FixedDisplayNameGenerator : IUserDisplayNameGenerator
     {
         public string Generate() => "Business customer";
+    }
+
+    private sealed class RecordingCustomerNotificationService : ICustomerNotificationService
+    {
+        public CoinOperationResponse? CoinsIssued { get; private set; }
+
+        public Task NotifyCoinsIssuedAsync(
+            CoinOperationResponse operation,
+            CancellationToken cancellationToken)
+        {
+            CoinsIssued = operation;
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyMetricIssuedAsync(
+            StampService.Contracts.DTOs.Metrics.IssueMetricResponse operation,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
     }
 }

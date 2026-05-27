@@ -56,7 +56,12 @@ try
     builder.Services.Configure<BotStartupNotificationOptions>(
         builder.Configuration.GetSection(BotStartupNotificationOptions.SectionName));
     builder.Services.Configure<RewardDigestOptions>(builder.Configuration.GetSection(RewardDigestOptions.SectionName));
-    builder.Services.AddScoped<ICustomerNotificationService, CustomerNotificationService>();
+    builder.Services.AddScoped<
+        StampService.TelegramBot.Common.Notifications.ICustomerNotificationService,
+        CustomerNotificationService>();
+    builder.Services.AddScoped<
+        StampService.Application.CustomerNotifications.ICustomerNotificationService,
+        CustomerNotificationApplicationAdapter>();
     builder.Services.AddScoped<CustomerRewardDigestSender>();
     builder.Services.AddHostedService<BotStartupNotificationHostedService>();
     builder.Services.AddHostedService<CustomerRewardDigestHostedService>();
