@@ -1,4 +1,4 @@
-import { LogOut, Settings, ShieldCheck, WalletCards, Workflow, type LucideIcon } from 'lucide-react';
+import { Settings, ShieldCheck, WalletCards, Workflow, type LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AdminPage } from '../admin/AdminPage';
@@ -132,15 +132,9 @@ function AppShell() {
             <h1>{pageTitle}</h1>
             {pageDescription ? <p>{pageDescription}</p> : null}
           </div>
-          <div className="workspace__header-actions">
-            <button className="button-secondary" type="button" onClick={auth.signOut}>
-              <LogOut size={18} />
-              Выйти
-            </button>
-          </div>
         </header>
 
-        {activeSection === 'profile' ? <ProfilePage /> : null}
+        {activeSection === 'profile' ? <ProfilePage onSignOut={auth.signOut} /> : null}
         {activeSection === 'wallet' ? <WalletPage /> : null}
         {activeSection === 'brands' && navigationAccess.brands.length > 0 ? (
           <BrandWorkspacePage
