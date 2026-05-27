@@ -108,6 +108,7 @@ Auto-create клиента по телефону применяется толь
 - `src/StampService.Application/CustomerNotifications/ICustomerNotificationService.cs` - порт Application-слоя для бизнес-уведомлений о начислении и списании;
 - `src/StampService.Infrastructure/Services/TelegramCustomerNotificationService.cs` - инфраструктурная доставка для API/web через Telegram Bot API по активной `Telegram` identity клиента;
 - `src/StampService.TelegramBot/Common/Notifications/CustomerNotificationApplicationAdapter.cs` - адаптер TelegramBot host, который сохраняет существующее session-aware поведение бота и не дает дублировать отправку в endpoint-ах;
+- `src/StampService.Infrastructure/Services/CustomerAvailableRewardsFormatter.cs` - общий форматтер блока `Доступно сейчас` для notification-текстов; он показывает доступные клиенту награды текущего бренда по текущим балансам, а не только новые награды после последней операции;
 - Telegram endpoints начисления/списания больше не должны отправлять уведомление вручную после handler-а, иначе появятся дубли.
 
 Просмотр балансов и истории клиента сотрудником также использует телефон как внешний идентификатор, но без auto-create: Application нормализует номер, ищет существующего пользователя по активной `Phone` identity и возвращает отказ, если клиент не найден. Это касается `GetBrandCustomerMetricBalancesQuery`, `GetCoinBalanceQuery` и `GetCoinHistoryQuery`. Auto-create по телефону остается только для начислений.
