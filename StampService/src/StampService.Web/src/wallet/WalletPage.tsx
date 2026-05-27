@@ -12,7 +12,7 @@ import {
   type UserWalletResponse
 } from './walletApi';
 
-export function WalletPage() {
+export function WalletPage({ homeNavigationKey }: { homeNavigationKey: number }) {
   const [wallet, setWallet] = useState<UserWalletResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingCode, setIsRefreshingCode] = useState(false);
@@ -31,6 +31,13 @@ export function WalletPage() {
     hasRequestedInitialWallet.current = true;
     void loadWallet(false);
   }, []);
+
+  useEffect(() => {
+    setSelectedBrandId(null);
+    setBrandDetails(null);
+    setBrandError('');
+    setIsBrandLoading(false);
+  }, [homeNavigationKey]);
 
   async function loadWallet(forceRefreshCode: boolean) {
     setError('');
