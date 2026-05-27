@@ -1,22 +1,18 @@
-import { FlaskConical, LogOut, Settings, ShieldCheck, WalletCards, Workflow } from 'lucide-react';
+import { LogOut, Settings, ShieldCheck, WalletCards, Workflow } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AdminPage } from '../admin/AdminPage';
 import { getAdminAccess } from '../admin/adminApi';
 import { AuthProvider, useAuth } from '../auth/AuthContext';
-import { PhoneLoginHeroUIPage } from '../auth/PhoneLoginHeroUIPage';
 import { PhoneLoginPage } from '../auth/PhoneLoginPage';
 import { BrandWorkspacePage } from '../brands/BrandWorkspacePage';
 import { getMyBrands, type MyBrandResponse } from '../brands/brandWorkspaceApi';
 import { DesignVariantsPage } from '../design/DesignVariantsPage';
-import { ProfileHeroUIFormsPage } from '../profile/ProfileHeroUIFormsPage';
 import { ProfilePage } from '../profile/ProfilePage';
-import { WalletHeroUIPage } from '../wallet/WalletHeroUIPage';
 import { WalletPage } from '../wallet/WalletPage';
 import { navigationLabels } from './navigationLabels';
 
 type ActiveSection = 'profile' | 'wallet' | 'brands' | 'admin';
-type UiVersion = 'default' | 'heroui';
 
 type NavigationAccess = {
   brands: MyBrandResponse[];
@@ -29,7 +25,6 @@ export function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/design-variants" element={<DesignVariantsPage />} />
-          <Route path="/login-heroui" element={<HeroUILoginRoute />} />
           <Route path="/login" element={<LoginRoute />} />
           <Route
             path="/*"
@@ -55,16 +50,6 @@ function LoginRoute() {
   return <PhoneLoginPage />;
 }
 
-function HeroUILoginRoute() {
-  const auth = useAuth();
-
-  if (auth.isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-
-  return <PhoneLoginHeroUIPage />;
-}
-
 function RequireAuth({ children }: { children: ReactNode }) {
   const auth = useAuth();
 
@@ -78,8 +63,6 @@ function RequireAuth({ children }: { children: ReactNode }) {
 function AppShell() {
   const auth = useAuth();
   const [activeSection, setActiveSection] = useState<ActiveSection>('wallet');
-  const [profileVersion, setProfileVersion] = useState<UiVersion>('default');
-  const [walletVersion, setWalletVersion] = useState<UiVersion>('default');
   const [navigationAccess, setNavigationAccess] = useState<NavigationAccess>({
     brands: [],
     isAdmin: false
@@ -175,26 +158,6 @@ function AppShell() {
             {pageDescription ? <p>{pageDescription}</p> : null}
           </div>
           <div className="workspace__header-actions">
-            {activeSection === 'profile' ? (
-              <button
-                className="button-secondary"
-                type="button"
-                onClick={() => setProfileVersion((version) => (version === 'default' ? 'heroui' : 'default'))}
-              >
-                <FlaskConical size={18} />
-                {profileVersion === 'default' ? 'Сменить на HeroUI версию' : 'Сменить на обычную версию'}
-              </button>
-            ) : null}
-            {activeSection === 'wallet' ? (
-              <button
-                className="button-secondary"
-                type="button"
-                onClick={() => setWalletVersion((version) => (version === 'default' ? 'heroui' : 'default'))}
-              >
-                <FlaskConical size={18} />
-                {walletVersion === 'default' ? 'Сменить на HeroUI версию' : 'Сменить на обычную версию'}
-              </button>
-            ) : null}
             <button className="button-secondary" type="button" onClick={auth.signOut}>
               <LogOut size={18} />
               Выйти
@@ -202,10 +165,8 @@ function AppShell() {
           </div>
         </header>
 
-        {activeSection === 'profile' && profileVersion === 'default' ? <ProfilePage /> : null}
-        {activeSection === 'profile' && profileVersion === 'heroui' ? <ProfileHeroUIFormsPage /> : null}
-        {activeSection === 'wallet' && walletVersion === 'default' ? <WalletPage /> : null}
-        {activeSection === 'wallet' && walletVersion === 'heroui' ? <WalletHeroUIPage /> : null}
+        {activeSection === 'profile' ? <ProfilePage /> : null}
+        {activeSection === 'wallet' ? <WalletPage /> : null}
         {activeSection === 'brands' && navigationAccess.brands.length > 0 ? (
           <BrandWorkspacePage
             initialBrands={navigationAccess.brands}

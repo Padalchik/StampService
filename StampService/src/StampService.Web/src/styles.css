@@ -1,5 +1,3 @@
-@import "@heroui/styles";
-
 :root {
   color-scheme: light;
   font-family: Inter, Arial, Helvetica, sans-serif;
@@ -81,261 +79,6 @@ button:disabled {
 .button-compact {
   min-height: 36px;
   padding: 0 12px;
-}
-
-.heroui-auth-card,
-.heroui-work-card {
-  width: 100%;
-  border-radius: 8px;
-}
-
-.heroui-auth-card {
-  max-width: 460px;
-}
-
-.heroui-work-card {
-  margin-bottom: 18px;
-}
-
-.heroui-card-header {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-}
-
-.heroui-card-header h3,
-.heroui-card-header p {
-  margin: 0;
-}
-
-.heroui-form {
-  display: grid;
-  gap: 16px;
-}
-
-.heroui-field {
-  display: grid;
-  gap: 8px;
-  color: #344054;
-  font-weight: 700;
-}
-
-.heroui-experiment [data-slot="button"] {
-  min-height: 42px;
-  border-radius: 8px;
-  padding: 0 16px;
-  font-weight: 700;
-}
-
-.heroui-experiment [data-slot="button"]:not(.heroui-button-outline) {
-  border: 1px solid #1769aa;
-  background: #1769aa;
-  color: #fff;
-}
-
-.heroui-experiment [data-slot="button"].heroui-button-outline {
-  border: 1px solid #c8d2dc;
-  background: #fff;
-  color: #1769aa;
-}
-
-.heroui-experiment [data-slot="button"][data-disabled],
-.heroui-experiment [data-slot="button"][aria-disabled="true"] {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.heroui-experiment [data-slot="input"] {
-  width: 100%;
-  min-height: 44px;
-  border: 1px solid #c8d2dc;
-  border-radius: 8px;
-  padding: 0 12px;
-  background: #fff;
-  color: #1f2933;
-}
-
-.heroui-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.heroui-status {
-  margin-top: 16px;
-}
-
-.heroui-wallet-page {
-  display: grid;
-  gap: 18px;
-}
-
-.heroui-wallet-code-card {
-  width: 100%;
-  border-radius: 8px;
-  border: 1px solid #d9e2ec;
-  background: #fff;
-}
-
-.heroui-wallet-code-card__header {
-  justify-content: space-between;
-}
-
-.heroui-redemption-code {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 172px;
-  border: 1px dashed #1769aa;
-  border-radius: 8px;
-  padding: 14px 18px;
-  background: #eef6fc;
-  color: #0b3b5d;
-  font-size: 34px;
-  font-weight: 800;
-  letter-spacing: 0;
-}
-
-.heroui-wallet-code-card__expires {
-  margin: 10px 0 0;
-  color: #667085;
-  font-size: 14px;
-}
-
-.heroui-wallet-brand-list {
-  display: grid;
-  gap: 14px;
-}
-
-.heroui-wallet-brand-card {
-  border-radius: 8px;
-  border: 1px solid #d9e2ec;
-  background: #fff;
-}
-
-.heroui-wallet-brand-card__header {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.heroui-wallet-brand-card__header h3 {
-  margin: 0 0 10px;
-}
-
-.heroui-chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.heroui-wallet-reward-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.heroui-wallet-preview {
-  min-width: 0;
-  border: 1px solid #edf1f5;
-  border-radius: 8px;
-  padding: 14px;
-  background: #fafbfc;
-}
-
-.heroui-wallet-preview h4,
-.heroui-history-section h4 {
-  margin: 0 0 10px;
-  color: #344054;
-  font-size: 15px;
-}
-
-.heroui-wallet-preview ul,
-.heroui-detail-list,
-.heroui-history-section ul {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.heroui-wallet-preview li,
-.heroui-detail-list li,
-.heroui-history-section li {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  justify-content: space-between;
-  min-width: 0;
-}
-
-.heroui-wallet-preview li span,
-.heroui-detail-list li strong,
-.heroui-history-section li strong,
-.heroui-history-section li p {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.heroui-brand-detail-header {
-  align-items: center;
-}
-
-.heroui-brand-details-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 14px;
-}
-
-.heroui-detail-card {
-  border-radius: 8px;
-  border: 1px solid #d9e2ec;
-  background: #fff;
-}
-
-.heroui-detail-list li > div {
-  display: grid;
-  gap: 3px;
-}
-
-.heroui-detail-list li span,
-.heroui-history-section li p {
-  color: #667085;
-  font-size: 13px;
-}
-
-.heroui-history-card {
-  margin-top: 14px;
-}
-
-.heroui-history-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.heroui-history-section li {
-  justify-content: flex-start;
-  align-items: flex-start;
-  border-bottom: 1px solid #edf1f5;
-  padding-bottom: 8px;
-}
-
-.heroui-history-section li:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-
-.heroui-history-section li div {
-  display: grid;
-  gap: 3px;
-}
-
-.heroui-history-section li p {
-  margin: 0;
 }
 
 .auth-page {
@@ -2076,8 +1819,6 @@ p {
   .wallet-code-panel__main,
   .wallet-brand-card__header,
   .brand-details__header,
-  .heroui-wallet-brand-card__header,
-  .heroui-brand-detail-header,
   .section-heading--split,
   .brand-list-item,
   .brand-workspace-header,
@@ -2109,9 +1850,6 @@ p {
   .brand-list-item button,
   .operation-option button,
   .admin-owner-form button,
-  .heroui-actions button,
-  .heroui-wallet-brand-card__header button,
-  .heroui-brand-detail-header button,
   .metric-management-row__actions button,
   .staff-row button {
     width: 100%;
@@ -2164,10 +1902,7 @@ p {
   .brand-details__grid,
   .history-sections,
   .settings-grid,
-  .operation-grid,
-  .heroui-wallet-reward-grid,
-  .heroui-brand-details-grid,
-  .heroui-history-grid {
+  .operation-grid {
     grid-template-columns: 1fr;
   }
 
