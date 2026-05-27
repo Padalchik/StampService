@@ -1,4 +1,5 @@
 using StampService.Application.Access;
+using StampService.Application.CustomerNotifications;
 using StampService.Application.Metrics;
 using StampService.Application.Metrics.Commands.IssueMetric;
 using StampService.Application.Users;
@@ -24,6 +25,7 @@ public class IssueMetricByPhoneHandlerTests
         var userRepository = new FakeUserRepository();
         var balanceRepository = new FakeMetricBalanceRepository();
         var transactionRepository = new FakeStampTransactionRepository();
+        var notificationService = new RecordingCustomerNotificationService();
         brandRepository.AddExisting(brand);
         metricRepository.AddExisting(metric);
         membershipRepository.SetRole(actorUserId, brand.Id, SystemRoles.Staff);
@@ -33,7 +35,8 @@ public class IssueMetricByPhoneHandlerTests
             brandRepository,
             new MetricLedgerService(balanceRepository, transactionRepository),
             metricRepository,
-            CreatePhoneAccountService(userRepository));
+            CreatePhoneAccountService(userRepository),
+            notificationService);
 
         var result = await handler.Handle(
             new IssueMetricByPhoneCommand(
@@ -49,6 +52,7 @@ public class IssueMetricByPhoneHandlerTests
         Assert.Equal(3, result.Value.BalanceValue);
         Assert.Single(balanceRepository.Balances);
         Assert.Single(transactionRepository.Transactions);
+        Assert.Equal(result.Value, notificationService.MetricIssued);
     }
 
     [Fact]
@@ -122,5 +126,25 @@ public class IssueMetricByPhoneHandlerTests
     private sealed class FixedDisplayNameGenerator : IUserDisplayNameGenerator
     {
         public string Generate() => "Business customer";
+    }
+
+    private sealed class RecordingCustomerNotificationService : ICustomerNotificationService
+    {
+        public IssueMetricResponse? MetricIssued { get; private set; }
+
+        public Task NotifyCoinsIssuedAsync(
+            StampService.Contracts.DTOs.Coins.CoinOperationResponse operation,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task NotifyMetricIssuedAsync(
+            IssueMetricResponse operation,
+            CancellationToken cancellationToken)
+        {
+            MetricIssued = operation;
+            return Task.CompletedTask;
+        }
     }
 }

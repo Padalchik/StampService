@@ -2,6 +2,7 @@ using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
 using StampService.Application.Brands;
+using StampService.Application.CustomerNotifications;
 using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Coins;
@@ -15,17 +16,20 @@ public class IssueCoinsByPhoneHandler : ICommandHandler<CoinOperationResponse, I
     private readonly IBrandAccessService _brandAccessService;
     private readonly IBrandRepository _brandRepository;
     private readonly ICoinLedgerService _coinLedgerService;
+    private readonly ICustomerNotificationService _customerNotificationService;
     private readonly IPhoneAccountService _phoneAccountService;
 
     public IssueCoinsByPhoneHandler(
         IBrandAccessService brandAccessService,
         IBrandRepository brandRepository,
         ICoinLedgerService coinLedgerService,
-        IPhoneAccountService phoneAccountService)
+        IPhoneAccountService phoneAccountService,
+        ICustomerNotificationService? customerNotificationService = null)
     {
         _brandAccessService = brandAccessService;
         _brandRepository = brandRepository;
         _coinLedgerService = coinLedgerService;
+        _customerNotificationService = customerNotificationService ?? NullCustomerNotificationService.Instance;
         _phoneAccountService = phoneAccountService;
     }
 
@@ -80,7 +84,7 @@ public class IssueCoinsByPhoneHandler : ICommandHandler<CoinOperationResponse, I
             return Result.Fail(operationResult.Errors);
 
         var operation = operationResult.Value;
-        return Result.Ok(new CoinOperationResponse(
+        var response = new CoinOperationResponse(
             operation.Transaction.Id,
             operation.Wallet.Id,
             operation.Wallet.BrandId,
@@ -89,6 +93,10 @@ public class IssueCoinsByPhoneHandler : ICommandHandler<CoinOperationResponse, I
             operation.Transaction.Type.ToString(),
             operation.Transaction.Amount,
             operation.Wallet.Value,
-            operation.Transaction.CreatedAt));
+            operation.Transaction.CreatedAt);
+
+        await _customerNotificationService.NotifyCoinsIssuedAsync(response, cancellationToken);
+
+        return Result.Ok(response);
     }
 }

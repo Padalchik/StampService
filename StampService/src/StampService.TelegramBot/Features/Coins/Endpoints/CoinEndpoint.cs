@@ -100,8 +100,7 @@ public sealed class CoinEndpoint : IBotEndpoint
     private static async Task<IEndpointResult> ConfirmIssueAsync(
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
-        ICommandHandler<CoinOperationResponse, IssueCoinsByPhoneCommand> issueHandler,
-        ICustomerNotificationService customerNotificationService)
+        ICommandHandler<CoinOperationResponse, IssueCoinsByPhoneCommand> issueHandler)
     {
         var brandId = GetBrandId(ctx);
         var customerPhoneNumber = ctx.Session?.Data.GetString(CoinSessionKeys.CustomerPhoneNumber) ?? string.Empty;
@@ -126,12 +125,6 @@ public sealed class CoinEndpoint : IBotEndpoint
 
         if (result.IsFailed)
             return BotResults.ShowView(new ScreenView($"Не удалось начислить монетки: {BotErrorFormatter.Format(result.Errors)}").BackButton());
-
-        var brandName = ctx.Session?.Data.GetString(BrandWorkspaceScreen.BrandNameSessionKey) ?? "бренд";
-        await customerNotificationService.NotifyCoinsIssuedAsync(
-            result.Value,
-            brandName,
-            ctx.CancellationToken);
 
         ClearOperation(ctx);
         return BotResults.ShowView(OperationResultView("Монетки начислены", result.Value));

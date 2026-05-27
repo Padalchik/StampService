@@ -2,6 +2,7 @@ using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
 using StampService.Application.Brands;
+using StampService.Application.CustomerNotifications;
 using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Metrics;
@@ -14,6 +15,7 @@ public class IssueMetricByPhoneHandler : ICommandHandler<IssueMetricResponse, Is
 {
     private readonly IBrandAccessService _brandAccessService;
     private readonly IBrandRepository _brandRepository;
+    private readonly ICustomerNotificationService _customerNotificationService;
     private readonly IMetricLedgerService _metricLedgerService;
     private readonly ILoyaltyMetricRepository _metricRepository;
     private readonly IPhoneAccountService _phoneAccountService;
@@ -23,10 +25,12 @@ public class IssueMetricByPhoneHandler : ICommandHandler<IssueMetricResponse, Is
         IBrandRepository brandRepository,
         IMetricLedgerService metricLedgerService,
         ILoyaltyMetricRepository metricRepository,
-        IPhoneAccountService phoneAccountService)
+        IPhoneAccountService phoneAccountService,
+        ICustomerNotificationService? customerNotificationService = null)
     {
         _brandAccessService = brandAccessService;
         _brandRepository = brandRepository;
+        _customerNotificationService = customerNotificationService ?? NullCustomerNotificationService.Instance;
         _metricLedgerService = metricLedgerService;
         _metricRepository = metricRepository;
         _phoneAccountService = phoneAccountService;
@@ -105,6 +109,8 @@ public class IssueMetricByPhoneHandler : ICommandHandler<IssueMetricResponse, Is
             transaction.Amount,
             balance.Value,
             transaction.CreatedAt);
+
+        await _customerNotificationService.NotifyMetricIssuedAsync(response, cancellationToken);
 
         return Result.Ok(response);
     }
