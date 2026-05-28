@@ -1,24 +1,29 @@
-import { Building2, RefreshCw, ShieldCheck, UserRoundCheck } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Building2, Plus, RefreshCw, Search, ShieldCheck, UserRoundCheck, X } from 'lucide-react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { getApiErrorMessage } from '../api/errorMessages';
 import { useAuth } from '../auth/AuthContext';
 import { formatRuPhoneInput } from '../validation/phoneNumber';
 import {
-  createDemoBrands,
   createBrandWithOwner,
+  createDemoBrands,
   createUserDemoData,
   getAdminBrands,
-  resetDemoDatabase,
   reassignBrandOwner,
+  resetDemoDatabase,
   type AdminBrandResponse
 } from './adminApi';
+
+type AdminTab = 'brands' | 'demo';
 
 export function AdminPage() {
   const auth = useAuth();
   const [brands, setBrands] = useState<AdminBrandResponse[]>([]);
+  const [activeTab, setActiveTab] = useState<AdminTab>('brands');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
+  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
+  const [ownerSheetBrand, setOwnerSheetBrand] = useState<AdminBrandResponse | null>(null);
 
   async function loadBrands() {
     setIsLoading(true);
@@ -38,72 +43,199 @@ export function AdminPage() {
 
   return (
     <div className="admin-page">
-      <section className="surface-panel">
-        <div className="section-heading section-heading--split">
-          <div className="section-heading__title">
-            <ShieldCheck size={24} />
-            <h2>Админка брендов</h2>
-          </div>
-          <button className="button-secondary button-compact" type="button" onClick={() => void loadBrands()}>
-            <RefreshCw size={16} />
-            Обновить
-          </button>
-        </div>
+      <AdminTabs activeTab={activeTab} onChange={setActiveTab} />
 
-        {error ? <p className="form-status form-status--error">{error}</p> : null}
-        {status ? <p className="form-status form-status--ok">{status}</p> : null}
+      {error ? <p className="form-status form-status--error">{error}</p> : null}
+      {status ? <p className="form-status form-status--ok">{status}</p> : null}
 
-        <CreateBrandPanel
+      {activeTab === 'brands' ? (
+        <AdminBrandsTab
+          brands={brands}
+          isLoading={isLoading}
+          onCreateBrand={() => setIsCreateSheetOpen(true)}
+          onRefresh={() => void loadBrands()}
+          onReassignOwner={setOwnerSheetBrand}
+        />
+      ) : (
+        <AdminDemoTab
+          brands={brands}
+          onChanged={async (message) => {
+            setStatus(message);
+            await loadBrands();
+          }}
+          onResetCompleted={() => {
+            setStatus('База очищена. Нужно войти заново.');
+            auth.signOut();
+          }}
+        />
+      )}
+
+      {isCreateSheetOpen ? (
+        <CreateBrandSheet
+          onClose={() => setIsCreateSheetOpen(false)}
           onCreated={async (brandName) => {
             setStatus(`Бренд "${brandName}" создан.`);
             await loadBrands();
+            setIsCreateSheetOpen(false);
           }}
         />
-      </section>
+      ) : null}
 
-      <section className="surface-panel">
-        <div className="section-heading">
-          <Building2 size={24} />
-          <h2>Бренды</h2>
-        </div>
-
-        {isLoading ? <p className="muted-text">Загружаем бренды...</p> : null}
-        {!isLoading && brands.length === 0 ? (
-          <div className="empty-state">
-            <p className="empty-state__meta">Брендов пока нет.</p>
-          </div>
-        ) : null}
-
-        <div className="brand-list">
-          {brands.map((brand) => (
-            <AdminBrandCard
-              key={brand.brandId}
-              brand={brand}
-              onOwnerChanged={async (brandName, ownerPhoneNumber) => {
-                setStatus(`Владелец бренда "${brandName}" обновлен: ${ownerPhoneNumber}.`);
-                await loadBrands();
-              }}
-            />
-          ))}
-        </div>
-      </section>
-
-      <DemoPanel
-        brands={brands}
-        onChanged={async (message) => {
-          setStatus(message);
-          await loadBrands();
-        }}
-        onResetCompleted={() => {
-          setStatus('База очищена. Нужно войти заново.');
-          auth.signOut();
-        }}
-      />
+      {ownerSheetBrand ? (
+        <ReassignOwnerSheet
+          brand={ownerSheetBrand}
+          onClose={() => setOwnerSheetBrand(null)}
+          onOwnerChanged={async (brandName, ownerPhoneNumber) => {
+            setStatus(`Владелец бренда "${brandName}" обновлен: ${ownerPhoneNumber}.`);
+            await loadBrands();
+            setOwnerSheetBrand(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
 
-function CreateBrandPanel({ onCreated }: { onCreated: (brandName: string) => Promise<void> }) {
+function AdminTabs({ activeTab, onChange }: { activeTab: AdminTab; onChange: (tab: AdminTab) => void }) {
+  return (
+    <div className="admin-tabs" role="tablist" aria-label="Разделы админки">
+      <button
+        className={activeTab === 'brands' ? 'admin-tabs__item admin-tabs__item--active' : 'admin-tabs__item'}
+        type="button"
+        role="tab"
+        aria-selected={activeTab === 'brands'}
+        onClick={() => onChange('brands')}
+      >
+        Бренды
+      </button>
+      <button
+        className={activeTab === 'demo' ? 'admin-tabs__item admin-tabs__item--active' : 'admin-tabs__item'}
+        type="button"
+        role="tab"
+        aria-selected={activeTab === 'demo'}
+        onClick={() => onChange('demo')}
+      >
+        Демо
+      </button>
+    </div>
+  );
+}
+
+function AdminBrandsTab({
+  brands,
+  isLoading,
+  onCreateBrand,
+  onRefresh,
+  onReassignOwner
+}: {
+  brands: AdminBrandResponse[];
+  isLoading: boolean;
+  onCreateBrand: () => void;
+  onRefresh: () => void;
+  onReassignOwner: (brand: AdminBrandResponse) => void;
+}) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredBrands = useMemo(() => {
+    if (!normalizedQuery) {
+      return brands;
+    }
+
+    return brands.filter((brand) =>
+      [brand.brandName, brand.ownerName, brand.ownerPhoneNumber]
+        .filter(Boolean)
+        .some((value) => value?.toLowerCase().includes(normalizedQuery))
+    );
+  }, [brands, normalizedQuery]);
+
+  return (
+    <section className="admin-tab-panel" aria-label="Бренды">
+      <div className="admin-toolbar">
+        <label className="admin-search">
+          <Search size={18} aria-hidden="true" />
+          <span className="sr-only">Поиск по брендам</span>
+          <input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Поиск по бренду, владельцу или телефону"
+          />
+        </label>
+        <div className="admin-toolbar__actions">
+          <button className="admin-add-brand-button" type="button" aria-label="Создать бренд" onClick={onCreateBrand}>
+            <Plus size={16} />
+          </button>
+          <button className="button-secondary button-compact admin-icon-button" type="button" onClick={onRefresh}>
+            <RefreshCw size={16} />
+            <span>Обновить</span>
+          </button>
+        </div>
+      </div>
+
+      {isLoading ? <p className="muted-text">Загружаем бренды...</p> : null}
+
+      {!isLoading && brands.length === 0 ? (
+        <div className="empty-state admin-empty-state">
+          <p className="empty-state__meta">Брендов пока нет.</p>
+        </div>
+      ) : null}
+
+      {!isLoading && brands.length > 0 && filteredBrands.length === 0 ? (
+        <div className="empty-state admin-empty-state">
+          <p className="empty-state__meta">По этому запросу бренды не найдены.</p>
+        </div>
+      ) : null}
+
+      <div className="admin-brand-list">
+        {filteredBrands.map((brand) => (
+          <AdminBrandCard key={brand.brandId} brand={brand} onReassignOwner={() => onReassignOwner(brand)} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function AdminBrandCard({
+  brand,
+  onReassignOwner
+}: {
+  brand: AdminBrandResponse;
+  onReassignOwner: () => void;
+}) {
+  const ownerActionText = brand.ownerName ? 'Сменить' : 'Назначить';
+
+  return (
+    <article className="admin-brand-card">
+      <div className="admin-brand-card__main">
+        <div className="admin-brand-card__avatar" aria-hidden="true">
+          {getBrandInitial(brand.brandName)}
+        </div>
+        <div className="admin-brand-card__content">
+          <h3>{brand.brandName}</h3>
+          <p>
+            <span>Владелец:</span> {brand.ownerName || 'не назначен'}
+          </p>
+          {brand.ownerPhoneNumber ? (
+            <p>
+              <span>Телефон:</span> {brand.ownerPhoneNumber}
+            </p>
+          ) : null}
+        </div>
+        <button className="button-secondary button-compact" type="button" onClick={onReassignOwner}>
+          <UserRoundCheck size={16} />
+          {ownerActionText}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function CreateBrandSheet({
+  onClose,
+  onCreated
+}: {
+  onClose: () => void;
+  onCreated: (brandName: string) => Promise<void>;
+}) {
   const [brandName, setBrandName] = useState('');
   const [ownerPhoneNumber, setOwnerPhoneNumber] = useState(formatRuPhoneInput(''));
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -128,12 +260,8 @@ function CreateBrandPanel({ onCreated }: { onCreated: (brandName: string) => Pro
   }
 
   return (
-    <div className="operation-panel admin-create-panel">
-      <div className="operation-panel__heading">
-        <Building2 size={20} />
-        <h3>Создать бренд</h3>
-      </div>
-      <div className="metric-create-form">
+    <AdminBottomSheet title="Создать бренд" onClose={onClose}>
+      <div className="admin-sheet-form">
         <label>
           Название бренда
           <input value={brandName} onChange={(event) => setBrandName(event.target.value)} />
@@ -150,22 +278,25 @@ function CreateBrandPanel({ onCreated }: { onCreated: (brandName: string) => Pro
         </button>
       </div>
       {error ? <p className="form-status form-status--error">{error}</p> : null}
-    </div>
+    </AdminBottomSheet>
   );
 }
 
-function AdminBrandCard({
+function ReassignOwnerSheet({
   brand,
+  onClose,
   onOwnerChanged
 }: {
   brand: AdminBrandResponse;
+  onClose: () => void;
   onOwnerChanged: (brandName: string, ownerPhoneNumber: string) => Promise<void>;
 }) {
   const [ownerPhoneNumber, setOwnerPhoneNumber] = useState(formatRuPhoneInput(''));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const title = brand.ownerName ? 'Сменить владельца' : 'Назначить владельца';
 
-  async function submitOwnerChange() {
+  async function submit() {
     setIsSubmitting(true);
     setError('');
     try {
@@ -180,22 +311,8 @@ function AdminBrandCard({
   }
 
   return (
-    <article className="brand-list-item admin-brand-card">
-      <div>
-        <h3>{brand.brandName}</h3>
-        <p>
-          Владелец: {brand.ownerName || 'не назначен'}
-          {brand.ownerPhoneNumber ? ` · ${brand.ownerPhoneNumber}` : ''}
-        </p>
-        <div className="workspace-flags admin-brand-card__flags">
-          {brand.isMetricsEnabled ? <span>Метрики</span> : null}
-          {brand.isCoinsEnabled ? <span>Монетки</span> : null}
-          {brand.isCoinProductRedemptionEnabled ? <span>Товары</span> : null}
-          {brand.isManualCoinRedemptionEnabled ? <span>Ручное списание</span> : null}
-        </div>
-        {error ? <p className="form-status form-status--error">{error}</p> : null}
-      </div>
-      <div className="admin-owner-form">
+    <AdminBottomSheet title={title} subtitle={brand.brandName} onClose={onClose}>
+      <div className="admin-sheet-form">
         <label>
           Новый владелец
           <input
@@ -203,16 +320,53 @@ function AdminBrandCard({
             onChange={(event) => setOwnerPhoneNumber(formatRuPhoneInput(event.target.value))}
           />
         </label>
-        <button className="button-secondary" type="button" disabled={isSubmitting} onClick={() => void submitOwnerChange()}>
-          <UserRoundCheck size={16} />
+        <button type="button" disabled={isSubmitting} onClick={() => void submit()}>
           Назначить
         </button>
       </div>
-    </article>
+      {error ? <p className="form-status form-status--error">{error}</p> : null}
+    </AdminBottomSheet>
   );
 }
 
-function DemoPanel({
+function AdminBottomSheet({
+  title,
+  subtitle,
+  onClose,
+  children
+}: {
+  title: string;
+  subtitle?: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="admin-sheet-backdrop" role="presentation" onClick={onClose}>
+      <section
+        className="admin-bottom-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-sheet-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="admin-bottom-sheet__handle" aria-hidden="true" />
+        <div className="admin-bottom-sheet__header">
+          <div>
+            <h3 id="admin-sheet-title">{title}</h3>
+            {subtitle ? <p>{subtitle}</p> : null}
+          </div>
+          <button className="button-secondary button-compact" type="button" onClick={onClose}>
+            <X size={16} />
+            Закрыть
+          </button>
+        </div>
+        <div className="admin-bottom-sheet__content">{children}</div>
+      </section>
+    </div>
+  );
+}
+
+function AdminDemoTab({
   brands,
   onChanged,
   onResetCompleted
@@ -283,46 +437,30 @@ function DemoPanel({
   }
 
   return (
-    <section className="surface-panel">
-      <div className="section-heading">
-        <ShieldCheck size={24} />
-        <h2>Демо</h2>
-      </div>
-
+    <section className="admin-tab-panel" aria-label="Демо">
       {error ? <p className="form-status form-status--error">{error}</p> : null}
 
-      <div className="operation-grid">
-        <div className="operation-panel">
-          <div className="operation-panel__heading">
+      <div className="admin-demo-grid">
+        <article className="admin-demo-card">
+          <div className="admin-demo-card__header">
             <Building2 size={20} />
             <h3>Демо-бренды</h3>
           </div>
-          <p className="muted-text">
-            Создает набор брендов с разными настройками, метриками и товарами.
-          </p>
-          <div className="form-actions">
-            <button
-              type="button"
-              disabled={isSubmitting === 'brands'}
-              onClick={() => void submitCreateDemoBrands()}
-            >
-              Создать демо-бренды
-            </button>
-          </div>
-        </div>
+          <p>Создает набор брендов с разными настройками, метриками и товарами.</p>
+          <button type="button" disabled={isSubmitting === 'brands'} onClick={() => void submitCreateDemoBrands()}>
+            Создать демо-бренды
+          </button>
+        </article>
 
-        <div className="operation-panel">
-          <div className="operation-panel__heading">
+        <article className="admin-demo-card">
+          <div className="admin-demo-card__header">
             <UserRoundCheck size={20} />
             <h3>Данные пользователю</h3>
           </div>
-          <div className="work-form">
+          <div className="admin-sheet-form">
             <label>
               Телефон пользователя
-              <input
-                value={phoneNumber}
-                onChange={(event) => setPhoneNumber(formatRuPhoneInput(event.target.value))}
-              />
+              <input value={phoneNumber} onChange={(event) => setPhoneNumber(formatRuPhoneInput(event.target.value))} />
             </label>
             <label>
               Бренд
@@ -334,27 +472,23 @@ function DemoPanel({
                 ))}
               </select>
             </label>
-            <div className="form-actions">
-              <button
-                type="button"
-                disabled={!brandId || isSubmitting === 'user-data'}
-                onClick={() => void submitCreateUserDemoData()}
-              >
-                Создать данные
-              </button>
-            </div>
+            <button
+              type="button"
+              disabled={!brandId || isSubmitting === 'user-data'}
+              onClick={() => void submitCreateUserDemoData()}
+            >
+              Создать данные
+            </button>
           </div>
-        </div>
+        </article>
 
-        <div className="operation-panel demo-danger-panel">
-          <div className="operation-panel__heading">
+        <article className="admin-demo-card admin-danger-card">
+          <div className="admin-demo-card__header">
             <ShieldCheck size={20} />
             <h3>Очистить всю БД</h3>
           </div>
-          <p className="muted-text">
-            Операция удаляет данные стенда и восстанавливает системные роли.
-          </p>
-          <div className="work-form">
+          <p>Операция удаляет данные стенда и восстанавливает системные роли.</p>
+          <div className="admin-sheet-form">
             <label>
               Подтверждение
               <input
@@ -363,17 +497,15 @@ function DemoPanel({
                 placeholder="ОЧИСТИТЬ"
               />
             </label>
-            <div className="form-actions">
-              <button
-                type="button"
-                disabled={resetConfirmation !== 'ОЧИСТИТЬ' || isSubmitting === 'reset'}
-                onClick={() => void submitReset()}
-              >
-                Очистить всю БД
-              </button>
-            </div>
+            <button
+              type="button"
+              disabled={resetConfirmation !== 'ОЧИСТИТЬ' || isSubmitting === 'reset'}
+              onClick={() => void submitReset()}
+            >
+              Очистить всю БД
+            </button>
           </div>
-        </div>
+        </article>
       </div>
     </section>
   );
@@ -381,4 +513,9 @@ function DemoPanel({
 
 function getUserMessage(error: unknown): string {
   return getApiErrorMessage(error, 'Не удалось выполнить запрос.');
+}
+
+function getBrandInitial(brandName: string): string {
+  const trimmedName = brandName.trim();
+  return trimmedName.length > 0 ? trimmedName[0].toUpperCase() : 'Б';
 }
