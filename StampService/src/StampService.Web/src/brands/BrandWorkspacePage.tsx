@@ -73,6 +73,16 @@ type BrandWorkspacePageProps = {
   initialBrands?: MyBrandResponse[];
 };
 
+type RootSection = 'operations' | 'management';
+type OperationType = 'metrics' | 'products' | 'coins' | 'customer';
+type OperationAction = 'issue' | 'redeem' | 'balances';
+type ManagementType = 'metrics' | 'products' | 'staff' | 'brand';
+
+type WorkspaceTabItem<T extends string> = {
+  id: T;
+  label: string;
+};
+
 export function BrandWorkspacePage({
   initialBrandId,
   initialBrands
@@ -169,7 +179,7 @@ export function BrandWorkspacePage({
             <article className="brand-list-item" key={brand.brandId}>
               <div>
                 <h3>{brand.brandName}</h3>
-                <p>Роль: {brand.roleSystemName}</p>
+                <p>Роль: {formatRoleName(brand.roleSystemName)}</p>
               </div>
               <button
                 className="button-secondary"
@@ -198,6 +208,10 @@ function BrandWorkspace({
 }) {
   const [metrics, setMetrics] = useState<MetricResponse[]>([]);
   const [metricsError, setMetricsError] = useState('');
+  const [activeRootSection, setActiveRootSection] = useState<RootSection>('operations');
+  const [activeOperationType, setActiveOperationType] = useState<OperationType>('metrics');
+  const [activeOperationAction, setActiveOperationAction] = useState<OperationAction>('issue');
+  const [activeManagementType, setActiveManagementType] = useState<ManagementType>('metrics');
 
   useEffect(() => {
     if (!workspace.isMetricsEnabled || !workspace.canIssue) {
@@ -219,88 +233,323 @@ function BrandWorkspace({
     }
   }
 
-  const hasClientActions = workspace.canIssue || workspace.canRedeem || workspace.canViewBalances;
   const showMetricManagement = workspace.canManageMetrics && workspace.isMetricsEnabled;
   const showCoinProductManagement =
     workspace.canManageMetrics && workspace.isCoinsEnabled && workspace.isCoinProductRedemptionEnabled;
   const showStaffManagement = workspace.canManageStaff;
   const showBrandSettings = workspace.canManageBrand;
 
+  const operationTabs = getOperationTabs(workspace);
+  const managementTabs = getManagementTabs({
+    showMetricManagement,
+    showCoinProductManagement,
+    showStaffManagement,
+    showBrandSettings
+  });
+  const rootTabs: WorkspaceTabItem<RootSection>[] = [
+    operationTabs.length > 0 ? { id: 'operations', label: 'Операции' } : null,
+    managementTabs.length > 0 ? { id: 'management', label: 'Управление' } : null
+  ].filter((tab): tab is WorkspaceTabItem<RootSection> => tab !== null);
+
+  const currentRootSection = rootTabs.some((tab) => tab.id === activeRootSection)
+    ? activeRootSection
+    : rootTabs[0]?.id;
+  const currentOperationType = operationTabs.some((tab) => tab.id === activeOperationType)
+    ? activeOperationType
+    : operationTabs[0]?.id;
+  const operationActionTabs = currentOperationType
+    ? getOperationActionTabs(workspace, currentOperationType)
+    : [];
+  const currentOperationAction = operationActionTabs.some((tab) => tab.id === activeOperationAction)
+    ? activeOperationAction
+    : operationActionTabs[0]?.id;
+  const currentManagementType = managementTabs.some((tab) => tab.id === activeManagementType)
+    ? activeManagementType
+    : managementTabs[0]?.id;
+
+  useEffect(() => {
+    if (currentRootSection && currentRootSection !== activeRootSection) {
+      setActiveRootSection(currentRootSection);
+    }
+  }, [activeRootSection, currentRootSection]);
+
+  useEffect(() => {
+    if (currentOperationType && currentOperationType !== activeOperationType) {
+      setActiveOperationType(currentOperationType);
+    }
+  }, [activeOperationType, currentOperationType]);
+
+  useEffect(() => {
+    if (currentOperationAction && currentOperationAction !== activeOperationAction) {
+      setActiveOperationAction(currentOperationAction);
+    }
+  }, [activeOperationAction, currentOperationAction]);
+
+  useEffect(() => {
+    if (currentManagementType && currentManagementType !== activeManagementType) {
+      setActiveManagementType(currentManagementType);
+    }
+  }, [activeManagementType, currentManagementType]);
+
   return (
-    <div className="brand-workspace-page">
-      <section className="surface-panel brand-workspace-header">
+    <div className="brand-workspace-page brand-workspace-console">
+      <div className="brand-workspace-topline">
         <button className="button-secondary button-compact" type="button" onClick={onBack}>
           <ArrowLeft size={17} />
           Назад
         </button>
+      </div>
+
+      <section className="brand-workspace-hero">
         <div>
           <h2>{workspace.brandName}</h2>
-          <p>Роль: {workspace.roleSystemName}</p>
-          <div className="workspace-flags">
-            {workspace.isMetricsEnabled ? <span>Метрики включены</span> : null}
-            {workspace.isCoinsEnabled ? <span>Монетки включены</span> : null}
-            {workspace.isCoinProductRedemptionEnabled ? <span>Товары за монетки</span> : null}
-            {workspace.isManualCoinRedemptionEnabled ? <span>Ручное списание монеток</span> : null}
-          </div>
+          <p>Роль: {formatRoleName(workspace.roleSystemName)}</p>
         </div>
       </section>
 
-      {!hasClientActions ? (
-        <section className="surface-panel">
-          <p className="muted-text">Для этого бренда нет доступных клиентских операций.</p>
-        </section>
-      ) : null}
-
-      <div className="operation-grid">
-        {workspace.isMetricsEnabled && workspace.canIssue ? (
-          <IssueMetricPanel metrics={metrics} metricsError={metricsError} onReloadMetrics={loadIssueMetrics} />
-        ) : null}
-
-        {workspace.isMetricsEnabled && workspace.canRedeem ? (
-          <RedeemMetricPanel brandId={workspace.brandId} />
-        ) : null}
-
-        {workspace.isCoinsEnabled && workspace.canIssue ? (
-          <IssueCoinsPanel brandId={workspace.brandId} />
-        ) : null}
-
-        {workspace.isCoinsEnabled && workspace.canRedeem && workspace.isManualCoinRedemptionEnabled ? (
-          <RedeemCoinsPanel brandId={workspace.brandId} />
-        ) : null}
-
-        {workspace.isCoinsEnabled && workspace.canRedeem && workspace.isCoinProductRedemptionEnabled ? (
-          <PurchaseCoinProductPanel brandId={workspace.brandId} />
-        ) : null}
-
-        {workspace.canViewBalances && (workspace.isMetricsEnabled || workspace.isCoinsEnabled) ? (
-          <CustomerBalancesPanel
-            brandId={workspace.brandId}
-            isMetricsEnabled={workspace.isMetricsEnabled}
-            isCoinsEnabled={workspace.isCoinsEnabled}
-          />
-        ) : null}
-      </div>
-
-      {showMetricManagement ? (
-        <MetricManagementPanel
-          brandId={workspace.brandId}
-          onMetricsChanged={workspace.canIssue ? loadIssueMetrics : undefined}
+      {rootTabs.length > 1 ? (
+        <WorkspaceTabs
+          items={rootTabs}
+          activeId={currentRootSection}
+          onSelect={(nextSection) => {
+            setActiveRootSection(nextSection);
+            if (nextSection === 'operations' && operationTabs[0]) {
+              setActiveOperationType(operationTabs[0].id);
+              const nextActions = getOperationActionTabs(workspace, operationTabs[0].id);
+              if (nextActions[0]) {
+                setActiveOperationAction(nextActions[0].id);
+              }
+            }
+            if (nextSection === 'management' && managementTabs[0]) {
+              setActiveManagementType(managementTabs[0].id);
+            }
+          }}
         />
       ) : null}
 
-      {showCoinProductManagement ? (
+      {currentRootSection === 'operations' && currentOperationType && currentOperationAction ? (
+        <OperationWorkspace
+          workspace={workspace}
+          metrics={metrics}
+          metricsError={metricsError}
+          operationTabs={operationTabs}
+          actionTabs={operationActionTabs}
+          activeOperationType={currentOperationType}
+          activeOperationAction={currentOperationAction}
+          onOperationTypeChange={(nextType) => {
+            setActiveOperationType(nextType);
+            const nextActions = getOperationActionTabs(workspace, nextType);
+            if (nextActions[0]) {
+              setActiveOperationAction(nextActions[0].id);
+            }
+          }}
+          onOperationActionChange={setActiveOperationAction}
+          onReloadMetrics={loadIssueMetrics}
+        />
+      ) : null}
+
+      {currentRootSection === 'management' && currentManagementType ? (
+        <ManagementWorkspace
+          workspace={workspace}
+          managementTabs={managementTabs}
+          activeManagementType={currentManagementType}
+          onManagementTypeChange={setActiveManagementType}
+          onMetricsChanged={workspace.canIssue ? loadIssueMetrics : undefined}
+          onWorkspaceUpdated={onWorkspaceUpdated}
+        />
+      ) : null}
+
+      {operationTabs.length === 0 && managementTabs.length === 0 ? (
+        <section className="operation-panel">
+          <p className="muted-text">Для этого бренда нет доступных разделов.</p>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function WorkspaceTabs<T extends string>({
+  items,
+  activeId,
+  onSelect
+}: {
+  items: WorkspaceTabItem<T>[];
+  activeId?: T;
+  onSelect: (id: T) => void;
+}) {
+  if (items.length <= 1) {
+    return null;
+  }
+
+  return (
+    <div className="workspace-tabs-card">
+      <div className="workspace-tabs">
+        {items.map((item) => (
+          <button
+            className={`workspace-tabs__item ${item.id === activeId ? 'workspace-tabs__item--active' : ''}`}
+            key={item.id}
+            type="button"
+            onClick={() => onSelect(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OperationWorkspace({
+  workspace,
+  metrics,
+  metricsError,
+  operationTabs,
+  actionTabs,
+  activeOperationType,
+  activeOperationAction,
+  onOperationTypeChange,
+  onOperationActionChange,
+  onReloadMetrics
+}: {
+  workspace: BrandWorkspaceResponse;
+  metrics: MetricResponse[];
+  metricsError: string;
+  operationTabs: WorkspaceTabItem<OperationType>[];
+  actionTabs: WorkspaceTabItem<OperationAction>[];
+  activeOperationType: OperationType;
+  activeOperationAction: OperationAction;
+  onOperationTypeChange: (type: OperationType) => void;
+  onOperationActionChange: (action: OperationAction) => void;
+  onReloadMetrics: () => Promise<void>;
+}) {
+  return (
+    <div className="workspace-active-area">
+      <WorkspaceTabs items={operationTabs} activeId={activeOperationType} onSelect={onOperationTypeChange} />
+      <WorkspaceTabs items={actionTabs} activeId={activeOperationAction} onSelect={onOperationActionChange} />
+
+      {activeOperationType === 'metrics' && activeOperationAction === 'issue' ? (
+        <IssueMetricPanel metrics={metrics} metricsError={metricsError} onReloadMetrics={onReloadMetrics} />
+      ) : null}
+      {activeOperationType === 'metrics' && activeOperationAction === 'redeem' ? (
+        <RedeemMetricPanel brandId={workspace.brandId} />
+      ) : null}
+      {activeOperationType === 'products' ? (
+        <PurchaseCoinProductPanel brandId={workspace.brandId} />
+      ) : null}
+      {activeOperationType === 'coins' && activeOperationAction === 'issue' ? (
+        <IssueCoinsPanel brandId={workspace.brandId} />
+      ) : null}
+      {activeOperationType === 'coins' && activeOperationAction === 'redeem' ? (
+        <RedeemCoinsPanel brandId={workspace.brandId} />
+      ) : null}
+      {activeOperationType === 'customer' ? (
+        <CustomerBalancesPanel
+          brandId={workspace.brandId}
+          isMetricsEnabled={workspace.isMetricsEnabled}
+          isCoinsEnabled={workspace.isCoinsEnabled}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ManagementWorkspace({
+  workspace,
+  managementTabs,
+  activeManagementType,
+  onManagementTypeChange,
+  onMetricsChanged,
+  onWorkspaceUpdated
+}: {
+  workspace: BrandWorkspaceResponse;
+  managementTabs: WorkspaceTabItem<ManagementType>[];
+  activeManagementType: ManagementType;
+  onManagementTypeChange: (type: ManagementType) => void;
+  onMetricsChanged?: () => Promise<void>;
+  onWorkspaceUpdated: (workspace: BrandWorkspaceResponse) => void;
+}) {
+  return (
+    <div className="workspace-active-area">
+      <WorkspaceTabs items={managementTabs} activeId={activeManagementType} onSelect={onManagementTypeChange} />
+
+      {activeManagementType === 'metrics' ? (
+        <MetricManagementPanel brandId={workspace.brandId} onMetricsChanged={onMetricsChanged} />
+      ) : null}
+      {activeManagementType === 'products' ? (
         <CoinProductManagementPanel brandId={workspace.brandId} />
       ) : null}
-
-      {showStaffManagement ? (
+      {activeManagementType === 'staff' ? (
         <StaffManagementPanel brandId={workspace.brandId} />
       ) : null}
-
-      {showBrandSettings ? (
+      {activeManagementType === 'brand' ? (
         <BrandSettingsPanel workspace={workspace} onWorkspaceUpdated={onWorkspaceUpdated} />
       ) : null}
     </div>
   );
+}
+
+function getOperationTabs(workspace: BrandWorkspaceResponse): WorkspaceTabItem<OperationType>[] {
+  return [
+    workspace.isMetricsEnabled && (workspace.canIssue || workspace.canRedeem)
+      ? { id: 'metrics', label: 'Метрики' }
+      : null,
+    workspace.isCoinsEnabled && workspace.canRedeem && workspace.isCoinProductRedemptionEnabled
+      ? { id: 'products', label: 'Товары' }
+      : null,
+    workspace.isCoinsEnabled
+      && (workspace.canIssue || (workspace.canRedeem && workspace.isManualCoinRedemptionEnabled))
+      ? { id: 'coins', label: 'Монетки' }
+      : null,
+    workspace.canViewBalances && (workspace.isMetricsEnabled || workspace.isCoinsEnabled)
+      ? { id: 'customer', label: 'Клиент' }
+      : null
+  ].filter((tab): tab is WorkspaceTabItem<OperationType> => tab !== null);
+}
+
+function getOperationActionTabs(
+  workspace: BrandWorkspaceResponse,
+  operationType: OperationType
+): WorkspaceTabItem<OperationAction>[] {
+  if (operationType === 'metrics') {
+    return [
+      workspace.isMetricsEnabled && workspace.canIssue ? { id: 'issue', label: 'Выдать' } : null,
+      workspace.isMetricsEnabled && workspace.canRedeem ? { id: 'redeem', label: 'Списать' } : null
+    ].filter((tab): tab is WorkspaceTabItem<OperationAction> => tab !== null);
+  }
+
+  if (operationType === 'coins') {
+    return [
+      workspace.isCoinsEnabled && workspace.canIssue ? { id: 'issue', label: 'Начислить' } : null,
+      workspace.isCoinsEnabled && workspace.canRedeem && workspace.isManualCoinRedemptionEnabled
+        ? { id: 'redeem', label: 'Списать' }
+        : null
+    ].filter((tab): tab is WorkspaceTabItem<OperationAction> => tab !== null);
+  }
+
+  if (operationType === 'customer') {
+    return [{ id: 'balances', label: 'Балансы' }];
+  }
+
+  return [{ id: 'issue', label: 'Выдать' }];
+}
+
+function getManagementTabs({
+  showMetricManagement,
+  showCoinProductManagement,
+  showStaffManagement,
+  showBrandSettings
+}: {
+  showMetricManagement: boolean;
+  showCoinProductManagement: boolean;
+  showStaffManagement: boolean;
+  showBrandSettings: boolean;
+}): WorkspaceTabItem<ManagementType>[] {
+  return [
+    showMetricManagement ? { id: 'metrics', label: 'Метрики' } : null,
+    showCoinProductManagement ? { id: 'products', label: 'Товары' } : null,
+    showStaffManagement ? { id: 'staff', label: 'Сотрудники' } : null,
+    showBrandSettings ? { id: 'brand', label: 'Бренд' } : null
+  ].filter((tab): tab is WorkspaceTabItem<ManagementType> => tab !== null);
 }
 
 function MetricManagementPanel({
@@ -1217,13 +1466,16 @@ function RedeemMetricPanel({ brandId }: { brandId: string }) {
         <div className="operation-options">
           <p className="operation-options__customer">Клиент: {options.customerName}</p>
           {options.metrics.length === 0 ? <p className="muted-text">Доступных метрик нет.</p> : null}
-          {options.metrics.map((metric) => (
+          {[...options.metrics].sort(compareRedeemableMetrics).map((metric) => (
             <div className="operation-option" key={metric.metricDefinitionId}>
               <div>
                 <strong>{metric.metricName}</strong>
                 <p>
                   Баланс {metric.currentBalance} из {metric.requiredAmount}
                 </p>
+                {!metric.canRedeem ? (
+                  <p>Недоступно: не хватает {Math.max(metric.requiredAmount - metric.currentBalance, 0)}</p>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -1399,7 +1651,7 @@ function PurchaseCoinProductPanel({ brandId }: { brandId: string }) {
 
     try {
       const response = await purchaseCoinProduct(brandId, productId, redemptionCode.trim());
-      setResult({ kind: 'coins', title: 'Товар списан за монетки', response });
+      setResult({ kind: 'coins', title: 'Товар выдан', response });
       setOptions(null);
       setRedemptionCode('');
     } catch (requestError) {
@@ -1410,7 +1662,7 @@ function PurchaseCoinProductPanel({ brandId }: { brandId: string }) {
   }
 
   return (
-    <OperationPanel icon={<Gift size={20} />} title="Выдать товар за монетки">
+    <OperationPanel icon={<Gift size={20} />} title="Выдать товар">
       <div className="work-form">
         <label>
           Код списания клиента
@@ -1426,13 +1678,16 @@ function PurchaseCoinProductPanel({ brandId }: { brandId: string }) {
         <div className="operation-options">
           <p className="operation-options__customer">Клиент: {options.customerName}</p>
           {options.products.length === 0 ? <p className="muted-text">Доступных товаров нет.</p> : null}
-          {options.products.map((product) => (
+          {[...options.products].sort(comparePurchasableProducts).map((product) => (
             <div className="operation-option" key={product.productId}>
               <div>
                 <strong>{product.productName}</strong>
                 <p>
                   Цена {product.price}, баланс {product.currentBalance}
                 </p>
+                {!product.canPurchase ? (
+                  <p>Недоступно: не хватает {Math.max(product.price - product.currentBalance, 0)}</p>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -1573,6 +1828,42 @@ function OperationFeedback({ error, result }: { error: string; result: Operation
       <span>Баланс: {result.response.balanceValue}</span>
     </div>
   );
+}
+
+function formatRoleName(roleSystemName: string): string {
+  const normalizedRole = roleSystemName.trim().toUpperCase();
+
+  if (normalizedRole === 'OWNER') {
+    return 'Владелец';
+  }
+
+  if (normalizedRole === 'STAFF') {
+    return 'Сотрудник';
+  }
+
+  return roleSystemName;
+}
+
+function compareRedeemableMetrics(
+  left: { canRedeem: boolean; metricName: string },
+  right: { canRedeem: boolean; metricName: string }
+): number {
+  if (left.canRedeem !== right.canRedeem) {
+    return left.canRedeem ? -1 : 1;
+  }
+
+  return left.metricName.localeCompare(right.metricName, 'ru');
+}
+
+function comparePurchasableProducts(
+  left: { canPurchase: boolean; productName: string },
+  right: { canPurchase: boolean; productName: string }
+): number {
+  if (left.canPurchase !== right.canPurchase) {
+    return left.canPurchase ? -1 : 1;
+  }
+
+  return left.productName.localeCompare(right.productName, 'ru');
 }
 
 function getUserMessage(error: unknown): string {
