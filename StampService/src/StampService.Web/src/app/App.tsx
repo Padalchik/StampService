@@ -78,6 +78,7 @@ function AppShell() {
   const singleBrand = navigationAccess.brands.length === 1 ? navigationAccess.brands[0] : null;
   const pageTitle = getPageTitle(activeSection, singleBrand !== null);
   const pageDescription = getPageDescription(activeSection);
+  const showWorkspaceHeader = activeSection !== 'brands' && activeSection !== 'admin';
   const navigationItems = useMemo(
     () => getNavigationItems(navigationAccess),
     [navigationAccess]
@@ -136,12 +137,14 @@ function AppShell() {
       />
 
       <main className="workspace">
-        <header className="workspace__header">
-          <div>
-            <h1>{pageTitle}</h1>
-            {pageDescription ? <p>{pageDescription}</p> : null}
-          </div>
-        </header>
+        {showWorkspaceHeader ? (
+          <header className="workspace__header">
+            <div>
+              <h1>{pageTitle}</h1>
+              {pageDescription ? <p>{pageDescription}</p> : null}
+            </div>
+          </header>
+        ) : null}
 
         {activeSection === 'profile' ? <ProfilePage onSignOut={auth.signOut} /> : null}
         {activeSection === 'wallet' ? <WalletPage homeNavigationKey={walletHomeNavigationKey} /> : null}
@@ -288,14 +291,6 @@ function getPageTitle(activeSection: ActiveSection, hasSingleBrand: boolean): st
 function getPageDescription(activeSection: ActiveSection): string {
   if (activeSection === 'profile') {
     return 'Профиль, способы входа и привязка контактов.';
-  }
-
-  if (activeSection === 'brands') {
-    return 'Выдача и списание метрик, монеток и товаров.';
-  }
-
-  if (activeSection === 'admin') {
-    return 'Глобальное управление брендами и владельцами.';
   }
 
   return '';
