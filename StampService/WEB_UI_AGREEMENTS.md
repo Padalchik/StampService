@@ -270,7 +270,9 @@ Web API/types для этих операций должны оставаться
 
 Ключевые frontend места:
 
-- `src/StampService.Web/src/brands/BrandWorkspacePage.tsx` - экран рабочих брендов, workspace, формы клиентских операций, управление метриками, товарами, сотрудниками и настройками;
+- `src/StampService.Web/src/brands/BrandWorkspacePage.tsx` - контейнер выбора бренда и загрузки workspace;
+- `src/StampService.Web/src/brands/BrandSelector.tsx` - экран выбора рабочего бренда;
+- `src/StampService.Web/src/brands/BrandWorkspace.tsx` - рабочая область выбранного бренда, формы клиентских операций, управление метриками, товарами, сотрудниками и настройками;
 - `src/StampService.Web/src/brands/brandWorkspaceApi.ts` - typed API calls;
 - `src/StampService.Web/src/validation/phoneNumber.ts` - frontend-маска и нормализация телефонного ввода;
 - `src/StampService.Web/src/app/App.tsx` - подключение раздела в основной layout;
@@ -523,6 +525,14 @@ Brand workspace в React web UI теперь проектируется как m
 - management-сценарии метрик, товаров, сотрудников и настроек бренда переиспользуют текущие панели и API-вызовы;
 - UI-сортировка options допустима только как presentation-слой: при списании/выдаче сначала показываются доступные награды, затем недоступные с пользовательской причиной.
 
+Компонентная модель:
+
+- `BrandWorkspacePage` является контейнером: хранит выбранный `BrandWorkspaceResponse`, вызывает `getBrandWorkspace(brandId)` и переключает selector/workspace;
+- `BrandSelector` отвечает только за список рабочих брендов, loading/error/empty states и открытие выбранного бренда;
+- `BrandWorkspace` отвечает только за рабочую область конкретного бренда и не содержит логики загрузки списка брендов;
+- `initialBrandId` сохраняет сценарий прямого открытия workspace, а `initialBrands` позволяют использовать уже загруженный список из `AppShell`;
+- ошибка открытия workspace остается на экране выбора бренда, чтобы пользователь мог повторить действие или выбрать другой бренд.
+
 Визуальные договоренности:
 
 - верх экрана: компактная кнопка `Назад` и отдельная белая плашка бренда;
@@ -530,5 +540,6 @@ Brand workspace в React web UI теперь проектируется как m
 - переключатели уровней оформляются как segmented controls;
 - рабочая зона показывает один активный сценарий;
 - карточками являются формы, options и результаты, без большой общей surface-panel вокруг всего workspace;
+- selector рабочих брендов проектируется как компактный mobile-first список: avatar с первой буквой, название бренда, человекочитаемая роль и действие `Открыть`; raw `roleSystemName` не показывается;
 - стили находятся в `src/StampService.Web/src/styles.css`, scoped к brand workspace;
-- основной компонент и typed API client находятся в `src/StampService.Web/src/brands/BrandWorkspacePage.tsx` и `src/StampService.Web/src/brands/brandWorkspaceApi.ts`.
+- основные компоненты находятся в `src/StampService.Web/src/brands/BrandWorkspacePage.tsx`, `BrandSelector.tsx`, `BrandWorkspace.tsx`; typed API client остается в `src/StampService.Web/src/brands/brandWorkspaceApi.ts`.

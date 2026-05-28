@@ -1000,6 +1000,122 @@ p {
   gap: 18px;
 }
 
+.brand-selector-page {
+  display: grid;
+  gap: 12px;
+  width: min(100%, 760px);
+  min-width: 0;
+  padding-bottom: 18px;
+}
+
+.brand-selector-page *,
+.brand-selector-page *::before,
+.brand-selector-page *::after {
+  min-width: 0;
+}
+
+.brand-selector-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.brand-selector-header h2 {
+  margin: 0;
+  color: #1f2933;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.brand-selector-header p {
+  margin: 6px 0 0;
+  color: #66788a;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.brand-selector-toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+}
+
+.brand-selector-list {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.brand-selector-item {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  border: 1px solid #d8e1e8;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+.brand-selector-avatar {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 8px;
+  background: #e8f3fd;
+  color: #1769aa;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.brand-selector-item__content {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.brand-selector-item h3 {
+  margin: 0;
+  color: #1f2933;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.brand-selector-role {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  max-width: 100%;
+  min-height: 24px;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.brand-selector-role--owner {
+  background: #e8f3fd;
+  color: #1769aa;
+}
+
+.brand-selector-role--staff {
+  background: #e7f6ef;
+  color: #17613d;
+}
+
 .brand-workspace-console {
   width: min(100%, 760px);
   min-width: 0;
@@ -2269,6 +2385,7 @@ p {
   .wallet-code-panel,
   .wallet-code-panel__main,
   .wallet-brand-card__header,
+  .brand-selector-header,
   .section-heading--split,
   .brand-list-item,
   .brand-workspace-header,
