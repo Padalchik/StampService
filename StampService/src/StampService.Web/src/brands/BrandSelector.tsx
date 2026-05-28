@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw, Store } from 'lucide-react';
+import { Store } from 'lucide-react';
 import { getApiErrorMessage } from '../api/errorMessages';
 import { getMyBrands, type MyBrandResponse } from './brandWorkspaceApi';
 
@@ -54,17 +54,6 @@ export function BrandSelector({
               <h2>Рабочие бренды</h2>
             </div>
             <p>Выберите бренд для операций с клиентами.</p>
-          </div>
-          <div className="brand-selector-toolbar">
-            <button
-              className="button-secondary button-compact"
-              type="button"
-              disabled={isLoading}
-              onClick={() => void loadBrands()}
-            >
-              <RefreshCw size={17} />
-              Обновить
-            </button>
           </div>
         </div>
 
