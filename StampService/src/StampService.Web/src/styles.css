@@ -1330,7 +1330,7 @@ p {
   display: grid;
   gap: 12px;
   min-width: 0;
-  margin: 0 auto;
+  margin: 0;
   padding-bottom: 18px;
 }
 
@@ -1418,10 +1418,6 @@ p {
 
 .admin-search input:focus {
   outline: 0;
-}
-
-.admin-icon-button {
-  white-space: nowrap;
 }
 
 .admin-add-brand-button {
@@ -2761,16 +2757,13 @@ p {
     padding-bottom: calc(18px + env(safe-area-inset-bottom));
   }
 
-  .admin-toolbar,
   .admin-demo-grid {
     grid-template-columns: 1fr;
   }
 
   .admin-toolbar__actions {
-    display: grid;
-    grid-template-columns: 42px auto;
+    display: flex;
     justify-content: end;
-    width: 100%;
   }
 
   .admin-toolbar__actions button {
@@ -2887,25 +2880,6 @@ p {
   .admin-tabs__item {
     min-height: 38px;
     font-size: 13px;
-  }
-
-  .admin-toolbar__actions {
-    grid-template-columns: 42px 46px;
-  }
-
-  .admin-icon-button span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-  }
-
-  .admin-icon-button {
-    min-width: 46px;
-    padding-right: 0;
-    padding-left: 0;
   }
 
   .admin-bottom-sheet {

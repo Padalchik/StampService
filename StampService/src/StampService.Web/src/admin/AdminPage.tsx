@@ -1,4 +1,4 @@
-import { Building2, Plus, RefreshCw, Search, ShieldCheck, UserRoundCheck, X } from 'lucide-react';
+import { Building2, Plus, Search, ShieldCheck, UserRoundCheck, X } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { getApiErrorMessage } from '../api/errorMessages';
 import { useAuth } from '../auth/AuthContext';
@@ -53,7 +53,6 @@ export function AdminPage() {
           brands={brands}
           isLoading={isLoading}
           onCreateBrand={() => setIsCreateSheetOpen(true)}
-          onRefresh={() => void loadBrands()}
           onReassignOwner={setOwnerSheetBrand}
         />
       ) : (
@@ -125,13 +124,11 @@ function AdminBrandsTab({
   brands,
   isLoading,
   onCreateBrand,
-  onRefresh,
   onReassignOwner
 }: {
   brands: AdminBrandResponse[];
   isLoading: boolean;
   onCreateBrand: () => void;
-  onRefresh: () => void;
   onReassignOwner: (brand: AdminBrandResponse) => void;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -163,10 +160,6 @@ function AdminBrandsTab({
         <div className="admin-toolbar__actions">
           <button className="admin-add-brand-button" type="button" aria-label="Создать бренд" onClick={onCreateBrand}>
             <Plus size={16} />
-          </button>
-          <button className="button-secondary button-compact admin-icon-button" type="button" onClick={onRefresh}>
-            <RefreshCw size={16} />
-            <span>Обновить</span>
           </button>
         </div>
       </div>
