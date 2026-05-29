@@ -119,6 +119,51 @@ public class GetUserWalletBrandDetailsHandlerTests
         Assert.True(result.IsFailed);
     }
 
+    [Fact]
+    public async Task Handle_WhenRewardFeaturesAreDisabled_ShouldNotReturnDisabledRewardSections()
+    {
+        var user = User.Create("Customer").Value;
+        var brand = Brand.Create("Brand").Value;
+        var updateResult = brand.UpdateDetails(
+            "Brand",
+            isMetricsEnabled: false,
+            isCoinsEnabled: true,
+            isCoinProductRedemptionEnabled: false,
+            isManualCoinRedemptionEnabled: true);
+        Assert.True(updateResult.IsSuccess);
+
+        var userRepository = new FakeUserRepository();
+        var brandRepository = new FakeBrandRepository();
+        var productRepository = new FakeCoinProductRepository();
+        var walletRepository = new FakeCoinWalletRepository();
+        userRepository.Add(user);
+        brandRepository.AddExisting(brand);
+
+        var wallet = CoinWallet.Create(user.Id, brand.Id).Value;
+        wallet.SetMaterializedValue(10);
+        walletRepository.Add(wallet);
+        productRepository.Add(CoinProduct.Create(brand.Id, "Coffee", 7).Value);
+
+        var handler = new GetUserWalletBrandDetailsHandler(
+            productRepository,
+            new FakeCoinTransactionRepository(),
+            walletRepository,
+            brandRepository,
+            new FakeLoyaltyMetricRepository(),
+            new FakeMetricBalanceRepository(),
+            new FakeStampTransactionRepository(),
+            userRepository);
+
+        var result = await handler.Handle(
+            new GetUserWalletBrandDetailsQuery(user.Id, brand.Id),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.DoesNotContain(result.Value.RewardSections, section => section.Kind == "Metrics");
+        Assert.DoesNotContain(result.Value.RewardSections, section => section.Kind == "CoinProducts");
+        Assert.Contains(result.Value.History.Groups, group => group.Kind == "Coin");
+    }
+
     private static void SetCreatedAt(BaseEntity entity, DateTime createdAt)
     {
         typeof(BaseEntity)

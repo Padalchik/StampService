@@ -9,14 +9,16 @@ import {
 } from './brandWorkspaceApi';
 
 type BrandWorkspacePageProps = {
+  homeNavigationKey: number;
   initialBrandId?: string;
   initialBrands?: MyBrandResponse[];
 };
 
 export function BrandWorkspacePage({
+  homeNavigationKey,
   initialBrandId,
   initialBrands
-}: BrandWorkspacePageProps = {}) {
+}: BrandWorkspacePageProps) {
   const [workspace, setWorkspace] = useState<BrandWorkspaceResponse | null>(null);
   const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(false);
   const [workspaceError, setWorkspaceError] = useState('');
@@ -24,8 +26,13 @@ export function BrandWorkspacePage({
   useEffect(() => {
     if (initialBrandId) {
       void openWorkspace(initialBrandId);
+      return;
     }
-  }, [initialBrandId]);
+
+    setWorkspace(null);
+    setWorkspaceError('');
+    setIsWorkspaceLoading(false);
+  }, [homeNavigationKey, initialBrandId]);
 
   async function openWorkspace(brandId: string) {
     setIsWorkspaceLoading(true);
@@ -45,6 +52,7 @@ export function BrandWorkspacePage({
   if (workspace) {
     return (
       <BrandWorkspace
+        key={`${workspace.brandId}-${homeNavigationKey}`}
         workspace={workspace}
         onWorkspaceUpdated={(updatedWorkspace) => setWorkspace(updatedWorkspace)}
         onBack={() => {

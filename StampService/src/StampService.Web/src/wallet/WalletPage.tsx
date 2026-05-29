@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, RefreshCw, X } from 'lucide-react';
 import { getApiErrorMessage } from '../api/errorMessages';
 import { formatRuDateTime } from '../format/dateTime';
@@ -266,7 +266,7 @@ function BrandDetailsScreen({
   error: string;
   onBack: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<BrandDetailsTab>('products');
+  const [activeTab, setActiveTab] = useState<BrandDetailsTab>('metrics');
   const [isProductsExpanded, setIsProductsExpanded] = useState(false);
   const [isMetricsExpanded, setIsMetricsExpanded] = useState(false);
   const [selectedHistorySource, setSelectedHistorySource] = useState<HistorySource | null>(null);
@@ -277,6 +277,19 @@ function BrandDetailsScreen({
   const metrics = metricsSection ? sortRewardItems(metricsSection.items) : [];
   const historySources = details ? getHistorySources(details.history.groups.flatMap((group) => group.items)) : [];
   const metaText = details ? getBrandDetailsMetaText(details, productsSection, metricsSection) : 'Загрузка данных';
+  const availableTabs = useMemo(
+    () => getAvailableBrandDetailsTabs(productsSection, metricsSection),
+    [productsSection, metricsSection]
+  );
+  const selectedTab = availableTabs.some((tab) => tab.id === activeTab) ? activeTab : availableTabs[0].id;
+
+  useEffect(() => {
+    if (!details || availableTabs.some((tab) => tab.id === activeTab)) {
+      return;
+    }
+
+    setActiveTab(availableTabs[0].id);
+  }, [activeTab, availableTabs, details]);
 
   return (
     <div className="brand-detail-page">
@@ -308,38 +321,23 @@ function BrandDetailsScreen({
         <>
           <section className="brand-details-tabs-card">
             <div className="brand-details-tabs" role="tablist" aria-label="Разделы бренда">
-              <button
-                className={activeTab === 'products' ? 'brand-details-tabs__item brand-details-tabs__item--active' : 'brand-details-tabs__item'}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === 'products'}
-                onClick={() => setActiveTab('products')}
-              >
-                Товары
-              </button>
-              <button
-                className={activeTab === 'metrics' ? 'brand-details-tabs__item brand-details-tabs__item--active' : 'brand-details-tabs__item'}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === 'metrics'}
-                onClick={() => setActiveTab('metrics')}
-              >
-                Метрики
-              </button>
-              <button
-                className={activeTab === 'history' ? 'brand-details-tabs__item brand-details-tabs__item--active' : 'brand-details-tabs__item'}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === 'history'}
-                onClick={() => setActiveTab('history')}
-              >
-                История
-              </button>
+              {availableTabs.map((tab) => (
+                <button
+                  className={selectedTab === tab.id ? 'brand-details-tabs__item brand-details-tabs__item--active' : 'brand-details-tabs__item'}
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={selectedTab === tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </section>
 
           <section className="brand-details-content">
-            {activeTab === 'products' ? (
+            {selectedTab === 'products' ? (
               <RewardTab
                 emptyText="Пока нет товаров"
                 items={products}
@@ -348,7 +346,7 @@ function BrandDetailsScreen({
               />
             ) : null}
 
-            {activeTab === 'metrics' ? (
+            {selectedTab === 'metrics' ? (
               <RewardTab
                 emptyText="Пока нет метрик"
                 items={metrics}
@@ -357,7 +355,7 @@ function BrandDetailsScreen({
               />
             ) : null}
 
-            {activeTab === 'history' ? (
+            {selectedTab === 'history' ? (
               <HistoryTab
                 emptyText={details.history.emptyText || 'Пока нет операций'}
                 sources={historySources}
@@ -376,6 +374,30 @@ function BrandDetailsScreen({
 }
 
 type BrandDetailsTab = 'products' | 'metrics' | 'history';
+
+type BrandDetailsTabItem = {
+  id: BrandDetailsTab;
+  label: string;
+};
+
+function getAvailableBrandDetailsTabs(
+  productsSection: UserWalletBrandRewardSectionResponse | null,
+  metricsSection: UserWalletBrandRewardSectionResponse | null
+): BrandDetailsTabItem[] {
+  const tabs: BrandDetailsTabItem[] = [];
+
+  if (metricsSection) {
+    tabs.push({ id: 'metrics', label: 'Метрики' });
+  }
+
+  if (productsSection) {
+    tabs.push({ id: 'products', label: 'Товары' });
+  }
+
+  tabs.push({ id: 'history', label: 'История' });
+
+  return tabs;
+}
 
 type RewardTabProps = {
   emptyText: string;
