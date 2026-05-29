@@ -175,10 +175,14 @@ public class GetUserWalletBrandDetailsHandler
     {
         var sections = new List<UserWalletBrandRewardSectionResponse>();
 
-        if (isCoinsEnabled)
+        if (isCoinsEnabled && isCoinProductRedemptionEnabled)
         {
-            var items = isCoinProductRedemptionEnabled
-                ? products
+            sections.Add(new UserWalletBrandRewardSectionResponse(
+                "CoinProducts",
+                "Товары за монетки",
+                $"Монетки: {coinBalance}",
+                "Пока нет активных товаров.",
+                products
                     .OrderBy(product => product.Price)
                     .ThenBy(product => product.Name)
                     .Select(product =>
@@ -191,15 +195,7 @@ public class GetUserWalletBrandDetailsHandler
                             missingAmount == 0 ? "доступно" : $"не хватает {missingAmount}",
                             missingAmount == 0);
                     })
-                    .ToArray()
-                : Array.Empty<UserWalletBrandRewardItemResponse>();
-
-            sections.Add(new UserWalletBrandRewardSectionResponse(
-                "CoinProducts",
-                "Товары за монетки",
-                $"Монетки: {coinBalance}",
-                "Пока нет активных товаров.",
-                items));
+                    .ToArray()));
         }
 
         if (isMetricsEnabled)

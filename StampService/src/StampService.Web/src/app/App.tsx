@@ -71,6 +71,7 @@ function AppShell() {
   const auth = useAuth();
   const [activeSection, setActiveSection] = useState<ActiveSection>('wallet');
   const [walletHomeNavigationKey, setWalletHomeNavigationKey] = useState(0);
+  const [brandsHomeNavigationKey, setBrandsHomeNavigationKey] = useState(0);
   const [navigationAccess, setNavigationAccess] = useState<NavigationAccess>({
     brands: [],
     isAdmin: false
@@ -125,6 +126,10 @@ function AppShell() {
       setWalletHomeNavigationKey((currentKey) => currentKey + 1);
     }
 
+    if (section === 'brands') {
+      setBrandsHomeNavigationKey((currentKey) => currentKey + 1);
+    }
+
     setActiveSection(section);
   }
 
@@ -150,6 +155,7 @@ function AppShell() {
         {activeSection === 'wallet' ? <WalletPage homeNavigationKey={walletHomeNavigationKey} /> : null}
         {activeSection === 'brands' && navigationAccess.brands.length > 0 ? (
           <BrandWorkspacePage
+            homeNavigationKey={brandsHomeNavigationKey}
             initialBrands={navigationAccess.brands}
             initialBrandId={singleBrand?.brandId}
           />
