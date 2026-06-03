@@ -63,15 +63,15 @@ public class CreateBrandWithOwnerHandler : ICommandHandler<CreateBrandWithOwnerR
             return Result.Fail(brandResult.Errors);
 
         var brand = brandResult.Value;
-        var addBrandResult = await _brandRepository.AddAsync(brand, cancellationToken);
-        if (addBrandResult.IsFailed)
-            return Result.Fail(addBrandResult.Errors);
-
         var membershipResult = BrandMembership.Create(owner.Id, brand.Id, ownerRole.Id);
         if (membershipResult.IsFailed)
             return Result.Fail(membershipResult.Errors);
 
         var membership = membershipResult.Value;
+        var addBrandResult = _brandRepository.Add(brand);
+        if (addBrandResult.IsFailed)
+            return Result.Fail(addBrandResult.Errors);
+
         _brandMembershipRepository.Add(membership);
         await _brandMembershipRepository.SaveAsync(cancellationToken);
 

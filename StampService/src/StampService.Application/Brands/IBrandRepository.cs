@@ -5,6 +5,8 @@ namespace StampService.Application.Brands;
 
 public interface IBrandRepository
 {
+    Result<Guid> Add(Brand brand);
+
     Task<Result<Guid>> AddAsync(Brand brand, CancellationToken cancellationToken);
 
     Task<bool> ExistsAsync(Guid brandId, CancellationToken cancellationToken);

@@ -20,11 +20,16 @@ public class FakeBrandRepository : IBrandRepository
         _brands[brand.Id] = brand;
     }
 
-    public Task<Result<Guid>> AddAsync(Brand brand, CancellationToken cancellationToken)
+    public Result<Guid> Add(Brand brand)
     {
         _brandIds.Add(brand.Id);
         _brands[brand.Id] = brand;
-        return Task.FromResult(Result.Ok(brand.Id));
+        return Result.Ok(brand.Id);
+    }
+
+    public Task<Result<Guid>> AddAsync(Brand brand, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(Add(brand));
     }
 
     public Task<bool> ExistsAsync(Guid brandId, CancellationToken cancellationToken)

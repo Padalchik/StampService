@@ -16,9 +16,18 @@ public class BrandRepository : IBrandRepository
         _dbContext = dbContext;
     }
 
-    public async Task<Result<Guid>> AddAsync(Brand brand, CancellationToken cancellationToken)
+    public Result<Guid> Add(Brand brand)
     {
         _dbContext.Brands.Add(brand);
+        return Result.Ok(brand.Id);
+    }
+
+    public async Task<Result<Guid>> AddAsync(Brand brand, CancellationToken cancellationToken)
+    {
+        var addResult = Add(brand);
+        if (addResult.IsFailed)
+            return addResult;
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return Result.Ok(brand.Id);
