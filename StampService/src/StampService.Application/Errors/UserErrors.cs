@@ -25,6 +25,11 @@ public static class UserErrors
             AppErrorCodes.User.IdentityAlreadyLinked,
             "Identity is already linked to this user");
 
+    public static AppError IdentityNotLinked() =>
+        AppError.Conflict(
+            AppErrorCodes.User.IdentityNotLinked,
+            "Identity is not linked to this user");
+
     public static AppError IdentityLinkedToAnotherUser() =>
         AppError.Conflict(
             AppErrorCodes.User.IdentityLinkedToAnotherUser,

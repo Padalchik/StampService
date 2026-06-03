@@ -54,6 +54,24 @@ export function confirmPhoneLinkCode(
   });
 }
 
+export function requestPhoneChangeCode(phoneNumber: string): Promise<RequestPhoneLinkCodeResponse> {
+  return apiRequest<RequestPhoneLinkCodeResponse>('/api/users/me/phone/change/code', {
+    method: 'POST',
+    body: { phoneNumber }
+  });
+}
+
+export function confirmPhoneChangeCode(
+  phoneNumber: string,
+  code: string,
+  authCodeId: string
+): Promise<ConfirmPhoneLinkCodeResponse> {
+  return apiRequest<ConfirmPhoneLinkCodeResponse>('/api/users/me/phone/change/verify', {
+    method: 'POST',
+    body: { phoneNumber, code, authCodeId }
+  });
+}
+
 export function requestTelegramLink(): Promise<RequestTelegramLinkResponse> {
   return apiRequest<RequestTelegramLinkResponse>('/api/users/me/telegram/link', {
     method: 'POST'

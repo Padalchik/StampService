@@ -2,7 +2,9 @@ using FluentResults;
 using Microsoft.Extensions.Logging.Abstractions;
 using StampService.Application.Auth;
 using StampService.Application.Users;
+using StampService.Application.Users.Commands.ConfirmPhoneChangeCode;
 using StampService.Application.Users.Commands.ConfirmPhoneLinkCode;
+using StampService.Application.Users.Commands.RequestPhoneChangeCode;
 using StampService.Application.Users.Commands.RequestPhoneLinkCode;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.User;
@@ -126,6 +128,93 @@ public class PhoneLinkHandlerTests
         Assert.DoesNotContain(targetUser.Identities, identity => identity.Type == IdentityType.Phone && identity.Key == "+79991234567");
     }
 
+    [Fact]
+    public async Task ConfirmPhoneChange_WhenCodeIsValid_ShouldReplaceActivePhoneIdentity()
+    {
+        var fixture = CreateFixture();
+        var user = User.Create("phone-user").Value;
+        user.AddIdentity(IdentityType.Phone, "+79990000000", "{}");
+        user.AddIdentity(IdentityType.Telegram, "278225388", "{}");
+        fixture.Users.Add(user);
+
+        await fixture.RequestChangeHandler.Handle(
+            new RequestPhoneChangeCodeCommand(user.Id, "+79991234567"),
+            CancellationToken.None);
+
+        var result = await fixture.ConfirmChangeHandler.Handle(
+            new ConfirmPhoneChangeCodeCommand(user.Id, "+79991234567", "123456"),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("+7******4567", result.Value.MaskedPhoneNumber);
+        Assert.Contains(user.Identities, identity =>
+            identity.Type == IdentityType.Phone
+            && identity.Key == "+79990000000"
+            && identity.DeletedAt is not null);
+        Assert.Contains(user.Identities, identity =>
+            identity.Type == IdentityType.Phone
+            && identity.Key == "+79991234567"
+            && identity.DeletedAt is null);
+        Assert.Single(user.Identities.Where(identity =>
+            identity.Type == IdentityType.Phone
+            && identity.DeletedAt is null));
+        Assert.Contains(user.Identities, identity =>
+            identity.Type == IdentityType.Telegram
+            && identity.Key == "278225388"
+            && identity.DeletedAt is null);
+    }
+
+    [Fact]
+    public async Task RequestPhoneChange_WhenUserHasNoPhone_ShouldFail()
+    {
+        var fixture = CreateFixture();
+        var user = User.Create("telegram-user").Value;
+        user.AddIdentity(IdentityType.Telegram, "278225388", "{}");
+        fixture.Users.Add(user);
+
+        var result = await fixture.RequestChangeHandler.Handle(
+            new RequestPhoneChangeCodeCommand(user.Id, "+79991234567"),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Empty(fixture.Sender.SentCodes);
+    }
+
+    [Fact]
+    public async Task RequestPhoneChange_WhenPhoneBelongsToAnotherUser_ShouldFail()
+    {
+        var fixture = CreateFixture();
+        var user = User.Create("phone-user").Value;
+        user.AddIdentity(IdentityType.Phone, "+79990000000", "{}");
+        var anotherUser = User.Create("another-phone-user").Value;
+        anotherUser.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
+        fixture.Users.Add(user);
+        fixture.Users.Add(anotherUser);
+
+        var result = await fixture.RequestChangeHandler.Handle(
+            new RequestPhoneChangeCodeCommand(user.Id, "+79991234567"),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Empty(fixture.Sender.SentCodes);
+    }
+
+    [Fact]
+    public async Task RequestPhoneChange_WhenNewPhoneIsCurrentPhone_ShouldFail()
+    {
+        var fixture = CreateFixture();
+        var user = User.Create("phone-user").Value;
+        user.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
+        fixture.Users.Add(user);
+
+        var result = await fixture.RequestChangeHandler.Handle(
+            new RequestPhoneChangeCodeCommand(user.Id, "+79991234567"),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Empty(fixture.Sender.SentCodes);
+    }
+
     private static Fixture CreateFixture()
     {
         var now = new DateTimeOffset(2026, 5, 17, 10, 0, 0, TimeSpan.Zero);
@@ -150,7 +239,15 @@ public class PhoneLinkHandlerTests
             new ConfirmPhoneLinkCodeHandler(
                 users,
                 phoneAuthCodeService,
-                NullLogger<ConfirmPhoneLinkCodeHandler>.Instance));
+                NullLogger<ConfirmPhoneLinkCodeHandler>.Instance),
+            new RequestPhoneChangeCodeHandler(
+                users,
+                phoneAuthCodeService,
+                NullLogger<RequestPhoneChangeCodeHandler>.Instance),
+            new ConfirmPhoneChangeCodeHandler(
+                users,
+                phoneAuthCodeService,
+                NullLogger<ConfirmPhoneChangeCodeHandler>.Instance));
     }
 
     private sealed record Fixture(
@@ -158,7 +255,9 @@ public class PhoneLinkHandlerTests
         FakePhoneAuthCodeRepository PhoneCodes,
         FakePhoneAuthCodeSender Sender,
         RequestPhoneLinkCodeHandler RequestHandler,
-        ConfirmPhoneLinkCodeHandler ConfirmHandler);
+        ConfirmPhoneLinkCodeHandler ConfirmHandler,
+        RequestPhoneChangeCodeHandler RequestChangeHandler,
+        ConfirmPhoneChangeCodeHandler ConfirmChangeHandler);
 
     private sealed class FakePhoneAuthCodeRepository : IPhoneAuthCodeRepository
     {

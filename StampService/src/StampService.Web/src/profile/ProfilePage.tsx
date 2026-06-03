@@ -5,8 +5,10 @@ import { RuPhoneInput } from '../components/RuPhoneInput';
 import { formatRuPhoneInput, isRuPhoneInputComplete, normalizePhoneNumber } from '../validation/phoneNumber';
 import { formatRuTime } from '../format/dateTime';
 import {
+  confirmPhoneChangeCode,
   confirmPhoneLinkCode,
   getMyProfile,
+  requestPhoneChangeCode,
   requestPhoneLinkCode,
   requestTelegramLink,
   type MyProfileResponse
@@ -71,12 +73,15 @@ export function ProfilePage({ onSignOut }: { onSignOut: () => void }) {
         return;
       }
 
-      const response = await requestPhoneLinkCode(normalizedPhone.value);
+      const isChangingPhone = profile?.phone.linked === true;
+      const response = isChangingPhone
+        ? await requestPhoneChangeCode(normalizedPhone.value)
+        : await requestPhoneLinkCode(normalizedPhone.value);
       setPhoneNumber(formatRuPhoneInput(normalizedPhone.value));
       setPhoneAuthCodeId(response.authCodeId);
       setPhoneExpiresAt(response.expiresAtUtc);
       setPhoneStep('code');
-      setPhoneStatus('Код подтверждения отправлен.');
+      setPhoneStatus(isChangingPhone ? 'Код отправлен на новый номер.' : 'Код подтверждения отправлен.');
     } catch (requestError) {
       setPhoneError(getUserMessage(requestError));
     } finally {
@@ -91,10 +96,18 @@ export function ProfilePage({ onSignOut }: { onSignOut: () => void }) {
     setIsPhoneSubmitting(true);
 
     try {
-      const response = await confirmPhoneLinkCode(phoneNumber, phoneCode.trim(), phoneAuthCodeId);
-      setPhoneStatus(`Телефон привязан: ${response.maskedPhoneNumber}.`);
+      const isChangingPhone = profile?.phone.linked === true;
+      const response = isChangingPhone
+        ? await confirmPhoneChangeCode(phoneNumber, phoneCode.trim(), phoneAuthCodeId)
+        : await confirmPhoneLinkCode(phoneNumber, phoneCode.trim(), phoneAuthCodeId);
+      setPhoneStatus(
+        isChangingPhone
+          ? `Телефон изменён: ${response.maskedPhoneNumber}.`
+          : `Телефон привязан: ${response.maskedPhoneNumber}.`
+      );
       setPhoneStep('idle');
       setPhoneCode('');
+      setPhoneNumber(formatRuPhoneInput(''));
       await loadProfile();
     } catch (requestError) {
       setPhoneError(getUserMessage(requestError));
@@ -161,16 +174,19 @@ export function ProfilePage({ onSignOut }: { onSignOut: () => void }) {
       </section>
 
       <section className="profile-actions-grid">
-        {!profile?.phone.linked ? (
+        {profile ? (
         <div className="surface-panel profile-action-panel">
           <div className="section-heading">
             <Phone size={22} />
-            <h2>Привязать телефон</h2>
+            <h2>{profile.phone.linked ? 'Изменить телефон' : 'Привязать телефон'}</h2>
           </div>
 
           {phoneStep === 'idle' ? (
             <form className="auth-form" onSubmit={handleRequestPhoneCode}>
-              <label htmlFor="profilePhone">Телефон</label>
+              {profile.phone.linked ? (
+                <p className="muted-text">Текущий номер: {profile.phone.value ?? 'привязан'}</p>
+              ) : null}
+              <label htmlFor="profilePhone">{profile.phone.linked ? 'Новый телефон' : 'Телефон'}</label>
               <RuPhoneInput
                 id="profilePhone"
                 value={phoneNumber}
@@ -298,6 +314,14 @@ function getUserMessage(error: unknown): string {
 
     if (error.errors.some((item) => item.code === 'user.identity_linked_to_another_user')) {
       return 'Этот способ входа уже привязан к другому пользователю.';
+    }
+
+    if (error.errors.some((item) => item.code === 'user.identity_already_linked')) {
+      return 'Этот номер уже привязан к вашему профилю.';
+    }
+
+    if (error.errors.some((item) => item.code === 'user.identity_not_linked')) {
+      return 'Сначала привяжите телефон к профилю.';
     }
 
     if (error.errors.some((item) => item.code === 'user.telegram_identity_not_linked')) {

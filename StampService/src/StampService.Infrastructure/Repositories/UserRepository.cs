@@ -87,6 +87,15 @@ public class UserRepository : IUserRepository
         {
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation
+        })
+        {
+            throw new ConcurrencyConflictException(
+                "User changes conflicted with another operation.",
+                ex);
+        }
         catch (DbUpdateConcurrencyException ex)
         {
             throw new ConcurrencyConflictException(
