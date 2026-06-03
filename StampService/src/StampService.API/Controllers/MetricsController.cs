@@ -135,25 +135,6 @@ public class MetricsController : ApiControllerBase
             cancellationToken);
     }
 
-    [HttpPost("metrics/{metricDefinitionId:guid}/issue")]
-    public async Task<EndpointResult<IssueMetricResponse>> Issue(
-        Guid metricDefinitionId,
-        IssueMetricRequest request,
-        [FromServices] ICommandHandler<IssueMetricResponse, IssueMetricCommand> handler,
-        CancellationToken cancellationToken)
-    {
-        var userIdResult = GetUserId();
-        if (userIdResult.IsFailed)
-            return userIdResult.ToResult<IssueMetricResponse>();
-
-        var command = new IssueMetricCommand(
-            metricDefinitionId,
-            userIdResult.Value,
-            request);
-
-        return await handler.Handle(command, cancellationToken);
-    }
-
     [HttpPost("metrics/{metricDefinitionId:guid}/issue-by-phone")]
     public async Task<EndpointResult<IssueMetricResponse>> IssueByPhone(
         Guid metricDefinitionId,
