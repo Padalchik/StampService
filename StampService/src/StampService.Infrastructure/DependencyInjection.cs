@@ -8,6 +8,7 @@ using StampService.Application.CoinProducts;
 using StampService.Application.Coins;
 using StampService.Application.CustomerNotifications;
 using StampService.Application.Demo;
+using StampService.Application.Ledger;
 using StampService.Application.Metrics;
 using StampService.Application.Users;
 using StampService.Infrastructure;
@@ -47,6 +48,7 @@ public static class DependencyInjection
         services.AddSingleton<HttpClient>();
         services.AddScoped<IPhoneAuthCodeSender, TelegramAdminPhoneAuthCodeSender>();
         services.AddScoped<StampService.Application.CustomerNotifications.ICustomerNotificationService, TelegramCustomerNotificationService>();
+        services.AddScoped<ILedgerOperationLock, PostgresLedgerOperationLock>();
         services.AddScoped<ITelegramLinkSessionProtector, CompactTelegramLinkSessionProtector>();
 
         return services;

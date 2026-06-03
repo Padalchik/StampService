@@ -1,5 +1,6 @@
 using FluentResults;
 using StampService.Application.Errors;
+using StampService.Application.Ledger;
 using StampService.Domain.Coins;
 
 namespace StampService.Application.Coins;
@@ -8,16 +9,49 @@ public class CoinLedgerService : ICoinLedgerService
 {
     private readonly ICoinWalletRepository _coinWalletRepository;
     private readonly ICoinTransactionRepository _coinTransactionRepository;
+    private readonly ILedgerOperationLock _ledgerOperationLock;
 
     public CoinLedgerService(
         ICoinWalletRepository coinWalletRepository,
-        ICoinTransactionRepository coinTransactionRepository)
+        ICoinTransactionRepository coinTransactionRepository,
+        ILedgerOperationLock? ledgerOperationLock = null)
     {
         _coinWalletRepository = coinWalletRepository;
         _coinTransactionRepository = coinTransactionRepository;
+        _ledgerOperationLock = ledgerOperationLock ?? NoopLedgerOperationLock.Instance;
     }
 
     public async Task<Result<CoinLedgerOperation>> IssueAsync(
+        Guid userId,
+        Guid actorUserId,
+        Guid brandId,
+        int amount,
+        string comment,
+        CancellationToken cancellationToken)
+    {
+        return await _ledgerOperationLock.ExecuteWithCoinWalletLockAsync(
+            userId,
+            brandId,
+            ct => IssueCoreAsync(userId, actorUserId, brandId, amount, comment, ct),
+            cancellationToken);
+    }
+
+    public async Task<Result<CoinLedgerOperation>> RedeemAsync(
+        Guid userId,
+        Guid actorUserId,
+        Guid brandId,
+        int amount,
+        string comment,
+        CancellationToken cancellationToken)
+    {
+        return await _ledgerOperationLock.ExecuteWithCoinWalletLockAsync(
+            userId,
+            brandId,
+            ct => RedeemCoreAsync(userId, actorUserId, brandId, amount, comment, ct),
+            cancellationToken);
+    }
+
+    private async Task<Result<CoinLedgerOperation>> IssueCoreAsync(
         Guid userId,
         Guid actorUserId,
         Guid brandId,
@@ -65,7 +99,7 @@ public class CoinLedgerService : ICoinLedgerService
         return Result.Ok(new CoinLedgerOperation(wallet, transaction));
     }
 
-    public async Task<Result<CoinLedgerOperation>> RedeemAsync(
+    private async Task<Result<CoinLedgerOperation>> RedeemCoreAsync(
         Guid userId,
         Guid actorUserId,
         Guid brandId,

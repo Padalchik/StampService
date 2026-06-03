@@ -5,6 +5,7 @@ using StampService.Application.Administration;
 using StampService.Application.Auth;
 using StampService.Application.Coins;
 using StampService.Application.CustomerNotifications;
+using StampService.Application.Ledger;
 using StampService.Application.Metrics;
 using StampService.Application.Metrics.Commands.RedeemMetric;
 using StampService.Application.Services;
@@ -42,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IPhoneAccountService, PhoneAccountService>();
         services.AddScoped<IRedemptionCodeGenerator, RedemptionCodeGenerator>();
         services.AddScoped<ICustomerNotificationService>(_ => NullCustomerNotificationService.Instance);
+        services.AddScoped<ILedgerOperationLock>(_ => NoopLedgerOperationLock.Instance);
         services.AddSingleton(TimeProvider.System);
 
         return services;
