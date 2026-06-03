@@ -1,6 +1,6 @@
 # StampService Web UI: рабочие договорённости
 
-Актуально на 2026-05-25, Europe/Moscow.
+Актуально на 2026-06-03, Europe/Moscow.
 
 Этот файл фиксирует договорённости по разработке полноценного web-интерфейса StampService, чтобы не переобсуждать базовые решения в новых задачах.
 
@@ -71,9 +71,9 @@ Web UI должен быть полноценным frontend-проектом н
 - React;
 - TypeScript;
 - нормальная структура приложения: роутинг, API-клиент, auth state, layout, страницы, общие компоненты;
-- не развивать текущий `wwwroot/app.html` как основную долгосрочную web-поверхность.
+- не развивать static `wwwroot`-страницы как web-поверхность.
 
-Текущий static web UI в `src/StampService.API/wwwroot` можно использовать как справочный/временный прототип, но не как целевую архитектуру web-приложения.
+Старые static/prototype web surfaces в `src/StampService.API/wwwroot` удалены из целевой архитектуры. Маршруты `/app`, `/phone-auth-test` и `/design-variants` не являются рабочими web-сценариями и не должны восстанавливаться без отдельной причины. Новые web-задачи развиваются в `src/StampService.Web` как React/TypeScript app поверх typed API clients.
 
 ## Визуальный стиль
 
@@ -267,6 +267,8 @@ Web API/types для этих операций должны оставаться
 - `POST /api/brands/{brandId}/staff/by-phone`;
 - `DELETE /api/brands/{brandId}/staff/{staffUserId}`;
 - `PUT /api/brands/{brandId}/reward-settings`.
+
+Старые endpoints без phone-first модели не являются частью web-контракта: `POST /api/brands/{brandId}/staff` и `POST /api/metrics/{metricDefinitionId}/issue` удалены. Web должен использовать `staff/by-phone` и `issue-by-phone`, а не пытаться передавать внутренний `UserId` клиента/сотрудника как пользовательский ввод.
 
 Ключевые frontend места:
 
@@ -477,6 +479,7 @@ Web-админка работает через `src/StampService.Web/src/admin/A
 
 - web не создает владельца автоматически;
 - телефон владельца должен принадлежать существующему phone-first пользователю;
+- создание бренда с владельцем должно быть атомарным на уровне persistence: frontend вызывает один API-сценарий, Application создает `Brand` и owner `BrandMembership`, а Infrastructure сохраняет их одним `SaveChanges`, чтобы не появлялся бренд без владельца;
 - frontend только собирает ввод и показывает результат, бизнес-проверки остаются в Application.
 
 ## Web: demo-раздел админки
@@ -511,6 +514,8 @@ Application use cases:
 ## Web: статус UI-библиотек
 
 Экспериментальная интеграция HeroUI удалена. Web UI больше не содержит альтернативных HeroUI-экранов для входа, профиля и кошелька, отдельного маршрута `/login-heroui`, переключателей версий в заголовках разделов, HeroUI/Tailwind-зависимостей и изолированных `heroui-*` CSS-правил.
+
+Отдельная страница `/design-variants` также удалена. Дизайн-эксперименты не должны жить как параллельные маршруты с копиями рабочих экранов; если нужен новый визуальный подход, его нужно вводить через локальные компоненты/стили основного приложения и согласованный UI layer.
 
 Текущее правило развития интерфейса:
 
