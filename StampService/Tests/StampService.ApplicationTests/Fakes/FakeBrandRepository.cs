@@ -9,6 +9,8 @@ public class FakeBrandRepository : IBrandRepository
     private readonly HashSet<Guid> _brandIds = [];
     private readonly Dictionary<Guid, Brand> _brands = [];
 
+    public int SaveCount { get; private set; }
+
     public void AddExisting(Guid brandId)
     {
         _brandIds.Add(brandId);
@@ -63,6 +65,7 @@ public class FakeBrandRepository : IBrandRepository
 
     public Task SaveAsync(CancellationToken cancellationToken)
     {
+        SaveCount++;
         return Task.CompletedTask;
     }
 }

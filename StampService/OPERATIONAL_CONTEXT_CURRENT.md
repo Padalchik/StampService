@@ -15,6 +15,7 @@
 - Не откатывать чужие изменения в рабочем дереве без явного разрешения.
 - Миграции EF не писать вручную: создавать через `dotnet ef migrations add`.
 - Не превращать проект в микросервисы без отдельного архитектурного решения.
+- При запуске тестов через debugger учитывать first-chance exceptions: `RedemptionCodeGeneratorTests.GenerateAsync_WhenAllCombinationsAreReserved_ShouldThrow` ожидаемо бросает `InvalidOperationException` внутри `Assert.ThrowsAsync`. Это не падение теста, если обычный `dotnet test` проходит.
 
 ## Назначение проекта
 
@@ -123,6 +124,8 @@ Auto-create клиента по телефону применяется толь
 `CreateBrandWithOwnerHandler` должен создавать бренд и owner membership как один логический persistence unit. Репозиторий брендов имеет staging-метод `Add(Brand)` с `Result<Guid>` без немедленного сохранения; handler добавляет `Brand`, добавляет `BrandMembership` и выполняет один общий `SaveAsync`. Это сделано, чтобы не оставлять бренд без владельца при ошибке между двумя сохранениями.
 
 Общая договоренность по repository write style: staging methods (`Add`, `Remove`, domain mutators над tracked entity) не должны сами вызывать `SaveChanges`; save boundary задает Application handler/service через явный `SaveAsync`. Старый `IBrandRepository.AddAsync` удален, demo-brand creation тоже переведен на staged `Add` для бренда, owner membership, метрик и товаров с одним `SaveAsync` в конце. Если нужен метод, который одновременно создает и сохраняет, его следует вводить как явно named use-case/repository operation, а не как обычный `AddAsync`.
+
+Тестовое покрытие этой договоренности обновлено: fake repositories в ApplicationTests имеют `SaveCount`, `CreateBrandWithOwner` фиксирует отсутствие отдельного save у `BrandRepository`, а `CreateDemoBrandsHandlerTests` фиксирует staged-создание demo brands с одним общим save boundary. Это не EF integration test, а Application-level защита от возврата к смешанному `AddAsync`/`SaveAsync` стилю.
 
 Публичные пользовательские поверхности также переведены с `CustomerCode` на phone-first модель. Профиль и кошелек в Web/Telegram больше не возвращают и не показывают 4-значный код пользователя; профиль показывает имя и статусы identity, где телефон является основной клиентской identity. Кошелек использует одноразовый `RedemptionCode` для операций списания и overview брендов с балансами/доступными наградами. API по-прежнему может возвращать срок действия кода, но основной web-экран не делает его главным UI-элементом. `RedemptionCode` остается отдельным операционным подтверждением и не заменяет телефон как внешний идентификатор клиента.
 
@@ -333,6 +336,8 @@ Outbox сейчас не вводился. Текущая модель - direct 
 Демо-инструменты нужны для подготовки стенда и проверки UX. Они должны использовать доменные/Application-сценарии, а не обходить правила прямыми business insert/update.
 
 Создание пользовательских демо-данных также переведено на phone-first модель. `CreateUserDemoDataCommand` принимает телефон пользователя, Application нормализует номер и ищет существующего `User` по активной `Phone` identity. Auto-create здесь не выполняется: демо-данные накатываются только на уже существующий телефонный аккаунт. Telegram admin demo-flow больше не просит `CustomerCode`; он собирает телефон, бренд и затем создает товары, метрики, балансы и историю через ledger/Application-сервисы.
+
+`CreateDemoBrandsCommand` создает демо-бренды для текущего администратора без отдельного persistence step на каждый бренд: Application выбирает до 5 отсутствующих шаблонов, создает `Brand`, owner `BrandMembership`, метрики и товары как staged entities и сохраняет их одним `SaveAsync`. Это стендовый admin-flow, но он следует тем же save-boundary правилам, что и обычное создание бренда с владельцем.
 
 Полный reset БД допустим только как явный админский/инфраструктурный сценарий с подтверждением.
 

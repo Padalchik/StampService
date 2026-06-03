@@ -14,6 +14,8 @@ public class FakeBrandMembershipRepository : IBrandMembershipRepository
         [SystemRoles.Staff] = Role.Create(SystemRoles.Staff, "Staff").Value
     };
 
+    public int SaveCount { get; private set; }
+
     public void SetRole(Guid userId, Guid brandId, string roleSystemName, string? brandName = null)
     {
         var role = GetKnownRole(roleSystemName);
@@ -118,6 +120,7 @@ public class FakeBrandMembershipRepository : IBrandMembershipRepository
 
     public Task SaveAsync(CancellationToken cancellationToken)
     {
+        SaveCount++;
         return Task.CompletedTask;
     }
 
