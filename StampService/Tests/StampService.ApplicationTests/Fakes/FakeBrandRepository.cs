@@ -27,11 +27,6 @@ public class FakeBrandRepository : IBrandRepository
         return Result.Ok(brand.Id);
     }
 
-    public Task<Result<Guid>> AddAsync(Brand brand, CancellationToken cancellationToken)
-    {
-        return Task.FromResult(Add(brand));
-    }
-
     public Task<bool> ExistsAsync(Guid brandId, CancellationToken cancellationToken)
     {
         return Task.FromResult(_brandIds.Contains(brandId));
