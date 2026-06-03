@@ -102,6 +102,7 @@ public class MetricLedgerService : IMetricLedgerService
                 return Result.Fail(syncResult.Errors);
         }
 
+        var balanceBefore = balance.Value;
         var transactionResult = StampTransaction.CreateIssue(balance.Id, amount, comment, actorUserId);
         if (transactionResult.IsFailed)
             return Result.Fail(transactionResult.Errors);
@@ -114,7 +115,7 @@ public class MetricLedgerService : IMetricLedgerService
         _stampTransactionRepository.Add(transaction);
         await _stampTransactionRepository.SaveAsync(cancellationToken);
 
-        return Result.Ok(new MetricLedgerOperation(balance, transaction));
+        return Result.Ok(new MetricLedgerOperation(balance, transaction, balanceBefore, balance.Value));
     }
 
     private async Task<Result<MetricLedgerOperation>> RedeemCoreAsync(
@@ -139,6 +140,7 @@ public class MetricLedgerService : IMetricLedgerService
         if (syncResult.IsFailed)
             return Result.Fail(syncResult.Errors);
 
+        var balanceBefore = balance.Value;
         var transactionResult = StampTransaction.CreateRedeem(balance.Id, amount, comment, actorUserId);
         if (transactionResult.IsFailed)
             return Result.Fail(transactionResult.Errors);
@@ -151,7 +153,7 @@ public class MetricLedgerService : IMetricLedgerService
         _stampTransactionRepository.Add(transaction);
         await _stampTransactionRepository.SaveAsync(cancellationToken);
 
-        return Result.Ok(new MetricLedgerOperation(balance, transaction));
+        return Result.Ok(new MetricLedgerOperation(balance, transaction, balanceBefore, balance.Value));
     }
 
     private async Task<Result<int>> RecalculateMetricBalanceCoreAsync(

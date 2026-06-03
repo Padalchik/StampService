@@ -4,4 +4,6 @@ namespace StampService.Application.Metrics;
 
 public record MetricLedgerOperation(
     MetricBalance Balance,
-    StampTransaction Transaction);
+    StampTransaction Transaction,
+    int BalanceBefore,
+    int BalanceAfter);

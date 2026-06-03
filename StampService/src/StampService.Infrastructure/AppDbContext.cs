@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using StampService.Domain.Access;
+using StampService.Domain.Audit;
 using StampService.Domain.Brand;
 using StampService.Domain.Coins;
 using StampService.Domain.CustomerNotifications;
@@ -47,6 +48,9 @@ public class AppDbContext : DbContext
     // Brand
     public DbSet<Brand> Brands => Set<Brand>();
     public DbSet<Location> Locations => Set<Location>();
+
+    // Audit
+    public DbSet<BusinessAuditLog> BusinessAuditLogs => Set<BusinessAuditLog>();
 
     // Access
     public DbSet<Role> Roles => Set<Role>();

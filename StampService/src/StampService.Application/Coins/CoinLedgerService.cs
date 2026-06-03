@@ -81,6 +81,7 @@ public class CoinLedgerService : ICoinLedgerService
                 return Result.Fail(syncResult.Errors);
         }
 
+        var balanceBefore = wallet.Value;
         var transactionResult = CoinTransaction.CreateIssue(wallet.Id, amount, comment, actorUserId);
         if (transactionResult.IsFailed)
             return Result.Fail(transactionResult.Errors);
@@ -96,7 +97,7 @@ public class CoinLedgerService : ICoinLedgerService
         _coinTransactionRepository.Add(transaction);
         await _coinTransactionRepository.SaveAsync(cancellationToken);
 
-        return Result.Ok(new CoinLedgerOperation(wallet, transaction));
+        return Result.Ok(new CoinLedgerOperation(wallet, transaction, balanceBefore, wallet.Value));
     }
 
     private async Task<Result<CoinLedgerOperation>> RedeemCoreAsync(
@@ -122,6 +123,7 @@ public class CoinLedgerService : ICoinLedgerService
         if (wallet.Value < amount)
             return Result.Fail(CoinErrors.InsufficientFunds(wallet.Value, amount));
 
+        var balanceBefore = wallet.Value;
         var transactionResult = CoinTransaction.CreateRedeem(wallet.Id, amount, comment, actorUserId);
         if (transactionResult.IsFailed)
             return Result.Fail(transactionResult.Errors);
@@ -134,7 +136,7 @@ public class CoinLedgerService : ICoinLedgerService
         _coinTransactionRepository.Add(transaction);
         await _coinTransactionRepository.SaveAsync(cancellationToken);
 
-        return Result.Ok(new CoinLedgerOperation(wallet, transaction));
+        return Result.Ok(new CoinLedgerOperation(wallet, transaction, balanceBefore, wallet.Value));
     }
 
     private async Task<Result> SynchronizeMaterializedWalletAsync(

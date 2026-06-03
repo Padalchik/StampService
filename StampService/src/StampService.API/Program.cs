@@ -1,10 +1,13 @@
+using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
+using StampService.API.Audit;
 using StampService.API.Extensions;
 using StampService.API.Middlewares;
 using StampService.Application;
 using StampService.Application.Administration;
+using StampService.Application.Audit;
 using StampService.Application.Services;
 using StampService.Infrastructure;
 using StampService.Infrastructure.Seeding;
@@ -47,6 +50,7 @@ try
     }
 
     builder.Services.AddControllers();
+    builder.Services.AddHttpContextAccessor();
     builder.Services.AddApiOpenApi();
     builder.Services.AddJwtAuthentication(builder.Configuration);
     builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("Admin"));
@@ -54,6 +58,7 @@ try
 
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddScoped<IBusinessAuditContext, HttpBusinessAuditContext>();
 
     var app = builder.Build();
 
@@ -85,11 +90,29 @@ try
         await RoleSeeder.SeedSystemRolesAsync(dbContext);
     }
 
+    app.UseCorrelationId();
+
     app.UseSerilogRequestLogging(options =>
     {
         options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
         {
             diagnosticContext.Set("TraceId", httpContext.TraceIdentifier);
+            if (httpContext.Items.TryGetValue(CorrelationIdMiddleware.ItemName, out var correlationId)
+                && correlationId is string correlationIdValue)
+            {
+                diagnosticContext.Set("CorrelationId", correlationIdValue);
+            }
+
+            var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrWhiteSpace(userId))
+                diagnosticContext.Set("UserId", userId);
+
+            if (httpContext.Request.RouteValues.TryGetValue("brandId", out var brandId)
+                && brandId is not null)
+            {
+                diagnosticContext.Set("BrandId", brandId.ToString());
+            }
+
             diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
             diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
         };

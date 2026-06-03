@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StampService.Application.Access;
+using StampService.Application.Audit;
 using StampService.Application.Auth;
 using StampService.Application.Brands;
 using StampService.Application.CoinProducts;
@@ -42,6 +43,8 @@ public static class DependencyInjection
         services.AddScoped<ICustomerDigestStateRepository, CustomerDigestStateRepository>();
         services.AddScoped<ICustomerRewardDigestRepository, CustomerRewardDigestRepository>();
         services.AddScoped<IRewardDigestSettingsRepository, RewardDigestSettingsRepository>();
+        services.AddScoped<IBusinessAuditLogRepository, BusinessAuditLogRepository>();
+        services.AddScoped<IBusinessAuditSink, BusinessAuditSink>();
         services.AddScoped<IDemoDatabaseResetService, DemoDatabaseResetService>();
         services.AddScoped<IPhoneAuthCodeRepository, PhoneAuthCodeRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
