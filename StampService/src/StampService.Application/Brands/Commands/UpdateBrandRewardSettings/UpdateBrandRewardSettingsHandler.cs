@@ -1,6 +1,7 @@
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Audit;
 using StampService.Application.Errors;
 using StampService.Contracts.DTOs.Brands;
 using StampService.Domain.Access;
@@ -11,13 +12,16 @@ public class UpdateBrandRewardSettingsHandler : ICommandHandler<UpdateBrandRespo
 {
     private readonly IBrandAccessService _brandAccessService;
     private readonly IBrandRepository _brandRepository;
+    private readonly IBusinessAuditSink _businessAuditSink;
 
     public UpdateBrandRewardSettingsHandler(
         IBrandAccessService brandAccessService,
-        IBrandRepository brandRepository)
+        IBrandRepository brandRepository,
+        IBusinessAuditSink? businessAuditSink = null)
     {
         _brandAccessService = brandAccessService;
         _brandRepository = brandRepository;
+        _businessAuditSink = businessAuditSink ?? NoopBusinessAuditSink.Instance;
     }
 
     public async Task<Result<UpdateBrandResponse>> Handle(
@@ -25,10 +29,10 @@ public class UpdateBrandRewardSettingsHandler : ICommandHandler<UpdateBrandRespo
         CancellationToken cancellationToken)
     {
         if (command.ActorUserId == Guid.Empty)
-            return Result.Fail(UserErrors.IdIsEmpty());
+            return await RejectedAsync(command, [UserErrors.IdIsEmpty()], cancellationToken);
 
         if (command.BrandId == Guid.Empty)
-            return Result.Fail(BrandErrors.IdIsEmpty());
+            return await RejectedAsync(command, [BrandErrors.IdIsEmpty()], cancellationToken);
 
         var canManageBrand = await _brandAccessService.CanAsync(
             command.ActorUserId,
@@ -37,11 +41,11 @@ public class UpdateBrandRewardSettingsHandler : ICommandHandler<UpdateBrandRespo
             cancellationToken);
 
         if (!canManageBrand)
-            return Result.Fail(AccessErrors.Denied());
+            return await RejectedAsync(command, [AccessErrors.Denied()], cancellationToken);
 
         var brand = await _brandRepository.GetByIdForUpdateAsync(command.BrandId, cancellationToken);
         if (brand is null)
-            return Result.Fail(BrandErrors.NotFound());
+            return await RejectedAsync(command, [BrandErrors.NotFound()], cancellationToken);
 
         var updateResult = brand.UpdateDetails(
             brand.Name,
@@ -51,9 +55,19 @@ public class UpdateBrandRewardSettingsHandler : ICommandHandler<UpdateBrandRespo
             command.IsManualCoinRedemptionEnabled);
 
         if (updateResult.IsFailed)
-            return Result.Fail(updateResult.Errors);
+            return await RejectedAsync(command, updateResult.Errors, cancellationToken);
 
         await _brandRepository.SaveAsync(cancellationToken);
+        await _businessAuditSink.RecordAsync(
+            new BusinessAuditEvent(
+                BusinessAuditOperationType.UpdateRewardSettings,
+                BusinessAuditOperationStatus.Succeeded,
+                BrandId: command.BrandId,
+                ActorUserId: command.ActorUserId,
+                TargetEntityType: BusinessAuditTargetEntityType.Brand,
+                TargetEntityId: brand.Id,
+                Metadata: CreateSettingsMetadata(command)),
+            cancellationToken);
 
         return Result.Ok(new UpdateBrandResponse(
             brand.Id,
@@ -63,5 +77,37 @@ public class UpdateBrandRewardSettingsHandler : ICommandHandler<UpdateBrandRespo
             brand.IsCoinProductRedemptionEnabled,
             brand.IsManualCoinRedemptionEnabled,
             brand.UpdatedAt));
+    }
+
+    private async Task<Result<UpdateBrandResponse>> RejectedAsync(
+        UpdateBrandRewardSettingsCommand command,
+        IReadOnlyCollection<IError> errors,
+        CancellationToken cancellationToken)
+    {
+        await _businessAuditSink.RecordAsync(
+            new BusinessAuditEvent(
+                BusinessAuditOperationType.UpdateRewardSettings,
+                BusinessAuditOperationStatus.Rejected,
+                BrandId: command.BrandId == Guid.Empty ? null : command.BrandId,
+                ActorUserId: command.ActorUserId == Guid.Empty ? null : command.ActorUserId,
+                TargetEntityType: BusinessAuditTargetEntityType.Brand,
+                TargetEntityId: command.BrandId == Guid.Empty ? null : command.BrandId,
+                ReasonCode: BusinessAuditReason.FromErrors(errors),
+                Metadata: CreateSettingsMetadata(command)),
+            cancellationToken);
+
+        return Result.Fail(errors);
+    }
+
+    private static IReadOnlyDictionary<string, object?> CreateSettingsMetadata(
+        UpdateBrandRewardSettingsCommand command)
+    {
+        return new Dictionary<string, object?>
+        {
+            ["isMetricsEnabled"] = command.IsMetricsEnabled,
+            ["isCoinsEnabled"] = command.IsCoinsEnabled,
+            ["isCoinProductRedemptionEnabled"] = command.IsCoinProductRedemptionEnabled,
+            ["isManualCoinRedemptionEnabled"] = command.IsManualCoinRedemptionEnabled
+        };
     }
 }

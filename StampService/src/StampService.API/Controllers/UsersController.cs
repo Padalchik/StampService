@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StampService.API.EndpointResults;
 using StampService.Application.Abstractions;
+using StampService.Application.Users.Commands.ConfirmPhoneChangeCode;
 using StampService.Application.Users.Commands.ConfirmPhoneLinkCode;
 using StampService.Application.Users.Commands.ConfirmTelegramLink;
 using StampService.Application.Users.Commands.CreateRedemptionCode;
+using StampService.Application.Users.Commands.RequestPhoneChangeCode;
 using StampService.Application.Users.Commands.RequestPhoneLinkCode;
 using StampService.Application.Users.Commands.RequestTelegramLink;
 using StampService.Application.Users.Queries.GetMyProfile;
@@ -72,6 +74,40 @@ public class UsersController : ApiControllerBase
 
         return await handler.Handle(
             new ConfirmPhoneLinkCodeCommand(
+                userIdResult.Value,
+                request.PhoneNumber,
+                request.Code,
+                request.AuthCodeId),
+            cancellationToken);
+    }
+
+    [HttpPost("me/phone/change/code")]
+    public async Task<EndpointResult<RequestPhoneLinkCodeResponse>> RequestPhoneChangeCode(
+        RequestPhoneLinkCodeRequest request,
+        [FromServices] ICommandHandler<RequestPhoneLinkCodeResponse, RequestPhoneChangeCodeCommand> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<RequestPhoneLinkCodeResponse>();
+
+        return await handler.Handle(
+            new RequestPhoneChangeCodeCommand(userIdResult.Value, request.PhoneNumber),
+            cancellationToken);
+    }
+
+    [HttpPost("me/phone/change/verify")]
+    public async Task<EndpointResult<ConfirmPhoneLinkCodeResponse>> ConfirmPhoneChangeCode(
+        ConfirmPhoneLinkCodeRequest request,
+        [FromServices] ICommandHandler<ConfirmPhoneLinkCodeResponse, ConfirmPhoneChangeCodeCommand> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<ConfirmPhoneLinkCodeResponse>();
+
+        return await handler.Handle(
+            new ConfirmPhoneChangeCodeCommand(
                 userIdResult.Value,
                 request.PhoneNumber,
                 request.Code,

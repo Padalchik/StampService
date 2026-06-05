@@ -7,7 +7,6 @@ import { AuthProvider, useAuth } from '../auth/AuthContext';
 import { PhoneLoginPage } from '../auth/PhoneLoginPage';
 import { BrandWorkspacePage } from '../brands/BrandWorkspacePage';
 import { getMyBrands, type MyBrandResponse } from '../brands/brandWorkspaceApi';
-import { DesignVariantsPage } from '../design/DesignVariantsPage';
 import { ProfilePage } from '../profile/ProfilePage';
 import { WalletPage } from '../wallet/WalletPage';
 import { navigationLabels } from './navigationLabels';
@@ -31,7 +30,6 @@ export function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/design-variants" element={<DesignVariantsPage />} />
           <Route path="/login" element={<LoginRoute />} />
           <Route
             path="/*"

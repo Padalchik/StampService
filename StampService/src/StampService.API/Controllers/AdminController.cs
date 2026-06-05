@@ -4,12 +4,14 @@ using FluentResults;
 using StampService.API.EndpointResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Administration;
+using StampService.Application.Audit.Queries.GetBusinessAuditLogs;
 using StampService.Application.Brands.Commands.CreateBrandWithOwner;
 using StampService.Application.Brands.Commands.ReassignBrandOwner;
 using StampService.Application.Brands.Queries.GetAdminBrands;
 using StampService.Application.Demo.Commands.CreateDemoBrands;
 using StampService.Application.Demo.Commands.CreateUserDemoData;
 using StampService.Application.Demo.Commands.ResetDemoDatabase;
+using StampService.Contracts.DTOs.Audit;
 using StampService.Contracts.DTOs.Brands;
 using StampService.Contracts.DTOs.Demo;
 
@@ -47,6 +49,37 @@ public class AdminController : ApiControllerBase
 
         return await handler.Handle(
             new GetAdminBrandsQuery(AdminActor.FromUser(userIdResult.Value)),
+            cancellationToken);
+    }
+
+    [HttpGet("audit-logs")]
+    public async Task<EndpointResult<BusinessAuditLogsResponse>> GetAuditLogs(
+        [FromQuery] DateTime? occurredFromUtc,
+        [FromQuery] DateTime? occurredToUtc,
+        [FromQuery] Guid? brandId,
+        [FromQuery] string? customerPhoneNumber,
+        [FromQuery] string? actorName,
+        [FromQuery] string? operationType,
+        [FromQuery] string? operationStatus,
+        [FromQuery] int? take,
+        [FromServices] IQueryHandler<BusinessAuditLogsResponse, GetBusinessAuditLogsQuery> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<BusinessAuditLogsResponse>();
+
+        return await handler.Handle(
+            new GetBusinessAuditLogsQuery(
+                AdminActor.FromUser(userIdResult.Value),
+                occurredFromUtc,
+                occurredToUtc,
+                brandId,
+                customerPhoneNumber,
+                actorName,
+                operationType,
+                operationStatus,
+                take ?? 50),
             cancellationToken);
     }
 

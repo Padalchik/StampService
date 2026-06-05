@@ -54,6 +54,7 @@ public static class BotErrorFormatter
             AppErrorCodes.RedemptionCode.AlreadyUsed => "код списания уже использован",
             AppErrorCodes.RedemptionCode.PoolExhausted => "сейчас нет свободных кодов списания, попробуйте позже",
             AppErrorCodes.User.IdentityAlreadyLinked => "уже привязано к вашему профилю",
+            AppErrorCodes.User.IdentityNotLinked => "сначала привяжите телефон",
             AppErrorCodes.User.IdentityLinkedToAnotherUser => "уже привязано к другому пользователю",
             AppErrorCodes.User.TelegramIdentityNotLinked => "сначала подтвердите телефон",
             AppErrorCodes.User.NotFound => context == BotErrorContext.IssueMetric

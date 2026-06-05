@@ -24,7 +24,9 @@ public class UserRepository : IUserRepository
             .Include(item => item.User)
             .ThenInclude(user => user.Identities)
             .FirstOrDefaultAsync(
-                item => item.Type == identityType && item.Key == identityKey,
+                item => item.DeletedAt == null
+                    && item.Type == identityType
+                    && item.Key == identityKey,
                 cancellationToken);
 
         return identity?.User;
@@ -86,6 +88,15 @@ public class UserRepository : IUserRepository
         try
         {
             await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation
+        })
+        {
+            throw new ConcurrencyConflictException(
+                "User changes conflicted with another operation.",
+                ex);
         }
         catch (DbUpdateConcurrencyException ex)
         {

@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StampService.API.EndpointResults;
 using StampService.Application.Abstractions;
-using StampService.Application.Brands.Commands.AddBrandStaff;
 using StampService.Application.Brands.Commands.AddBrandStaffByPhone;
 using StampService.Application.Brands.Commands.RemoveBrandStaff;
 using StampService.Application.Brands.Commands.UpdateBrandRewardSettings;
@@ -60,22 +59,6 @@ public class BrandsController : ApiControllerBase
         return await handler.Handle(
             new GetBrandStaffQuery(userIdResult.Value, brandId),
             cancellationToken);
-    }
-
-    [HttpPost("{brandId:guid}/staff")]
-    public async Task<EndpointResult<AddBrandStaffResponse>> AddStaff(
-        Guid brandId,
-        AddBrandStaffRequest request,
-        [FromServices] ICommandHandler<AddBrandStaffResponse, AddBrandStaffCommand> handler,
-        CancellationToken cancellationToken)
-    {
-        var userIdResult = GetUserId();
-        if (userIdResult.IsFailed)
-            return userIdResult.ToResult<AddBrandStaffResponse>();
-
-        var command = new AddBrandStaffCommand(brandId, userIdResult.Value, request);
-
-        return await handler.Handle(command, cancellationToken);
     }
 
     [HttpPut("{brandId:guid}/reward-settings")]

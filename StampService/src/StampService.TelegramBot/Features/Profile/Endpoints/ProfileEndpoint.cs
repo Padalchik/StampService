@@ -3,10 +3,13 @@ using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Auth;
 using StampService.Application.Users;
+using StampService.Application.Users.Commands.ConfirmPhoneChangeCode;
 using StampService.Application.Users.Commands.ConfirmPhoneLinkCode;
 using StampService.Application.Users.Commands.ConfirmTelegramPhoneCode;
 using StampService.Application.Users.Commands.EnsureTelegramUser;
+using StampService.Application.Users.Commands.RequestPhoneChangeCode;
 using StampService.Application.Users.Commands.RequestPhoneLinkCode;
+using StampService.Application.Users.Queries.GetMyProfile;
 using StampService.Contracts.DTOs.Profile;
 using StampService.TelegramBot.Common.Errors;
 using StampService.TelegramBot.Common.Routing;
@@ -24,6 +27,7 @@ namespace StampService.TelegramBot.Features.Profile.Endpoints;
 public sealed class ProfileEndpoint : IBotEndpoint
 {
     private const string AuthenticatedPhoneLinkMode = "authenticated";
+    private const string AuthenticatedPhoneChangeMode = "authenticated_phone_change";
     private const string TelegramPhoneOnboardingMode = "telegram_phone_onboarding";
 
     public void MapEndpoint(BotApplication app)
@@ -44,16 +48,36 @@ public sealed class ProfileEndpoint : IBotEndpoint
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
         IPhoneAuthCodeService phoneAuthCodeService,
         ICommandHandler<RequestPhoneLinkCodeResponse, RequestPhoneLinkCodeCommand> requestCodeHandler,
+        ICommandHandler<RequestPhoneLinkCodeResponse, RequestPhoneChangeCodeCommand> requestChangeCodeHandler,
+        IQueryHandler<MyProfileResponse, GetMyProfileQuery> profileHandler,
         ILogger<ProfileEndpoint> logger)
     {
         var userResult = await BotEndpointHelpers.EnsureUserAsync(ctx, ensureUserHandler);
         var phoneNumber = ctx.MessageText?.Trim() ?? string.Empty;
         Result<RequestPhoneLinkCodeResponse> result;
+        var isPhoneChange = false;
         if (userResult.IsSuccess)
         {
-            result = await requestCodeHandler.Handle(
-                new RequestPhoneLinkCodeCommand(userResult.Value.UserId, phoneNumber),
+            var profileResult = await profileHandler.Handle(
+                new GetMyProfileQuery(userResult.Value.UserId),
                 ctx.CancellationToken);
+            if (profileResult.IsFailed)
+            {
+                result = Result.Fail<RequestPhoneLinkCodeResponse>(profileResult.Errors);
+            }
+            else if (profileResult.Value.Phone.Linked)
+            {
+                isPhoneChange = true;
+                result = await requestChangeCodeHandler.Handle(
+                    new RequestPhoneChangeCodeCommand(userResult.Value.UserId, phoneNumber),
+                    ctx.CancellationToken);
+            }
+            else
+            {
+                result = await requestCodeHandler.Handle(
+                    new RequestPhoneLinkCodeCommand(userResult.Value.UserId, phoneNumber),
+                    ctx.CancellationToken);
+            }
         }
         else
         {
@@ -84,7 +108,9 @@ public sealed class ProfileEndpoint : IBotEndpoint
         if (userResult.IsSuccess)
         {
             ctx.Session?.Data.Set(ProfileSessionKeys.PhoneAuthCodeId, result.Value.AuthCodeId);
-            ctx.Session?.Data.Set(ProfileSessionKeys.PhoneLinkMode, AuthenticatedPhoneLinkMode);
+            ctx.Session?.Data.Set(
+                ProfileSessionKeys.PhoneLinkMode,
+                isPhoneChange ? AuthenticatedPhoneChangeMode : AuthenticatedPhoneLinkMode);
         }
         else
         {
@@ -99,6 +125,7 @@ public sealed class ProfileEndpoint : IBotEndpoint
         UpdateContext ctx,
         ICommandHandler<EnsureTelegramUserResponse, EnsureTelegramUserCommand> ensureUserHandler,
         ICommandHandler<ConfirmPhoneLinkCodeResponse, ConfirmPhoneLinkCodeCommand> confirmCodeHandler,
+        ICommandHandler<ConfirmPhoneLinkCodeResponse, ConfirmPhoneChangeCodeCommand> confirmChangeCodeHandler,
         ICommandHandler<EnsureTelegramUserResponse, ConfirmTelegramPhoneCodeCommand> confirmTelegramPhoneCodeHandler,
         ILogger<ProfileEndpoint> logger)
     {
@@ -112,15 +139,20 @@ public sealed class ProfileEndpoint : IBotEndpoint
         var code = ctx.MessageText?.Trim() ?? string.Empty;
         var isAuthenticatedPhoneLink = phoneLinkMode == AuthenticatedPhoneLinkMode
             || (phoneLinkMode is null && userResult.IsSuccess);
+        var isAuthenticatedPhoneChange = phoneLinkMode == AuthenticatedPhoneChangeMode;
         Result<ConfirmPhoneLinkCodeResponse> result;
-        if (isAuthenticatedPhoneLink && userResult.IsSuccess)
+        if ((isAuthenticatedPhoneLink || isAuthenticatedPhoneChange) && userResult.IsSuccess)
         {
             if (authCodeId is null || authCodeId == Guid.Empty)
                 return BotResults.ShowView(new ScreenView("Сценарий привязки устарел. Начните заново.").BackButton());
 
-            result = await confirmCodeHandler.Handle(
-                new ConfirmPhoneLinkCodeCommand(userResult.Value.UserId, phoneNumber, code, authCodeId),
-                ctx.CancellationToken);
+            result = isAuthenticatedPhoneChange
+                ? await confirmChangeCodeHandler.Handle(
+                    new ConfirmPhoneChangeCodeCommand(userResult.Value.UserId, phoneNumber, code, authCodeId),
+                    ctx.CancellationToken)
+                : await confirmCodeHandler.Handle(
+                    new ConfirmPhoneLinkCodeCommand(userResult.Value.UserId, phoneNumber, code, authCodeId),
+                    ctx.CancellationToken);
         }
         else
         {
@@ -158,7 +190,9 @@ public sealed class ProfileEndpoint : IBotEndpoint
 
         return BotInputResults.DeleteInputThen(BotResults.ShowView(
             new ScreenView(
-                "<b>Телефон привязан</b>\n\n" +
+                (isAuthenticatedPhoneChange
+                    ? "<b>Телефон изменён</b>\n\n"
+                    : "<b>Телефон привязан</b>\n\n") +
                 $"К вашему профилю привязан номер {result.Value.MaskedPhoneNumber}.")
                 .NavigateButton<MainMenuScreen>("Продолжить")));
     }

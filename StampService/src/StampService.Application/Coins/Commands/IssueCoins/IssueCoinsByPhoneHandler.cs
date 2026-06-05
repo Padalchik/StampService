@@ -1,6 +1,7 @@
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Audit;
 using StampService.Application.Brands;
 using StampService.Application.CustomerNotifications;
 using StampService.Application.Errors;
@@ -15,6 +16,7 @@ public class IssueCoinsByPhoneHandler : ICommandHandler<CoinOperationResponse, I
 {
     private readonly IBrandAccessService _brandAccessService;
     private readonly IBrandRepository _brandRepository;
+    private readonly IBusinessAuditSink _businessAuditSink;
     private readonly ICoinLedgerService _coinLedgerService;
     private readonly ICustomerNotificationService _customerNotificationService;
     private readonly IPhoneAccountService _phoneAccountService;
@@ -24,10 +26,12 @@ public class IssueCoinsByPhoneHandler : ICommandHandler<CoinOperationResponse, I
         IBrandRepository brandRepository,
         ICoinLedgerService coinLedgerService,
         IPhoneAccountService phoneAccountService,
-        ICustomerNotificationService? customerNotificationService = null)
+        ICustomerNotificationService? customerNotificationService = null,
+        IBusinessAuditSink? businessAuditSink = null)
     {
         _brandAccessService = brandAccessService;
         _brandRepository = brandRepository;
+        _businessAuditSink = businessAuditSink ?? NoopBusinessAuditSink.Instance;
         _coinLedgerService = coinLedgerService;
         _customerNotificationService = customerNotificationService ?? NullCustomerNotificationService.Instance;
         _phoneAccountService = phoneAccountService;
@@ -39,10 +43,10 @@ public class IssueCoinsByPhoneHandler : ICommandHandler<CoinOperationResponse, I
     {
         var brand = await _brandRepository.GetByIdAsync(command.BrandId, cancellationToken);
         if (brand is null)
-            return Result.Fail(BrandErrors.NotFound());
+            return await RejectedAsync(command, [BrandErrors.NotFound()], null, null, cancellationToken);
 
         if (!brand.IsCoinsEnabled)
-            return Result.Fail(BrandErrors.CoinsDisabled());
+            return await RejectedAsync(command, [BrandErrors.CoinsDisabled()], null, null, cancellationToken);
 
         var canIssue = await _brandAccessService.CanAsync(
             command.RequestUserId,
@@ -51,7 +55,7 @@ public class IssueCoinsByPhoneHandler : ICommandHandler<CoinOperationResponse, I
             cancellationToken);
 
         if (!canIssue)
-            return Result.Fail(AccessErrors.Denied());
+            return await RejectedAsync(command, [AccessErrors.Denied()], null, null, cancellationToken);
 
         var comment = string.IsNullOrWhiteSpace(command.Request.Comment)
             ? "Issue coins"
@@ -62,14 +66,14 @@ public class IssueCoinsByPhoneHandler : ICommandHandler<CoinOperationResponse, I
             comment,
             command.RequestUserId);
         if (transactionValidation.IsFailed)
-            return Result.Fail(transactionValidation.Errors);
+            return await RejectedAsync(command, transactionValidation.Errors, null, comment, cancellationToken);
 
         var customerResult = await _phoneAccountService.GetOrCreateForBusinessOperationAsync(
             command.Request.PhoneNumber,
             nameof(command.Request.PhoneNumber),
             cancellationToken);
         if (customerResult.IsFailed)
-            return Result.Fail(customerResult.Errors);
+            return await RejectedAsync(command, customerResult.Errors, null, comment, cancellationToken);
 
         var customer = customerResult.Value;
         var operationResult = await _coinLedgerService.IssueAsync(
@@ -81,7 +85,7 @@ public class IssueCoinsByPhoneHandler : ICommandHandler<CoinOperationResponse, I
             cancellationToken);
 
         if (operationResult.IsFailed)
-            return Result.Fail(operationResult.Errors);
+            return await RejectedAsync(command, operationResult.Errors, customer.Id, comment, cancellationToken);
 
         var operation = operationResult.Value;
         var response = new CoinOperationResponse(
@@ -96,7 +100,43 @@ public class IssueCoinsByPhoneHandler : ICommandHandler<CoinOperationResponse, I
             operation.Transaction.CreatedAt);
 
         await _customerNotificationService.NotifyCoinsIssuedAsync(response, cancellationToken);
+        await _businessAuditSink.RecordAsync(
+            new BusinessAuditEvent(
+                BusinessAuditOperationType.IssueCoins,
+                BusinessAuditOperationStatus.Succeeded,
+                BrandId: command.BrandId,
+                ActorUserId: command.RequestUserId,
+                CustomerUserId: customer.Id,
+                TargetEntityType: BusinessAuditTargetEntityType.CoinTransaction,
+                TargetEntityId: operation.Transaction.Id,
+                Amount: command.Request.Amount,
+                BalanceBefore: operation.BalanceBefore,
+                BalanceAfter: operation.BalanceAfter,
+                Comment: comment),
+            cancellationToken);
 
         return Result.Ok(response);
+    }
+
+    private async Task<Result<CoinOperationResponse>> RejectedAsync(
+        IssueCoinsByPhoneCommand command,
+        IReadOnlyCollection<IError> errors,
+        Guid? customerUserId,
+        string? comment,
+        CancellationToken cancellationToken)
+    {
+        await _businessAuditSink.RecordAsync(
+            new BusinessAuditEvent(
+                BusinessAuditOperationType.IssueCoins,
+                BusinessAuditOperationStatus.Rejected,
+                BrandId: command.BrandId,
+                ActorUserId: command.RequestUserId,
+                CustomerUserId: customerUserId,
+                Amount: command.Request.Amount,
+                ReasonCode: BusinessAuditReason.FromErrors(errors),
+                Comment: comment),
+            cancellationToken);
+
+        return Result.Fail(errors);
     }
 }

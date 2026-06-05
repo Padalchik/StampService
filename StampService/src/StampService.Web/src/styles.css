@@ -1648,6 +1648,215 @@ p {
   padding: 18px;
 }
 
+.admin-audit-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-audit-filters label,
+.admin-audit-filter-group {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: #5f6368;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.admin-audit-filter-group > span {
+  color: #5f6368;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.admin-audit-filters input,
+.admin-audit-filters select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #e1e4ea;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  color: #202124;
+  font: inherit;
+}
+
+.admin-audit-filters input:focus,
+.admin-audit-filters select:focus {
+  border-color: #5b8def;
+  box-shadow: 0 0 0 3px rgba(91, 141, 239, 0.16);
+  outline: none;
+}
+
+.admin-audit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.admin-audit-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+}
+
+.admin-audit-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  margin-top: 14px;
+  color: #5f6368;
+  font-size: 0.88rem;
+}
+
+.admin-audit-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.admin-audit-card {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 12px;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px;
+}
+
+.admin-audit-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #eef3ff;
+  color: #315fbd;
+}
+
+.admin-audit-card__content {
+  min-width: 0;
+}
+
+.admin-audit-card__topline,
+.admin-audit-detail-grid,
+.admin-audit-card__numbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-audit-card__topline {
+  justify-content: space-between;
+  color: #6b7280;
+  font-size: 0.82rem;
+}
+
+.admin-audit-card h3 {
+  margin: 6px 0;
+  color: #202124;
+  font-size: 0.98rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.admin-audit-detail-grid,
+.admin-audit-card__numbers,
+.admin-audit-card__detail {
+  color: #5f6368;
+  font-size: 0.86rem;
+}
+
+.admin-audit-card__numbers span {
+  min-width: 0;
+  border-radius: 999px;
+  background: #f4f6f8;
+  padding: 4px 8px;
+  overflow-wrap: anywhere;
+}
+
+.admin-audit-detail {
+  display: grid;
+  gap: 2px;
+  min-width: min(180px, 100%);
+  border-radius: 8px;
+  background: #f7f9fb;
+  padding: 7px 9px;
+}
+
+.admin-audit-detail span {
+  color: #7b8490;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.admin-audit-detail strong {
+  color: #30343b;
+  font-size: 0.86rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.admin-audit-card__detail {
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-audit-status-filter {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  border: 1px solid #e1e4ea;
+  border-radius: 8px;
+  background: #fff;
+  padding: 4px;
+}
+
+.admin-audit-filter-button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #5f6368;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.admin-audit-filter-button--active {
+  background: #e8f3fd;
+  color: #1769aa;
+}
+
+.admin-audit-status {
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-weight: 700;
+}
+
+.admin-audit-status--success {
+  background: #eaf7ee;
+  color: #18733d;
+}
+
+.admin-audit-status--rejected {
+  background: #fff4df;
+  color: #9a5b00;
+}
+
+.admin-audit-status--failed {
+  background: #fdecec;
+  color: #b42318;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -2759,6 +2968,23 @@ p {
 
   .admin-demo-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-audit-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-audit-actions {
+    flex-direction: column;
+    justify-content: stretch;
+  }
+
+  .admin-audit-actions button {
+    width: 100%;
+  }
+
+  .admin-audit-status-filter {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .admin-toolbar__actions {

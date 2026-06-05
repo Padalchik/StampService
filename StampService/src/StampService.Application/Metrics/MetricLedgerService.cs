@@ -1,5 +1,6 @@
 using FluentResults;
 using StampService.Application.Errors;
+using StampService.Application.Ledger;
 using StampService.Domain.Loyalty;
 
 namespace StampService.Application.Metrics;
@@ -7,17 +8,70 @@ namespace StampService.Application.Metrics;
 public class MetricLedgerService : IMetricLedgerService
 {
     private readonly IMetricBalanceRepository _metricBalanceRepository;
+    private readonly ILedgerOperationLock _ledgerOperationLock;
     private readonly IStampTransactionRepository _stampTransactionRepository;
 
     public MetricLedgerService(
         IMetricBalanceRepository metricBalanceRepository,
-        IStampTransactionRepository stampTransactionRepository)
+        IStampTransactionRepository stampTransactionRepository,
+        ILedgerOperationLock? ledgerOperationLock = null)
     {
         _metricBalanceRepository = metricBalanceRepository;
+        _ledgerOperationLock = ledgerOperationLock ?? NoopLedgerOperationLock.Instance;
         _stampTransactionRepository = stampTransactionRepository;
     }
 
     public async Task<Result<MetricLedgerOperation>> IssueAsync(
+        Guid userId,
+        Guid actorUserId,
+        Guid brandId,
+        Guid metricDefinitionId,
+        int amount,
+        string comment,
+        CancellationToken cancellationToken)
+    {
+        return await _ledgerOperationLock.ExecuteWithMetricBalanceLockAsync(
+            userId,
+            brandId,
+            metricDefinitionId,
+            ct => IssueCoreAsync(userId, actorUserId, brandId, metricDefinitionId, amount, comment, ct),
+            cancellationToken);
+    }
+
+    public async Task<Result<MetricLedgerOperation>> RedeemAsync(
+        Guid userId,
+        Guid actorUserId,
+        Guid brandId,
+        Guid metricDefinitionId,
+        int amount,
+        string comment,
+        CancellationToken cancellationToken)
+    {
+        return await _ledgerOperationLock.ExecuteWithMetricBalanceLockAsync(
+            userId,
+            brandId,
+            metricDefinitionId,
+            ct => RedeemCoreAsync(userId, actorUserId, brandId, metricDefinitionId, amount, comment, ct),
+            cancellationToken);
+    }
+
+    public async Task<Result<int>> RecalculateMetricBalanceAsync(
+        Guid metricBalanceId,
+        CancellationToken cancellationToken)
+    {
+        var balance = await _metricBalanceRepository.GetByIdAsync(metricBalanceId, cancellationToken);
+        if (balance is null)
+            return Result.Fail(MetricErrors.BalanceNotFound());
+
+        return await _ledgerOperationLock.ExecuteWithMetricBalanceLockAsync(
+            balance.UserId,
+            balance.BrandId,
+            balance.MetricDefinitionId,
+            ct => RecalculateMetricBalanceCoreAsync(metricBalanceId, ct),
+            cancellationToken);
+    }
+
+    private async Task<Result<MetricLedgerOperation>> IssueCoreAsync(
         Guid userId,
         Guid actorUserId,
         Guid brandId,
@@ -48,6 +102,7 @@ public class MetricLedgerService : IMetricLedgerService
                 return Result.Fail(syncResult.Errors);
         }
 
+        var balanceBefore = balance.Value;
         var transactionResult = StampTransaction.CreateIssue(balance.Id, amount, comment, actorUserId);
         if (transactionResult.IsFailed)
             return Result.Fail(transactionResult.Errors);
@@ -60,10 +115,10 @@ public class MetricLedgerService : IMetricLedgerService
         _stampTransactionRepository.Add(transaction);
         await _stampTransactionRepository.SaveAsync(cancellationToken);
 
-        return Result.Ok(new MetricLedgerOperation(balance, transaction));
+        return Result.Ok(new MetricLedgerOperation(balance, transaction, balanceBefore, balance.Value));
     }
 
-    public async Task<Result<MetricLedgerOperation>> RedeemAsync(
+    private async Task<Result<MetricLedgerOperation>> RedeemCoreAsync(
         Guid userId,
         Guid actorUserId,
         Guid brandId,
@@ -85,6 +140,7 @@ public class MetricLedgerService : IMetricLedgerService
         if (syncResult.IsFailed)
             return Result.Fail(syncResult.Errors);
 
+        var balanceBefore = balance.Value;
         var transactionResult = StampTransaction.CreateRedeem(balance.Id, amount, comment, actorUserId);
         if (transactionResult.IsFailed)
             return Result.Fail(transactionResult.Errors);
@@ -97,10 +153,10 @@ public class MetricLedgerService : IMetricLedgerService
         _stampTransactionRepository.Add(transaction);
         await _stampTransactionRepository.SaveAsync(cancellationToken);
 
-        return Result.Ok(new MetricLedgerOperation(balance, transaction));
+        return Result.Ok(new MetricLedgerOperation(balance, transaction, balanceBefore, balance.Value));
     }
 
-    public async Task<Result<int>> RecalculateMetricBalanceAsync(
+    private async Task<Result<int>> RecalculateMetricBalanceCoreAsync(
         Guid metricBalanceId,
         CancellationToken cancellationToken)
     {

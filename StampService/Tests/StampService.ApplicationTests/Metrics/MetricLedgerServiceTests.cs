@@ -7,6 +7,32 @@ namespace StampService.ApplicationTests.Metrics;
 public class MetricLedgerServiceTests
 {
     [Fact]
+    public async Task IssueAsync_ShouldRunInsideMetricBalanceLock()
+    {
+        var userId = Guid.NewGuid();
+        var brandId = Guid.NewGuid();
+        var metricDefinitionId = Guid.NewGuid();
+        var operationLock = new RecordingLedgerOperationLock();
+        var service = new MetricLedgerService(
+            new FakeMetricBalanceRepository(),
+            new FakeStampTransactionRepository(),
+            operationLock);
+
+        var result = await service.IssueAsync(
+            userId,
+            Guid.NewGuid(),
+            brandId,
+            metricDefinitionId,
+            5,
+            "Issue stamps",
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(operationLock.MetricBalanceLocks);
+        Assert.Equal((userId, brandId, metricDefinitionId), operationLock.MetricBalanceLocks.Single());
+    }
+
+    [Fact]
     public async Task IssueAsync_WhenBalanceDoesNotExist_ShouldCreateBalanceAndIssueTransaction()
     {
         var balanceRepository = new FakeMetricBalanceRepository();

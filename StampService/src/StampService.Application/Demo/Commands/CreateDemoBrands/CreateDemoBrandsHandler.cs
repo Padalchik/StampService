@@ -8,6 +8,7 @@ using StampService.Application.Demo;
 using StampService.Application.Errors;
 using StampService.Application.Metrics;
 using StampService.Application.Users;
+using StampService.Domain.Access;
 using StampService.Domain.Brand;
 using StampService.Domain.Coins;
 using StampService.Domain.Loyalty;
@@ -18,7 +19,7 @@ namespace StampService.Application.Demo.Commands.CreateDemoBrands;
 public class CreateDemoBrandsHandler : ICommandHandler<bool, CreateDemoBrandsCommand>
 {
     private readonly IAdminAccessService _adminAccessService;
-    private readonly IBrandMembershipService _brandMembershipService;
+    private readonly IBrandMembershipRepository _brandMembershipRepository;
     private readonly IBrandRepository _brandRepository;
     private readonly ICoinProductRepository _coinProductRepository;
     private readonly ILoyaltyMetricRepository _metricRepository;
@@ -26,14 +27,14 @@ public class CreateDemoBrandsHandler : ICommandHandler<bool, CreateDemoBrandsCom
 
     public CreateDemoBrandsHandler(
         IAdminAccessService adminAccessService,
-        IBrandMembershipService brandMembershipService,
+        IBrandMembershipRepository brandMembershipRepository,
         IBrandRepository brandRepository,
         ICoinProductRepository coinProductRepository,
         ILoyaltyMetricRepository metricRepository,
         IUserRepository userRepository)
     {
         _adminAccessService = adminAccessService;
-        _brandMembershipService = brandMembershipService;
+        _brandMembershipRepository = brandMembershipRepository;
         _brandRepository = brandRepository;
         _coinProductRepository = coinProductRepository;
         _metricRepository = metricRepository;
@@ -61,6 +62,14 @@ public class CreateDemoBrandsHandler : ICommandHandler<bool, CreateDemoBrandsCom
             .OrderBy(_ => Random.Shared.Next())
             .Take(5)
             .ToArray();
+        if (specs.Length == 0)
+            return Result.Ok(true);
+
+        var ownerRole = await _brandMembershipRepository.GetRoleBySystemNameAsync(
+            SystemRoles.Owner,
+            cancellationToken);
+        if (ownerRole is null)
+            return Result.Fail(BrandErrors.OwnerRoleNotFound());
 
         foreach (var spec in specs)
         {
@@ -78,16 +87,15 @@ public class CreateDemoBrandsHandler : ICommandHandler<bool, CreateDemoBrandsCom
             if (updateResult.IsFailed)
                 return Result.Fail(updateResult.Errors);
 
-            var addBrandResult = await _brandRepository.AddAsync(brand, cancellationToken);
+            var membershipResult = BrandMembership.Create(owner.Id, brand.Id, ownerRole.Id);
+            if (membershipResult.IsFailed)
+                return Result.Fail(membershipResult.Errors);
+
+            var addBrandResult = _brandRepository.Add(brand);
             if (addBrandResult.IsFailed)
                 return Result.Fail(addBrandResult.Errors);
 
-            var ownerResult = await _brandMembershipService.AssignOwnerAsync(
-                brand.Id,
-                owner.Id,
-                cancellationToken);
-            if (ownerResult.IsFailed)
-                return Result.Fail(ownerResult.Errors);
+            _brandMembershipRepository.Add(membershipResult.Value);
 
             foreach (var metricSpec in spec.Metrics)
             {
@@ -114,8 +122,7 @@ public class CreateDemoBrandsHandler : ICommandHandler<bool, CreateDemoBrandsCom
             }
         }
 
-        await _metricRepository.SaveAsync(cancellationToken);
-        await _coinProductRepository.SaveAsync(cancellationToken);
+        await _brandRepository.SaveAsync(cancellationToken);
 
         return Result.Ok(true);
     }

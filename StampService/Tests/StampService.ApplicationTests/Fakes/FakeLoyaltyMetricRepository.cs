@@ -7,6 +7,8 @@ public class FakeLoyaltyMetricRepository : ILoyaltyMetricRepository
 {
     private readonly List<LoyaltyMetricDefinition> _metrics = [];
 
+    public int SaveCount { get; private set; }
+
     public void AddExisting(LoyaltyMetricDefinition metric)
     {
         _metrics.Add(metric);
@@ -45,6 +47,7 @@ public class FakeLoyaltyMetricRepository : ILoyaltyMetricRepository
 
     public Task SaveAsync(CancellationToken cancellationToken)
     {
+        SaveCount++;
         return Task.CompletedTask;
     }
 }

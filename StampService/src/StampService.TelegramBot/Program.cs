@@ -3,8 +3,10 @@ using Serilog;
 using Serilog.Events;
 using StampService.Application;
 using StampService.Application.Administration;
+using StampService.Application.Audit;
 using StampService.Application.CustomerNotifications;
 using StampService.Infrastructure;
+using StampService.TelegramBot.Common.Audit;
 using StampService.Infrastructure.Seeding;
 using StampService.TelegramBot.Common.Notifications;
 using StampService.TelegramBot.Features.MainMenu.Screens;
@@ -52,6 +54,7 @@ try
 
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddScoped<IBusinessAuditContext, TelegramBusinessAuditContext>();
     builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("Admin"));
     builder.Services.Configure<BotStartupNotificationOptions>(
         builder.Configuration.GetSection(BotStartupNotificationOptions.SectionName));

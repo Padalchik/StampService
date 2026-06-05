@@ -1,6 +1,7 @@
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Audit;
 using StampService.Application.Brands;
 using StampService.Application.Coins;
 using StampService.Application.CustomerNotifications;
@@ -18,6 +19,7 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
 {
     private readonly IBrandAccessService _brandAccessService;
     private readonly IBrandRepository _brandRepository;
+    private readonly IBusinessAuditSink _businessAuditSink;
     private readonly ICoinLedgerService _coinLedgerService;
     private readonly ICustomerNotificationService _customerNotificationService;
     private readonly ICoinProductRepository _productRepository;
@@ -39,10 +41,12 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
         IUserRepository userRepository,
         ICommandHandler<UseRedemptionCodeResponse, UseRedemptionCodeCommand> useRedemptionCodeHandler,
         TimeProvider timeProvider,
-        ICustomerNotificationService? customerNotificationService = null)
+        ICustomerNotificationService? customerNotificationService = null,
+        IBusinessAuditSink? businessAuditSink = null)
     {
         _brandAccessService = brandAccessService;
         _brandRepository = brandRepository;
+        _businessAuditSink = businessAuditSink ?? NoopBusinessAuditSink.Instance;
         _coinLedgerService = coinLedgerService;
         _customerNotificationService = customerNotificationService ?? NullCustomerNotificationService.Instance;
         _productRepository = productRepository;
@@ -60,13 +64,13 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
     {
         var brand = await _brandRepository.GetByIdAsync(command.BrandId, cancellationToken);
         if (brand is null)
-            return Result.Fail(BrandErrors.NotFound());
+            return await RejectedAsync(command, [BrandErrors.NotFound()], null, null, null, null, cancellationToken);
 
         if (!brand.IsCoinsEnabled)
-            return Result.Fail(BrandErrors.CoinsDisabled());
+            return await RejectedAsync(command, [BrandErrors.CoinsDisabled()], null, null, null, null, cancellationToken);
 
         if (!brand.IsCoinProductRedemptionEnabled)
-            return Result.Fail(BrandErrors.CoinProductRedemptionDisabled());
+            return await RejectedAsync(command, [BrandErrors.CoinProductRedemptionDisabled()], null, null, null, null, cancellationToken);
 
         var canRedeem = await _brandAccessService.CanAsync(
             command.RequestUserId,
@@ -75,18 +79,18 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
             cancellationToken);
 
         if (!canRedeem)
-            return Result.Fail(AccessErrors.Denied());
+            return await RejectedAsync(command, [AccessErrors.Denied()], null, null, null, null, cancellationToken);
 
         var product = await _productRepository.GetByIdAsync(command.ProductId, cancellationToken);
         if (product is null || product.BrandId != command.BrandId)
-            return Result.Fail(CoinProductErrors.NotFound());
+            return await RejectedAsync(command, [CoinProductErrors.NotFound()], null, null, null, null, cancellationToken);
 
         if (!product.IsActive)
-            return Result.Fail(CoinProductErrors.IsNotActive());
+            return await RejectedAsync(command, [CoinProductErrors.IsNotActive()], null, null, product.Price, null, cancellationToken);
 
         var code = command.RedemptionCode.Trim();
         if (!DomainRedemptionCode.IsValidCode(code))
-            return Result.Fail(UserErrors.RedemptionCodeInvalid());
+            return await RejectedAsync(command, [UserErrors.RedemptionCodeInvalid()], null, null, product.Price, null, cancellationToken);
 
         var activeCode = await _redemptionCodeRepository.GetActiveByCodeAsync(
             code,
@@ -94,11 +98,11 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
             cancellationToken);
 
         if (activeCode is null)
-            return Result.Fail(UserErrors.RedemptionCodeNotFoundOrExpired());
+            return await RejectedAsync(command, [UserErrors.RedemptionCodeNotFoundOrExpired()], null, null, product.Price, null, cancellationToken);
 
         var customer = await _userRepository.GetByIdAsync(activeCode.UserId, cancellationToken);
         if (customer is null)
-            return Result.Fail(UserErrors.NotFound());
+            return await RejectedAsync(command, [UserErrors.NotFound()], activeCode.UserId, null, product.Price, null, cancellationToken);
 
         var wallet = await _coinWalletRepository.GetByUserAndBrandAsync(
             customer.Id,
@@ -106,14 +110,21 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
             cancellationToken);
 
         if (wallet is null)
-            return Result.Fail(CoinErrors.WalletNotFound());
+            return await RejectedAsync(command, [CoinErrors.WalletNotFound()], customer.Id, null, product.Price, null, cancellationToken);
 
         var currentBalance = await _coinTransactionRepository.CalculateWalletValueAsync(
             wallet.Id,
             cancellationToken);
 
         if (currentBalance < product.Price)
-            return Result.Fail(CoinErrors.InsufficientFunds(currentBalance, product.Price));
+            return await RejectedAsync(
+                command,
+                [CoinErrors.InsufficientFunds(currentBalance, product.Price)],
+                customer.Id,
+                currentBalance,
+                product.Price,
+                null,
+                cancellationToken);
 
         var comment = product.Name;
         var transactionPrecheck = CoinTransaction.CreateRedeem(
@@ -122,14 +133,14 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
             comment,
             command.RequestUserId);
         if (transactionPrecheck.IsFailed)
-            return Result.Fail(transactionPrecheck.Errors);
+            return await RejectedAsync(command, transactionPrecheck.Errors, customer.Id, currentBalance, product.Price, comment, cancellationToken);
 
         var useCodeResult = await _useRedemptionCodeHandler.Handle(
             new UseRedemptionCodeCommand(code),
             cancellationToken);
 
         if (useCodeResult.IsFailed)
-            return Result.Fail(useCodeResult.Errors);
+            return await RejectedAsync(command, useCodeResult.Errors, customer.Id, currentBalance, product.Price, comment, cancellationToken);
 
         var operationResult = await _coinLedgerService.RedeemAsync(
             customer.Id,
@@ -140,7 +151,7 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
             cancellationToken);
 
         if (operationResult.IsFailed)
-            return Result.Fail(operationResult.Errors);
+            return await RejectedAsync(command, operationResult.Errors, customer.Id, currentBalance, product.Price, comment, cancellationToken);
 
         var operation = operationResult.Value;
         var response = new CoinOperationResponse(
@@ -155,7 +166,52 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
             operation.Transaction.CreatedAt);
 
         await _customerNotificationService.NotifyCoinProductPurchasedAsync(response, product.Name, cancellationToken);
+        await _businessAuditSink.RecordAsync(
+            new BusinessAuditEvent(
+                BusinessAuditOperationType.PurchaseCoinProduct,
+                BusinessAuditOperationStatus.Succeeded,
+                BrandId: command.BrandId,
+                ActorUserId: command.RequestUserId,
+                CustomerUserId: customer.Id,
+                TargetEntityType: BusinessAuditTargetEntityType.CoinProduct,
+                TargetEntityId: product.Id,
+                Amount: product.Price,
+                BalanceBefore: operation.BalanceBefore,
+                BalanceAfter: operation.BalanceAfter,
+                Comment: comment,
+                Metadata: new Dictionary<string, object?>
+                {
+                    ["coinTransactionId"] = operation.Transaction.Id
+                }),
+            cancellationToken);
 
         return Result.Ok(response);
+    }
+
+    private async Task<Result<CoinOperationResponse>> RejectedAsync(
+        PurchaseCoinProductCommand command,
+        IReadOnlyCollection<IError> errors,
+        Guid? customerUserId,
+        int? balanceBefore,
+        int? amount,
+        string? comment,
+        CancellationToken cancellationToken)
+    {
+        await _businessAuditSink.RecordAsync(
+            new BusinessAuditEvent(
+                BusinessAuditOperationType.PurchaseCoinProduct,
+                BusinessAuditOperationStatus.Rejected,
+                BrandId: command.BrandId,
+                ActorUserId: command.RequestUserId,
+                CustomerUserId: customerUserId,
+                TargetEntityType: BusinessAuditTargetEntityType.CoinProduct,
+                TargetEntityId: command.ProductId,
+                Amount: amount,
+                BalanceBefore: balanceBefore,
+                ReasonCode: BusinessAuditReason.FromErrors(errors),
+                Comment: comment),
+            cancellationToken);
+
+        return Result.Fail(errors);
     }
 }

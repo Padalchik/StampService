@@ -27,8 +27,10 @@ public class GetMyProfileHandler : IQueryHandler<MyProfileResponse, GetMyProfile
         if (user is null)
             return Result.Fail(UserErrors.NotFound());
 
-        var telegram = user.Identities.FirstOrDefault(identity => identity.Type == IdentityType.Telegram);
-        var phone = user.Identities.FirstOrDefault(identity => identity.Type == IdentityType.Phone);
+        var telegram = user.Identities.FirstOrDefault(identity =>
+            identity.DeletedAt is null && identity.Type == IdentityType.Telegram);
+        var phone = user.Identities.FirstOrDefault(identity =>
+            identity.DeletedAt is null && identity.Type == IdentityType.Phone);
 
         return Result.Ok(new MyProfileResponse(
             user.Id,

@@ -8,6 +8,30 @@ namespace StampService.ApplicationTests.Coins;
 public class CoinLedgerServiceTests
 {
     [Fact]
+    public async Task IssueAsync_ShouldRunInsideCoinWalletLock()
+    {
+        var userId = Guid.NewGuid();
+        var brandId = Guid.NewGuid();
+        var operationLock = new RecordingLedgerOperationLock();
+        var service = new CoinLedgerService(
+            new FakeCoinWalletRepository(),
+            new FakeCoinTransactionRepository(),
+            operationLock);
+
+        var result = await service.IssueAsync(
+            userId,
+            Guid.NewGuid(),
+            brandId,
+            10,
+            "Welcome coins",
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(operationLock.CoinWalletLocks);
+        Assert.Equal((userId, brandId), operationLock.CoinWalletLocks.Single());
+    }
+
+    [Fact]
     public async Task IssueAsync_WhenWalletDoesNotExist_ShouldCreateWalletAndIssueTransaction()
     {
         var walletRepository = new FakeCoinWalletRepository();

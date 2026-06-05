@@ -37,6 +37,8 @@ public class AdminBrandOwnerHandlerTests
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
+        Assert.Equal(0, brandRepository.SaveCount);
+        Assert.Equal(1, membershipRepository.SaveCount);
         Assert.True(await brandRepository.ExistsAsync(result.Value.BrandId, CancellationToken.None));
         Assert.Equal(SystemRoles.Owner, await membershipRepository.GetRoleSystemNameAsync(
             owner.Id,

@@ -35,12 +35,65 @@ export type ReassignBrandOwnerResponse = {
   removedOwnerUserId?: string | null;
 };
 
+export type BusinessAuditLogResponse = {
+  occurredAt: string;
+  operationType: string;
+  operationName: string;
+  operationStatus: string;
+  operationStatusText: string;
+  channel: string;
+  brandName?: string | null;
+  actorName?: string | null;
+  customerName?: string | null;
+  targetEntityType?: string | null;
+  amount?: number | null;
+  balanceBefore?: number | null;
+  balanceAfter?: number | null;
+  reasonCode?: string | null;
+  comment?: string | null;
+  summary: string;
+};
+
+export type BusinessAuditLogsResponse = {
+  items: BusinessAuditLogResponse[];
+  totalCount: number;
+  take: number;
+};
+
+export type BusinessAuditLogFilters = {
+  occurredFromUtc?: string;
+  occurredToUtc?: string;
+  brandId?: string;
+  customerPhoneNumber?: string;
+  actorName?: string;
+  operationType?: string;
+  operationStatus?: string;
+  take?: number;
+};
+
 export function getAdminAccess(): Promise<boolean> {
   return apiRequest<boolean>('/api/admin/access');
 }
 
 export function getAdminBrands(): Promise<AdminBrandResponse[]> {
   return apiRequest<AdminBrandResponse[]>('/api/admin/brands');
+}
+
+export function getBusinessAuditLogs(filters: BusinessAuditLogFilters): Promise<BusinessAuditLogsResponse> {
+  const params = new URLSearchParams();
+  appendParam(params, 'occurredFromUtc', filters.occurredFromUtc);
+  appendParam(params, 'occurredToUtc', filters.occurredToUtc);
+  appendParam(params, 'brandId', filters.brandId);
+  appendParam(params, 'customerPhoneNumber', filters.customerPhoneNumber);
+  appendParam(params, 'actorName', filters.actorName);
+  appendParam(params, 'operationType', filters.operationType);
+  appendParam(params, 'operationStatus', filters.operationStatus);
+  if (filters.take) {
+    params.set('take', filters.take.toString());
+  }
+
+  const query = params.toString();
+  return apiRequest<BusinessAuditLogsResponse>(`/api/admin/audit-logs${query ? `?${query}` : ''}`);
 }
 
 export function createBrandWithOwner(
@@ -79,4 +132,10 @@ export function resetDemoDatabase(): Promise<boolean> {
   return apiRequest<boolean>('/api/admin/demo/reset', {
     method: 'POST'
   });
+}
+
+function appendParam(params: URLSearchParams, key: string, value?: string) {
+  if (value?.trim()) {
+    params.set(key, value.trim());
+  }
 }

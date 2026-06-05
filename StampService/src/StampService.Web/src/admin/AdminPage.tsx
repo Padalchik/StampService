@@ -1,19 +1,21 @@
-import { Building2, Plus, Search, ShieldCheck, UserRoundCheck, X } from 'lucide-react';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { Building2, ClipboardList, Plus, RefreshCw, Search, ShieldCheck, UserRoundCheck, X } from 'lucide-react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getApiErrorMessage } from '../api/errorMessages';
 import { useAuth } from '../auth/AuthContext';
-import { formatRuPhoneInput } from '../validation/phoneNumber';
+import { formatRuPhoneInput, isRuPhoneInputComplete } from '../validation/phoneNumber';
 import {
   createBrandWithOwner,
   createDemoBrands,
   createUserDemoData,
   getAdminBrands,
+  getBusinessAuditLogs,
   reassignBrandOwner,
   resetDemoDatabase,
-  type AdminBrandResponse
+  type AdminBrandResponse,
+  type BusinessAuditLogResponse
 } from './adminApi';
 
-type AdminTab = 'brands' | 'demo';
+type AdminTab = 'brands' | 'audit' | 'demo';
 
 export function AdminPage() {
   const auth = useAuth();
@@ -55,7 +57,11 @@ export function AdminPage() {
           onCreateBrand={() => setIsCreateSheetOpen(true)}
           onReassignOwner={setOwnerSheetBrand}
         />
-      ) : (
+      ) : null}
+
+      {activeTab === 'audit' ? <AdminAuditTab brands={brands} /> : null}
+
+      {activeTab === 'demo' ? (
         <AdminDemoTab
           brands={brands}
           onChanged={async (message) => {
@@ -67,7 +73,7 @@ export function AdminPage() {
             auth.signOut();
           }}
         />
-      )}
+      ) : null}
 
       {isCreateSheetOpen ? (
         <CreateBrandSheet
@@ -106,6 +112,15 @@ function AdminTabs({ activeTab, onChange }: { activeTab: AdminTab; onChange: (ta
         onClick={() => onChange('brands')}
       >
         Бренды
+      </button>
+      <button
+        className={activeTab === 'audit' ? 'admin-tabs__item admin-tabs__item--active' : 'admin-tabs__item'}
+        type="button"
+        role="tab"
+        aria-selected={activeTab === 'audit'}
+        onClick={() => onChange('audit')}
+      >
+        Журнал
       </button>
       <button
         className={activeTab === 'demo' ? 'admin-tabs__item admin-tabs__item--active' : 'admin-tabs__item'}
@@ -359,6 +374,269 @@ function AdminBottomSheet({
   );
 }
 
+function AdminAuditTab({ brands }: { brands: AdminBrandResponse[] }) {
+  const [occurredFrom, setOccurredFrom] = useState('');
+  const [occurredTo, setOccurredTo] = useState('');
+  const [brandId, setBrandId] = useState('');
+  const [customerPhoneNumber, setCustomerPhoneNumber] = useState('');
+  const [actorName, setActorName] = useState('');
+  const [operationType, setOperationType] = useState('');
+  const [operationStatus, setOperationStatus] = useState('');
+  const [take, setTake] = useState(50);
+  const [logs, setLogs] = useState<BusinessAuditLogResponse[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+  const requestSequenceRef = useRef(0);
+  const isPhoneFilterIncomplete = customerPhoneNumber.trim().length > 0
+    && !isRuPhoneInputComplete(customerPhoneNumber);
+
+  const loadLogs = useCallback(async () => {
+    if (isPhoneFilterIncomplete) {
+      return;
+    }
+
+    const requestId = requestSequenceRef.current + 1;
+    requestSequenceRef.current = requestId;
+    setIsLoading(true);
+    setError('');
+    try {
+      const response = await getBusinessAuditLogs({
+        occurredFromUtc: toStartOfDayUtc(occurredFrom),
+        occurredToUtc: toEndOfDayUtc(occurredTo),
+        brandId,
+        customerPhoneNumber: isRuPhoneInputComplete(customerPhoneNumber) ? customerPhoneNumber : undefined,
+        actorName,
+        operationType,
+        operationStatus,
+        take
+      });
+      if (requestSequenceRef.current !== requestId) {
+        return;
+      }
+
+      setLogs(response.items);
+      setTotalCount(response.totalCount);
+      setLastUpdatedAt(new Date());
+    } catch (requestError) {
+      if (requestSequenceRef.current !== requestId) {
+        return;
+      }
+
+      setError(getUserMessage(requestError));
+    } finally {
+      if (requestSequenceRef.current === requestId) {
+        setIsLoading(false);
+      }
+    }
+  }, [
+    actorName,
+    brandId,
+    customerPhoneNumber,
+    isPhoneFilterIncomplete,
+    occurredFrom,
+    occurredTo,
+    operationStatus,
+    operationType,
+    take
+  ]);
+
+  useEffect(() => {
+    if (isPhoneFilterIncomplete) {
+      requestSequenceRef.current += 1;
+      setIsLoading(false);
+      return;
+    }
+
+    const delayMs = actorName.trim() || customerPhoneNumber.trim() ? 500 : 0;
+    const timeoutId = window.setTimeout(() => {
+      void loadLogs();
+    }, delayMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [actorName, customerPhoneNumber, isPhoneFilterIncomplete, loadLogs]);
+
+  function resetFilters() {
+    setOccurredFrom('');
+    setOccurredTo('');
+    setBrandId('');
+    setCustomerPhoneNumber('');
+    setActorName('');
+    setOperationType('');
+    setOperationStatus('');
+    setTake(50);
+  }
+
+  return (
+    <section className="admin-tab-panel" aria-label="Журнал операций">
+      <div className="admin-audit-filters">
+        <label>
+          С
+          <input type="date" value={occurredFrom} onChange={(event) => setOccurredFrom(event.target.value)} />
+        </label>
+        <label>
+          По
+          <input type="date" value={occurredTo} onChange={(event) => setOccurredTo(event.target.value)} />
+        </label>
+        <label>
+          Бренд
+          <select value={brandId} onChange={(event) => setBrandId(event.target.value)}>
+            <option value="">Все бренды</option>
+            {brands.map((brand) => (
+              <option key={brand.brandId} value={brand.brandId}>
+                {brand.brandName}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Клиент по телефону
+          <input
+            value={customerPhoneNumber}
+            placeholder="+7 (999) 123-45-67"
+            onChange={(event) => setCustomerPhoneNumber(formatAuditPhoneFilter(event.target.value))}
+          />
+        </label>
+        <label>
+          Исполнитель
+          <input
+            value={actorName}
+            onChange={(event) => setActorName(event.target.value)}
+            placeholder="Имя сотрудника, владельца или админа"
+          />
+        </label>
+        <label>
+          Операция
+          <select value={operationType} onChange={(event) => setOperationType(event.target.value)}>
+            <option value="">Все операции</option>
+            {operationTypeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="admin-audit-filter-group">
+          <span>Статус</span>
+          <div className="admin-audit-status-filter" role="group" aria-label="Статус операции">
+            <button
+              className={operationStatus === '' ? 'admin-audit-filter-button admin-audit-filter-button--active' : 'admin-audit-filter-button'}
+              type="button"
+              onClick={() => setOperationStatus('')}
+            >
+              Все
+            </button>
+            {operationStatusOptions.map((option) => (
+              <button
+                key={option.value}
+                className={operationStatus === option.value ? 'admin-audit-filter-button admin-audit-filter-button--active' : 'admin-audit-filter-button'}
+                type="button"
+                onClick={() => setOperationStatus(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <label>
+          Записей
+          <select value={take} onChange={(event) => setTake(Number(event.target.value))}>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+            <option value={200}>200</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="admin-audit-actions">
+        <button className="button-secondary" type="button" disabled={isLoading} onClick={() => void loadLogs()}>
+          <RefreshCw size={16} />
+          Обновить
+        </button>
+        <button className="button-secondary" type="button" onClick={resetFilters}>
+          <X size={16} />
+          Сбросить
+        </button>
+      </div>
+
+      {error ? <p className="form-status form-status--error">{error}</p> : null}
+      {isPhoneFilterIncomplete ? (
+        <p className="form-status form-status--error">Введите телефон клиента полностью или очистите поле.</p>
+      ) : null}
+      {isLoading ? <p className="muted-text">Загружаем журнал...</p> : null}
+      {!isLoading && logs.length === 0 ? (
+        <div className="empty-state admin-empty-state">
+          <p className="empty-state__meta">Операций по этим фильтрам нет.</p>
+        </div>
+      ) : null}
+
+      {!isLoading && lastUpdatedAt ? (
+        <div className="admin-audit-summary">
+          <span>Показано {logs.length} из {totalCount}</span>
+          <span>Обновлено: {formatTime(lastUpdatedAt)}</span>
+        </div>
+      ) : null}
+
+      <div className="admin-audit-list">
+        {logs.map((log, index) => (
+          <AdminAuditLogCard key={`${log.occurredAt}-${index}`} log={log} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function AdminAuditLogCard({ log }: { log: BusinessAuditLogResponse }) {
+  const amountText = formatAuditAmount(log);
+  const balanceText = formatBalance(log);
+  const reasonText = log.reasonCode ? formatReasonCode(log.reasonCode) : '';
+
+  return (
+    <article className="admin-audit-card">
+      <div className="admin-audit-card__icon" aria-hidden="true">
+        <ClipboardList size={18} />
+      </div>
+      <div className="admin-audit-card__content">
+        <div className="admin-audit-card__topline">
+          <span>{formatRuDateTime(log.occurredAt)}</span>
+          <span className={getAuditStatusClassName(log.operationStatus)}>{log.operationStatusText}</span>
+        </div>
+        <h3>{log.summary}</h3>
+        <div className="admin-audit-detail-grid">
+          <AdminAuditDetail label="Операция" value={log.operationName} />
+          <AdminAuditDetail label="Канал" value={log.channel} />
+          <AdminAuditDetail label="Бренд" value={log.brandName} />
+          <AdminAuditDetail label="Исполнитель" value={log.actorName} />
+          <AdminAuditDetail label="Клиент" value={log.customerName} />
+        </div>
+        {amountText || balanceText ? (
+          <div className="admin-audit-card__numbers">
+            {amountText ? <span>{amountText}</span> : null}
+            {balanceText ? <span>{balanceText}</span> : null}
+          </div>
+        ) : null}
+        {reasonText ? <p className="admin-audit-card__detail">Причина: {reasonText}</p> : null}
+        {log.comment ? <p className="admin-audit-card__detail">Комментарий: {log.comment}</p> : null}
+      </div>
+    </article>
+  );
+}
+
+function AdminAuditDetail({ label, value }: { label: string; value?: string | null }) {
+  if (!value) {
+    return null;
+  }
+
+  return (
+    <div className="admin-audit-detail">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
 function AdminDemoTab({
   brands,
   onChanged,
@@ -508,7 +786,122 @@ function getUserMessage(error: unknown): string {
   return getApiErrorMessage(error, 'Не удалось выполнить запрос.');
 }
 
+const operationTypeOptions = [
+  { value: 'IssueCoins', label: 'Начисление монет' },
+  { value: 'RedeemCoins', label: 'Списание монет' },
+  { value: 'IssueMetric', label: 'Начисление метрики' },
+  { value: 'RedeemMetric', label: 'Списание метрики' },
+  { value: 'PurchaseCoinProduct', label: 'Выдача товара' },
+  { value: 'AddStaff', label: 'Добавление сотрудника' },
+  { value: 'UpdateRewardSettings', label: 'Настройки наград' }
+];
+
+const operationStatusOptions = [
+  { value: 'Succeeded', label: 'Выполнено' },
+  { value: 'Rejected', label: 'Отклонено' },
+  { value: 'Failed', label: 'Ошибка' }
+];
+
 function getBrandInitial(brandName: string): string {
   const trimmedName = brandName.trim();
   return trimmedName.length > 0 ? trimmedName[0].toUpperCase() : 'Б';
+}
+
+function toStartOfDayUtc(value: string): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  return new Date(`${value}T00:00:00`).toISOString();
+}
+
+function toEndOfDayUtc(value: string): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  return new Date(`${value}T23:59:59.999`).toISOString();
+}
+
+function formatRuDateTime(value: string): string {
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(value));
+}
+
+function formatTime(value: Date): string {
+  return new Intl.DateTimeFormat('ru-RU', {
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(value);
+}
+
+function formatAuditPhoneFilter(input: string): string {
+  if (!input.trim()) {
+    return '';
+  }
+
+  return formatRuPhoneInput(input);
+}
+
+function formatAuditAmount(log: BusinessAuditLogResponse): string {
+  if (log.amount === null || log.amount === undefined) {
+    return '';
+  }
+
+  const sign = log.operationType === 'IssueCoins' || log.operationType === 'IssueMetric' ? '+' : '-';
+  const unit = log.operationType.includes('Coin') ? 'монет' : 'ед.';
+  return `${sign}${log.amount} ${unit}`;
+}
+
+function formatBalance(log: BusinessAuditLogResponse): string {
+  if (log.balanceAfter === null || log.balanceAfter === undefined) {
+    return '';
+  }
+
+  if (log.balanceBefore === null || log.balanceBefore === undefined) {
+    return `Баланс после: ${log.balanceAfter}`;
+  }
+
+  return `Баланс: ${log.balanceBefore} -> ${log.balanceAfter}`;
+}
+
+function formatReasonCode(reasonCode: string): string {
+  const reasons: Record<string, string> = {
+    'access.denied': 'нет доступа',
+    'brand.not_found': 'бренд не найден',
+    'brand.coins_disabled': 'монеты выключены',
+    'brand.metrics_disabled': 'метрики выключены',
+    'brand.coin_product_redemption_disabled': 'выдача товаров выключена',
+    'brand.manual_coin_redemption_disabled': 'ручное списание монет выключено',
+    'coin.insufficient_funds': 'недостаточно монет',
+    'coin.wallet_not_found': 'кошелек не найден',
+    'coin_product.inactive': 'товар неактивен',
+    'coin_product.not_found': 'товар не найден',
+    'metric.inactive': 'метрика неактивна',
+    'metric.not_found': 'метрика не найдена',
+    'metric_balance.insufficient_funds': 'недостаточно баланса',
+    'metric_balance.not_found': 'баланс не найден',
+    'recipient.not_found': 'пользователь не найден',
+    'redemption_code.invalid': 'код списания некорректен',
+    'redemption_code.not_found_or_expired': 'код списания не найден или истек'
+  };
+
+  return reasons[reasonCode] ?? reasonCode;
+}
+
+function getAuditStatusClassName(status: string): string {
+  if (status === 'Succeeded') {
+    return 'admin-audit-status admin-audit-status--success';
+  }
+
+  if (status === 'Rejected') {
+    return 'admin-audit-status admin-audit-status--rejected';
+  }
+
+  return 'admin-audit-status admin-audit-status--failed';
 }
