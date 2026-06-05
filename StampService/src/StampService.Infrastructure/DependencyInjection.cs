@@ -29,6 +29,10 @@ public static class DependencyInjection
         {
             options.UseNpgsql(connectionString);
         });
+        services.AddDbContextFactory<AppDbContext>(options =>
+        {
+            options.UseNpgsql(connectionString);
+        }, ServiceLifetime.Scoped);
 
         services.AddScoped<IBrandRepository, BrandRepository>();
         services.AddScoped<IUserRepository, UserRepository>();

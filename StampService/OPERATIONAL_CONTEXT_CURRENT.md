@@ -347,6 +347,7 @@ Outbox сейчас не вводился. Текущая модель - direct 
 - Soft delete реализован через `ISoftDelete` и global query filter.
 - У `user_identities` уникальный индекс по активным identity: `deleted_at IS NULL`.
 - Это позволяет хранить историю старых identity и иметь только одну активную привязку конкретного внешнего ключа.
+- Все штатные lookup-сценарии по внешней identity должны работать только с активными identity. `IUserRepository.GetByIdentityAsync` концептуально означает поиск по `DeletedAt IS NULL`; soft-deleted phone/Telegram identity является историей, а не способом входа, начисления, назначения сотрудника/владельца или фильтрации audit.
 - `users.customer_code` удаляется миграцией `RemoveUserCustomerCode`; актуальный EF model snapshot больше не содержит `User.CustomerCode` и уникальный индекс по старому коду. Исторические migration files до этой миграции не редактировать вручную.
 - Конфиги Telegram bot token берутся из secrets/config; `Admin:TelegramUserIds` задается конфигурацией и уже содержит id пользователя `278225388`.
 
@@ -438,7 +439,7 @@ Outbox сейчас не вводился. Текущая модель - direct 
 
 Чувствительные данные в audit не пишутся: JWT, OTP, redemption code, raw phone/auth payloads и секреты не должны попадать ни в `MetadataJson`, ни в комментарии системного происхождения. Комментарий операции считается пользовательским бизнес-комментарием и должен показываться аккуратно.
 
-Audit sink сделан fail-safe для уже завершенной бизнес-операции: если запись audit-события не сохранилась после успешного use case, это логируется как техническая ошибка в Serilog/Seq, но не откатывает выданные монетки/метрики. Миграция для таблицы audit создана как `20260603124027_AddBusinessAuditLogs`; применение миграции к конкретной БД остается отдельным инфраструктурным шагом.
+Audit sink сделан fail-safe для уже завершенной бизнес-операции: если запись audit-события не сохранилась после успешного use case, это логируется как техническая ошибка в Serilog/Seq, но не откатывает выданные монетки/метрики. При этом audit persistence изолирован от основного request `DbContext`: `BusinessAuditSink` создает отдельный `AppDbContext` через `IDbContextFactory<AppDbContext>` и сохраняет только audit record. Это принципиально, потому что audit не должен случайно коммитить pending изменения бизнес-use-case, например использованный redemption code, баланс, membership или другие изменения, которые еще не прошли свою persistence boundary. Миграция для таблицы audit создана как `20260603124027_AddBusinessAuditLogs`; применение миграции к конкретной БД остается отдельным инфраструктурным шагом.
 
 ## Startup-уведомления TelegramBot
 

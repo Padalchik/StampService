@@ -24,7 +24,9 @@ public class UserRepository : IUserRepository
             .Include(item => item.User)
             .ThenInclude(user => user.Identities)
             .FirstOrDefaultAsync(
-                item => item.Type == identityType && item.Key == identityKey,
+                item => item.DeletedAt == null
+                    && item.Type == identityType
+                    && item.Key == identityKey,
                 cancellationToken);
 
         return identity?.User;

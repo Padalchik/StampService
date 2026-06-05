@@ -28,6 +28,28 @@ public class PhoneAccountServiceTests
     }
 
     [Fact]
+    public async Task GetOrCreateForBusinessOperationAsync_WhenPhoneIdentityWasDeactivated_ShouldNotReturnOldUser()
+    {
+        var repository = new FakeUserRepository();
+        var existingUser = User.Create("Existing customer").Value;
+        var identity = existingUser.AddIdentity(IdentityType.Phone, "+79991234567", "{}").Value;
+        identity.Deactivate(new DateTime(2026, 5, 17, 10, 0, 0, DateTimeKind.Utc));
+        repository.Add(existingUser);
+        var service = CreateService(repository);
+
+        var result = await service.GetOrCreateForBusinessOperationAsync(
+            "+7 999 123-45-67",
+            "phoneNumber",
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotEqual(existingUser.Id, result.Value.Id);
+        Assert.Equal(2, repository.Users.Count);
+        Assert.Contains(repository.Users, user => user.Id == existingUser.Id);
+        Assert.Contains(repository.Users, user => user.Id == result.Value.Id);
+    }
+
+    [Fact]
     public async Task GetOrCreateForBusinessOperationAsync_WhenPhoneIdentityDoesNotExist_ShouldCreatePhoneUser()
     {
         var repository = new FakeUserRepository();

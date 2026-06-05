@@ -34,7 +34,7 @@ public class FakeUserRepository : IUserRepository
     {
         Users.Add(user);
 
-        foreach (var identity in user.Identities)
+        foreach (var identity in user.Identities.Where(identity => identity.DeletedAt is null))
             _usersByIdentity[(identity.Type, identity.Key)] = user;
     }
 
