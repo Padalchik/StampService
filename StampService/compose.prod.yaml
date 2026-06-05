@@ -57,6 +57,8 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
+    extra_hosts:
+      - "api.telegram.org:149.154.167.220"
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:
@@ -80,6 +82,8 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       DOTNET_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
+    extra_hosts:
+      - "api.telegram.org:149.154.167.220"
     depends_on:
       postgres:
         condition: service_healthy
