@@ -23,9 +23,9 @@ import {
   createCoinProduct,
   createMetric,
   deleteCoinProduct,
+  getBrandCustomerCard,
   getBrandStaff,
   getCoinProductPurchaseOptions,
-  getCustomerBalances,
   getIssueMetricOptions,
   getManageCoinProducts,
   getManageMetrics,
@@ -40,7 +40,7 @@ import {
   updateCoinProduct,
   updateMetric,
   type AddBrandStaffByPhoneResponse,
-  type BrandCustomerBalancesResponse,
+  type BrandCustomerCardResponse,
   type BrandStaffResponse,
   type BrandWorkspaceResponse,
   type CoinOperationResponse,
@@ -52,9 +52,11 @@ import {
   type RedeemMetricResponse,
   type UpdateBrandResponse
 } from './brandWorkspaceApi';
-import { formatRuPhoneInput, isRuPhoneInputComplete } from '../validation/phoneNumber';
+import { ApiRequestError } from '../api/apiClient';
+import { formatRuPhoneInput, isRuPhoneInputComplete, normalizePhoneNumber } from '../validation/phoneNumber';
 import { RuPhoneInput } from '../components/RuPhoneInput';
 import { formatRuDateTime } from '../format/dateTime';
+import { WalletBrandDetailsBlock } from '../wallet/WalletPage';
 
 type OperationResult =
   | { kind: 'metric'; title: string; response: IssueMetricResponse | RedeemMetricResponse }
@@ -64,9 +66,8 @@ type StaffOperationResult =
   | { kind: 'add'; response: AddBrandStaffByPhoneResponse }
   | { kind: 'remove'; response: { userName: string; phoneNumber?: string | null } };
 
-type RootSection = 'operations' | 'management';
-type OperationType = 'metrics' | 'coins' | 'customer';
-type OperationAction = 'issue' | 'purchase' | 'redeem' | 'balances';
+type OperationType = 'metrics' | 'coins';
+type OperationAction = 'issue' | 'purchase' | 'redeem';
 type ManagementType = 'metrics' | 'products' | 'staff' | 'brand';
 
 type WorkspaceTabItem<T extends string> = {
@@ -85,10 +86,11 @@ export function BrandWorkspace({
 }) {
   const [metrics, setMetrics] = useState<MetricResponse[]>([]);
   const [metricsError, setMetricsError] = useState('');
-  const [activeRootSection, setActiveRootSection] = useState<RootSection>('operations');
   const [activeOperationType, setActiveOperationType] = useState<OperationType>('metrics');
   const [activeOperationAction, setActiveOperationAction] = useState<OperationAction>('issue');
-  const [activeManagementType, setActiveManagementType] = useState<ManagementType>('metrics');
+  const [selectedCustomer, setSelectedCustomer] = useState<BrandCustomerCardResponse | null>(null);
+  const [customerCardError, setCustomerCardError] = useState('');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (!workspace.isMetricsEnabled || !workspace.canIssue) {
@@ -123,14 +125,6 @@ export function BrandWorkspace({
     showStaffManagement,
     showBrandSettings
   });
-  const rootTabs: WorkspaceTabItem<RootSection>[] = [
-    operationTabs.length > 0 ? { id: 'operations', label: 'Операции' } : null,
-    managementTabs.length > 0 ? { id: 'management', label: 'Управление' } : null
-  ].filter((tab): tab is WorkspaceTabItem<RootSection> => tab !== null);
-
-  const currentRootSection = rootTabs.some((tab) => tab.id === activeRootSection)
-    ? activeRootSection
-    : rootTabs[0]?.id;
   const currentOperationType = operationTabs.some((tab) => tab.id === activeOperationType)
     ? activeOperationType
     : operationTabs[0]?.id;
@@ -140,15 +134,6 @@ export function BrandWorkspace({
   const currentOperationAction = operationActionTabs.some((tab) => tab.id === activeOperationAction)
     ? activeOperationAction
     : operationActionTabs[0]?.id;
-  const currentManagementType = managementTabs.some((tab) => tab.id === activeManagementType)
-    ? activeManagementType
-    : managementTabs[0]?.id;
-
-  useEffect(() => {
-    if (currentRootSection && currentRootSection !== activeRootSection) {
-      setActiveRootSection(currentRootSection);
-    }
-  }, [activeRootSection, currentRootSection]);
 
   useEffect(() => {
     if (currentOperationType && currentOperationType !== activeOperationType) {
@@ -162,11 +147,17 @@ export function BrandWorkspace({
     }
   }, [activeOperationAction, currentOperationAction]);
 
-  useEffect(() => {
-    if (currentManagementType && currentManagementType !== activeManagementType) {
-      setActiveManagementType(currentManagementType);
-    }
-  }, [activeManagementType, currentManagementType]);
+  if (isSettingsOpen) {
+    return (
+      <BrandSettingsPage
+        workspace={workspace}
+        managementTabs={managementTabs}
+        onBack={() => setIsSettingsOpen(false)}
+        onWorkspaceUpdated={onWorkspaceUpdated}
+        onMetricsChanged={workspace.canIssue ? loadIssueMetrics : undefined}
+      />
+    );
+  }
 
   return (
     <div className="brand-workspace-page brand-workspace-console">
@@ -182,37 +173,40 @@ export function BrandWorkspace({
           <h2>{workspace.brandName}</h2>
           <p>Роль: {formatRoleName(workspace.roleSystemName)}</p>
         </div>
+        {managementTabs.length > 0 ? (
+          <button
+            className="brand-workspace-hero__settings"
+            type="button"
+            aria-label="Управление брендом"
+            title="Управление брендом"
+            onClick={() => setIsSettingsOpen(true)}
+          >
+            <Settings size={20} aria-hidden="true" />
+          </button>
+        ) : null}
       </section>
 
-      {rootTabs.length > 1 ? (
-        <WorkspaceTabs
-          items={rootTabs}
-          activeId={currentRootSection}
-          onSelect={(nextSection) => {
-            setActiveRootSection(nextSection);
-            if (nextSection === 'operations' && operationTabs[0]) {
-              setActiveOperationType(operationTabs[0].id);
-              const nextActions = getOperationActionTabs(workspace, operationTabs[0].id);
-              if (nextActions[0]) {
-                setActiveOperationAction(nextActions[0].id);
-              }
-            }
-            if (nextSection === 'management' && managementTabs[0]) {
-              setActiveManagementType(managementTabs[0].id);
-            }
-          }}
-        />
+      {!workspace.canViewBalances ? (
+        <section className="operation-panel">
+          <p className="muted-text">Для открытия карточки клиента нет доступа.</p>
+        </section>
       ) : null}
 
-      {currentRootSection === 'operations' && currentOperationType && currentOperationAction ? (
-        <OperationWorkspace
-          workspace={workspace}
-          metrics={metrics}
-          metricsError={metricsError}
+      {workspace.canViewBalances && !selectedCustomer ? (
+        <CustomerLookupPanel brandId={workspace.brandId} onCustomerFound={setSelectedCustomer} />
+      ) : null}
+
+      {workspace.canViewBalances && selectedCustomer ? (
+        <SelectedCustomerWorkspace
+          customer={selectedCustomer}
+          customerCardError={customerCardError}
           operationTabs={operationTabs}
           actionTabs={operationActionTabs}
           activeOperationType={currentOperationType}
           activeOperationAction={currentOperationAction}
+          workspace={workspace}
+          metrics={metrics}
+          metricsError={metricsError}
           onOperationTypeChange={(nextType) => {
             setActiveOperationType(nextType);
             const nextActions = getOperationActionTabs(workspace, nextType);
@@ -221,28 +215,26 @@ export function BrandWorkspace({
             }
           }}
           onOperationActionChange={setActiveOperationAction}
-          onReloadMetrics={loadIssueMetrics}
+          onCustomerChanged={refreshSelectedCustomer}
         />
-      ) : null}
-
-      {currentRootSection === 'management' && currentManagementType ? (
-        <ManagementWorkspace
-          workspace={workspace}
-          managementTabs={managementTabs}
-          activeManagementType={currentManagementType}
-          onManagementTypeChange={setActiveManagementType}
-          onMetricsChanged={workspace.canIssue ? loadIssueMetrics : undefined}
-          onWorkspaceUpdated={onWorkspaceUpdated}
-        />
-      ) : null}
-
-      {operationTabs.length === 0 && managementTabs.length === 0 ? (
-        <section className="operation-panel">
-          <p className="muted-text">Для этого бренда нет доступных разделов.</p>
-        </section>
       ) : null}
     </div>
   );
+
+  async function refreshSelectedCustomer() {
+    if (!selectedCustomer) {
+      return;
+    }
+
+    setCustomerCardError('');
+
+    try {
+      const response = await getBrandCustomerCard(workspace.brandId, selectedCustomer.customerPhoneNumber);
+      setSelectedCustomer(response);
+    } catch (requestError) {
+      setCustomerCardError(getUserMessage(requestError));
+    }
+  }
 }
 
 function WorkspaceTabs<T extends string>({
@@ -276,8 +268,139 @@ function WorkspaceTabs<T extends string>({
   );
 }
 
+function CustomerLookupPanel({
+  brandId,
+  onCustomerFound
+}: {
+  brandId: string;
+  onCustomerFound: (customer: BrandCustomerCardResponse) => void;
+}) {
+  const [phoneNumber, setPhoneNumber] = useState(formatRuPhoneInput(''));
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [notFound, setNotFound] = useState(false);
+
+  async function submit() {
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    if (!isRuPhoneInputComplete(phoneNumber) || !normalizedPhone.ok) {
+      setError(normalizedPhone.ok ? 'Укажите телефон клиента.' : normalizedPhone.message);
+      setNotFound(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    setNotFound(false);
+
+    try {
+      const response = await getBrandCustomerCard(brandId, normalizedPhone.value);
+      onCustomerFound(response);
+    } catch (requestError) {
+      if (requestError instanceof ApiRequestError && requestError.status === 404) {
+        setNotFound(true);
+        return;
+      }
+
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <OperationPanel icon={<Search size={20} />} title="Найти клиента">
+      <div className="work-form">
+        <label>
+          Телефон клиента
+          <RuPhoneInput value={phoneNumber} onValueChange={setPhoneNumber} />
+        </label>
+        <button type="button" disabled={isLoading || !isRuPhoneInputComplete(phoneNumber)} onClick={() => void submit()}>
+          Найти клиента
+        </button>
+      </div>
+
+      {notFound ? (
+        <p className="form-status form-status--error">Клиент не найден. Проверьте номер телефона.</p>
+      ) : null}
+      {error ? <p className="form-status form-status--error">{error}</p> : null}
+    </OperationPanel>
+  );
+}
+
+function SelectedCustomerWorkspace({
+  customer,
+  customerCardError,
+  operationTabs,
+  actionTabs,
+  activeOperationType,
+  activeOperationAction,
+  workspace,
+  metrics,
+  metricsError,
+  onOperationTypeChange,
+  onOperationActionChange,
+  onCustomerChanged
+}: {
+  customer: BrandCustomerCardResponse;
+  customerCardError: string;
+  operationTabs: WorkspaceTabItem<OperationType>[];
+  actionTabs: WorkspaceTabItem<OperationAction>[];
+  activeOperationType?: OperationType;
+  activeOperationAction?: OperationAction;
+  workspace: BrandWorkspaceResponse;
+  metrics: MetricResponse[];
+  metricsError: string;
+  onOperationTypeChange: (type: OperationType) => void;
+  onOperationActionChange: (action: OperationAction) => void;
+  onCustomerChanged: () => Promise<void>;
+}) {
+  return (
+    <div className="workspace-active-area">
+      <section className="brand-customer-card">
+        <div className="brand-customer-card__header">
+          <div>
+            <span className="brand-customer-card__eyebrow">Клиент</span>
+            <h3>{customer.customerName}</h3>
+            <p>{customer.customerPhoneNumber}</p>
+          </div>
+        </div>
+
+        {customerCardError ? <p className="form-status form-status--error">{customerCardError}</p> : null}
+        <WalletBrandDetailsBlock details={customer.details} ariaLabel="Разделы карточки клиента" />
+      </section>
+
+      <section className="brand-customer-operations">
+        <div className="section-heading">
+          <h2>Операции</h2>
+        </div>
+
+        {activeOperationType && activeOperationAction ? (
+          <OperationWorkspace
+            workspace={workspace}
+            customer={customer}
+            metrics={metrics}
+            metricsError={metricsError}
+            operationTabs={operationTabs}
+            actionTabs={actionTabs}
+            activeOperationType={activeOperationType}
+            activeOperationAction={activeOperationAction}
+            onOperationTypeChange={onOperationTypeChange}
+            onOperationActionChange={onOperationActionChange}
+            onCustomerChanged={onCustomerChanged}
+          />
+        ) : (
+          <section className="operation-panel">
+            <p className="muted-text">Для этого бренда нет доступных операций.</p>
+          </section>
+        )}
+      </section>
+    </div>
+  );
+}
+
 function OperationWorkspace({
   workspace,
+  customer,
   metrics,
   metricsError,
   operationTabs,
@@ -286,9 +409,10 @@ function OperationWorkspace({
   activeOperationAction,
   onOperationTypeChange,
   onOperationActionChange,
-  onReloadMetrics
+  onCustomerChanged
 }: {
   workspace: BrandWorkspaceResponse;
+  customer: BrandCustomerCardResponse;
   metrics: MetricResponse[];
   metricsError: string;
   operationTabs: WorkspaceTabItem<OperationType>[];
@@ -297,7 +421,7 @@ function OperationWorkspace({
   activeOperationAction: OperationAction;
   onOperationTypeChange: (type: OperationType) => void;
   onOperationActionChange: (action: OperationAction) => void;
-  onReloadMetrics: () => Promise<void>;
+  onCustomerChanged: () => Promise<void>;
 }) {
   return (
     <div className="workspace-active-area">
@@ -305,27 +429,83 @@ function OperationWorkspace({
       <WorkspaceTabs items={actionTabs} activeId={activeOperationAction} onSelect={onOperationActionChange} />
 
       {activeOperationType === 'metrics' && activeOperationAction === 'issue' ? (
-        <IssueMetricPanel metrics={metrics} metricsError={metricsError} onReloadMetrics={onReloadMetrics} />
-      ) : null}
-      {activeOperationType === 'metrics' && activeOperationAction === 'redeem' ? (
-        <RedeemMetricPanel brandId={workspace.brandId} />
-      ) : null}
-      {activeOperationType === 'coins' && activeOperationAction === 'issue' ? (
-        <IssueCoinsPanel brandId={workspace.brandId} />
-      ) : null}
-      {activeOperationType === 'coins' && activeOperationAction === 'purchase' ? (
-        <PurchaseCoinProductPanel brandId={workspace.brandId} />
-      ) : null}
-      {activeOperationType === 'coins' && activeOperationAction === 'redeem' ? (
-        <RedeemCoinsPanel brandId={workspace.brandId} />
-      ) : null}
-      {activeOperationType === 'customer' ? (
-        <CustomerBalancesPanel
-          brandId={workspace.brandId}
-          isMetricsEnabled={workspace.isMetricsEnabled}
-          isCoinsEnabled={workspace.isCoinsEnabled}
+        <IssueMetricPanel
+          customer={customer}
+          metrics={metrics}
+          metricsError={metricsError}
+          onCustomerChanged={onCustomerChanged}
         />
       ) : null}
+      {activeOperationType === 'metrics' && activeOperationAction === 'redeem' ? (
+        <RedeemMetricPanel brandId={workspace.brandId} onCustomerChanged={onCustomerChanged} />
+      ) : null}
+      {activeOperationType === 'coins' && activeOperationAction === 'issue' ? (
+        <IssueCoinsPanel brandId={workspace.brandId} customer={customer} onCustomerChanged={onCustomerChanged} />
+      ) : null}
+      {activeOperationType === 'coins' && activeOperationAction === 'purchase' ? (
+        <PurchaseCoinProductPanel brandId={workspace.brandId} onCustomerChanged={onCustomerChanged} />
+      ) : null}
+      {activeOperationType === 'coins' && activeOperationAction === 'redeem' ? (
+        <RedeemCoinsPanel brandId={workspace.brandId} onCustomerChanged={onCustomerChanged} />
+      ) : null}
+    </div>
+  );
+}
+
+function BrandSettingsPage({
+  workspace,
+  managementTabs,
+  onBack,
+  onMetricsChanged,
+  onWorkspaceUpdated
+}: {
+  workspace: BrandWorkspaceResponse;
+  managementTabs: WorkspaceTabItem<ManagementType>[];
+  onBack: () => void;
+  onMetricsChanged?: () => Promise<void>;
+  onWorkspaceUpdated: (workspace: BrandWorkspaceResponse) => void;
+}) {
+  const [activeManagementType, setActiveManagementType] = useState<ManagementType>('metrics');
+  const currentManagementType = managementTabs.some((tab) => tab.id === activeManagementType)
+    ? activeManagementType
+    : managementTabs[0]?.id;
+
+  useEffect(() => {
+    if (currentManagementType && currentManagementType !== activeManagementType) {
+      setActiveManagementType(currentManagementType);
+    }
+  }, [activeManagementType, currentManagementType]);
+
+  return (
+    <div className="brand-workspace-page brand-workspace-console">
+      <div className="brand-workspace-topline">
+        <button className="button-secondary button-compact" type="button" onClick={onBack}>
+          <ArrowLeft size={17} />
+          Назад
+        </button>
+      </div>
+
+      <section className="brand-workspace-hero">
+        <div>
+          <h2>Управление брендом</h2>
+          <p>{workspace.brandName}</p>
+        </div>
+      </section>
+
+      {currentManagementType ? (
+        <ManagementWorkspace
+          workspace={workspace}
+          managementTabs={managementTabs}
+          activeManagementType={currentManagementType}
+          onManagementTypeChange={setActiveManagementType}
+          onMetricsChanged={onMetricsChanged}
+          onWorkspaceUpdated={onWorkspaceUpdated}
+        />
+      ) : (
+        <section className="operation-panel">
+          <p className="muted-text">Для этого бренда нет доступных настроек.</p>
+        </section>
+      )}
     </div>
   );
 }
@@ -377,9 +557,6 @@ function getOperationTabs(workspace: BrandWorkspaceResponse): WorkspaceTabItem<O
         || (workspace.canRedeem && workspace.isManualCoinRedemptionEnabled)
       )
       ? { id: 'coins', label: 'Монетки' }
-      : null,
-    workspace.canViewBalances && (workspace.isMetricsEnabled || workspace.isCoinsEnabled)
-      ? { id: 'customer', label: 'Клиент' }
       : null
   ].filter((tab): tab is WorkspaceTabItem<OperationType> => tab !== null);
 }
@@ -405,10 +582,6 @@ function getOperationActionTabs(
         ? { id: 'redeem', label: 'Списать вручную' }
         : null
     ].filter((tab): tab is WorkspaceTabItem<OperationAction> => tab !== null);
-  }
-
-  if (operationType === 'customer') {
-    return [{ id: 'balances', label: 'Балансы' }];
   }
 
   return [{ id: 'issue', label: 'Выдать' }];
@@ -1189,16 +1362,17 @@ function mapUpdatedBrandToWorkspace(
 }
 
 function IssueMetricPanel({
+  customer,
   metrics,
   metricsError,
-  onReloadMetrics
+  onCustomerChanged
 }: {
+  customer: BrandCustomerCardResponse;
   metrics: MetricResponse[];
   metricsError: string;
-  onReloadMetrics: () => Promise<void>;
+  onCustomerChanged: () => Promise<void>;
 }) {
   const [metricId, setMetricId] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState(formatRuPhoneInput(''));
   const [amount, setAmount] = useState('');
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1213,8 +1387,8 @@ function IssueMetricPanel({
 
   async function submit() {
     const parsedAmount = Number(amount);
-    if (!metricId || !isRuPhoneInputComplete(phoneNumber) || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
-      setError('Выберите штамп, укажите телефон клиента и положительное количество.');
+    if (!metricId || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+      setError('Выберите штамп и укажите положительное количество.');
       return;
     }
 
@@ -1224,13 +1398,14 @@ function IssueMetricPanel({
 
     try {
       const response = await issueMetricByPhone(metricId, {
-        phoneNumber: phoneNumber.trim(),
+        phoneNumber: customer.customerPhoneNumber,
         amount: parsedAmount,
         comment: comment.trim() || undefined
       });
       setResult({ kind: 'metric', title: 'Штамп выдан', response });
       setAmount('');
       setComment('');
+      await onCustomerChanged();
     } catch (requestError) {
       setError(getUserMessage(requestError));
     } finally {
@@ -1252,13 +1427,7 @@ function IssueMetricPanel({
             ))}
           </select>
         </label>
-        <label>
-          Телефон клиента
-          <RuPhoneInput
-            value={phoneNumber}
-            onValueChange={setPhoneNumber}
-          />
-        </label>
+        <p className="operation-options__customer">Клиент: {customer.customerName}</p>
         <label>
           Количество
           <input value={amount} inputMode="numeric" onChange={(event) => setAmount(event.target.value)} />
@@ -1271,9 +1440,6 @@ function IssueMetricPanel({
           <button type="button" disabled={isSubmitting || metrics.length === 0} onClick={() => void submit()}>
             Выдать
           </button>
-          <button className="button-secondary" type="button" onClick={() => void onReloadMetrics()}>
-            Обновить
-          </button>
         </div>
       </div>
       <OperationFeedback error={error} result={result} />
@@ -1281,7 +1447,13 @@ function IssueMetricPanel({
   );
 }
 
-function RedeemMetricPanel({ brandId }: { brandId: string }) {
+function RedeemMetricPanel({
+  brandId,
+  onCustomerChanged
+}: {
+  brandId: string;
+  onCustomerChanged: () => Promise<void>;
+}) {
   const [redemptionCode, setRedemptionCode] = useState('');
   const [options, setOptions] = useState<RedeemMetricOptionsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -1323,6 +1495,7 @@ function RedeemMetricPanel({ brandId }: { brandId: string }) {
       setResult({ kind: 'metric', title: 'Штамп списан', response });
       setOptions(null);
       setRedemptionCode('');
+      await onCustomerChanged();
     } catch (requestError) {
       setError(getUserMessage(requestError));
     } finally {
@@ -1374,8 +1547,15 @@ function RedeemMetricPanel({ brandId }: { brandId: string }) {
   );
 }
 
-function IssueCoinsPanel({ brandId }: { brandId: string }) {
-  const [phoneNumber, setPhoneNumber] = useState(formatRuPhoneInput(''));
+function IssueCoinsPanel({
+  brandId,
+  customer,
+  onCustomerChanged
+}: {
+  brandId: string;
+  customer: BrandCustomerCardResponse;
+  onCustomerChanged: () => Promise<void>;
+}) {
   const [amount, setAmount] = useState('');
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1384,8 +1564,8 @@ function IssueCoinsPanel({ brandId }: { brandId: string }) {
 
   async function submit() {
     const parsedAmount = Number(amount);
-    if (!isRuPhoneInputComplete(phoneNumber) || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
-      setError('Укажите телефон клиента и положительное количество монеток.');
+    if (!Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+      setError('Укажите положительное количество монеток.');
       return;
     }
 
@@ -1395,13 +1575,14 @@ function IssueCoinsPanel({ brandId }: { brandId: string }) {
 
     try {
       const response = await issueCoinsByPhone(brandId, {
-        phoneNumber: phoneNumber.trim(),
+        phoneNumber: customer.customerPhoneNumber,
         amount: parsedAmount,
         comment: comment.trim() || undefined
       });
       setResult({ kind: 'coins', title: 'Монетки начислены', response });
       setAmount('');
       setComment('');
+      await onCustomerChanged();
     } catch (requestError) {
       setError(getUserMessage(requestError));
     } finally {
@@ -1412,13 +1593,7 @@ function IssueCoinsPanel({ brandId }: { brandId: string }) {
   return (
     <OperationPanel icon={<Coins size={20} />} title="Начислить монетки">
       <div className="work-form">
-        <label>
-          Телефон клиента
-          <RuPhoneInput
-            value={phoneNumber}
-            onValueChange={setPhoneNumber}
-          />
-        </label>
+        <p className="operation-options__customer">Клиент: {customer.customerName}</p>
         <label>
           Количество
           <input value={amount} inputMode="numeric" onChange={(event) => setAmount(event.target.value)} />
@@ -1436,7 +1611,13 @@ function IssueCoinsPanel({ brandId }: { brandId: string }) {
   );
 }
 
-function RedeemCoinsPanel({ brandId }: { brandId: string }) {
+function RedeemCoinsPanel({
+  brandId,
+  onCustomerChanged
+}: {
+  brandId: string;
+  onCustomerChanged: () => Promise<void>;
+}) {
   const [redemptionCode, setRedemptionCode] = useState('');
   const [amount, setAmount] = useState('');
   const [comment, setComment] = useState('');
@@ -1465,6 +1646,7 @@ function RedeemCoinsPanel({ brandId }: { brandId: string }) {
       setRedemptionCode('');
       setAmount('');
       setComment('');
+      await onCustomerChanged();
     } catch (requestError) {
       setError(getUserMessage(requestError));
     } finally {
@@ -1496,7 +1678,13 @@ function RedeemCoinsPanel({ brandId }: { brandId: string }) {
   );
 }
 
-function PurchaseCoinProductPanel({ brandId }: { brandId: string }) {
+function PurchaseCoinProductPanel({
+  brandId,
+  onCustomerChanged
+}: {
+  brandId: string;
+  onCustomerChanged: () => Promise<void>;
+}) {
   const [redemptionCode, setRedemptionCode] = useState('');
   const [options, setOptions] = useState<CoinProductPurchaseOptionsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -1535,6 +1723,7 @@ function PurchaseCoinProductPanel({ brandId }: { brandId: string }) {
       setResult({ kind: 'coins', title: 'Товар выдан', response });
       setOptions(null);
       setRedemptionCode('');
+      await onCustomerChanged();
     } catch (requestError) {
       setError(getUserMessage(requestError));
     } finally {
@@ -1582,82 +1771,6 @@ function PurchaseCoinProductPanel({ brandId }: { brandId: string }) {
         </div>
       ) : null}
       <OperationFeedback error={error} result={result} />
-    </OperationPanel>
-  );
-}
-
-function CustomerBalancesPanel({
-  brandId,
-  isMetricsEnabled,
-  isCoinsEnabled
-}: {
-  brandId: string;
-  isMetricsEnabled: boolean;
-  isCoinsEnabled: boolean;
-}) {
-  const [phoneNumber, setPhoneNumber] = useState(formatRuPhoneInput(''));
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [balances, setBalances] = useState<BrandCustomerBalancesResponse | null>(null);
-
-  async function loadBalances() {
-    if (!isRuPhoneInputComplete(phoneNumber)) {
-      setError('Укажите телефон клиента.');
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-    setBalances(null);
-
-    try {
-      setBalances(await getCustomerBalances(brandId, phoneNumber.trim()));
-    } catch (requestError) {
-      setError(getUserMessage(requestError));
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  const activeBalances = balances?.balances.filter((balance) => balance.isActive) ?? [];
-
-  return (
-    <OperationPanel icon={<BarChart3 size={20} />} title="Балансы клиента">
-      <div className="work-form">
-        <label>
-          Телефон клиента
-          <RuPhoneInput
-            value={phoneNumber}
-            onValueChange={setPhoneNumber}
-          />
-        </label>
-        <button
-          className="button-secondary"
-          type="button"
-          disabled={isLoading}
-          onClick={() => void loadBalances()}
-        >
-          <Search size={17} />
-          Показать балансы
-        </button>
-      </div>
-
-      {balances ? (
-        <div className="operation-result">
-          <strong>Клиент: {balances.customerName}</strong>
-          {isMetricsEnabled && activeBalances.length === 0 ? <span>Активных штампов пока нет</span> : null}
-          {isMetricsEnabled
-            ? activeBalances.map((balance) => (
-                <span key={balance.metricDefinitionId}>
-                  {balance.metricName}: {balance.value}
-                </span>
-              ))
-            : null}
-          {isCoinsEnabled ? <span>Монетки: {balances.coinBalanceValue}</span> : null}
-        </div>
-      ) : null}
-
-      {error ? <p className="form-status form-status--error">{error}</p> : null}
     </OperationPanel>
   );
 }

@@ -266,30 +266,10 @@ function BrandDetailsScreen({
   error: string;
   onBack: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<BrandDetailsTab>('metrics');
-  const [isProductsExpanded, setIsProductsExpanded] = useState(false);
-  const [isMetricsExpanded, setIsMetricsExpanded] = useState(false);
-  const [selectedHistorySource, setSelectedHistorySource] = useState<HistorySource | null>(null);
   const brandName = details?.brandName || 'Бренд';
   const productsSection = details ? findRewardSection(details.rewardSections, 'products') : null;
   const metricsSection = details ? findRewardSection(details.rewardSections, 'metrics') : null;
-  const products = productsSection ? sortRewardItems(productsSection.items) : [];
-  const metrics = metricsSection ? sortRewardItems(metricsSection.items) : [];
-  const historySources = details ? getHistorySources(details.history.groups.flatMap((group) => group.items)) : [];
   const metaText = details ? getBrandDetailsMetaText(details, productsSection, metricsSection) : 'Загрузка данных';
-  const availableTabs = useMemo(
-    () => getAvailableBrandDetailsTabs(details, metricsSection),
-    [details, metricsSection]
-  );
-  const selectedTab = availableTabs.some((tab) => tab.id === activeTab) ? activeTab : availableTabs[0].id;
-
-  useEffect(() => {
-    if (!details || availableTabs.some((tab) => tab.id === activeTab)) {
-      return;
-    }
-
-    setActiveTab(availableTabs[0].id);
-  }, [activeTab, availableTabs, details]);
 
   return (
     <div className="brand-detail-page">
@@ -318,57 +298,7 @@ function BrandDetailsScreen({
       ) : null}
 
       {!isLoading && details ? (
-        <>
-          <section className="brand-details-tabs-card">
-            <div className="brand-details-tabs" role="tablist" aria-label="Разделы бренда">
-              {availableTabs.map((tab) => (
-                <button
-                  className={selectedTab === tab.id ? 'brand-details-tabs__item brand-details-tabs__item--active' : 'brand-details-tabs__item'}
-                  key={tab.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={selectedTab === tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="brand-details-content">
-            {selectedTab === 'coins' ? (
-              <CoinsTab
-                balance={details.coinBalance}
-                products={details.isCoinProductRedemptionEnabled && productsSection ? products : null}
-                productsEmptyText={productsSection?.emptyText || 'Пока нет активных товаров.'}
-                isProductsExpanded={isProductsExpanded}
-                onToggleProductsExpanded={() => setIsProductsExpanded((value) => !value)}
-              />
-            ) : null}
-
-            {selectedTab === 'metrics' ? (
-              <RewardTab
-                emptyText="Пока нет штампов"
-                items={metrics}
-                isExpanded={isMetricsExpanded}
-                onToggleExpanded={() => setIsMetricsExpanded((value) => !value)}
-              />
-            ) : null}
-
-            {selectedTab === 'history' ? (
-              <HistoryTab
-                emptyText={details.history.emptyText || 'Пока нет операций'}
-                sources={historySources}
-                onSelectSource={setSelectedHistorySource}
-              />
-            ) : null}
-          </section>
-        </>
-      ) : null}
-
-      {selectedHistorySource ? (
-        <HistoryBottomSheet source={selectedHistorySource} onClose={() => setSelectedHistorySource(null)} />
+        <WalletBrandDetailsBlock details={details} ariaLabel="Разделы бренда" />
       ) : null}
     </div>
   );
@@ -398,6 +328,91 @@ function getAvailableBrandDetailsTabs(
   tabs.push({ id: 'history', label: 'История' });
 
   return tabs;
+}
+
+export function WalletBrandDetailsBlock({
+  details,
+  ariaLabel = 'Разделы бренда'
+}: {
+  details: UserWalletBrandDetailsResponse;
+  ariaLabel?: string;
+}) {
+  const [activeTab, setActiveTab] = useState<BrandDetailsTab>('metrics');
+  const [isProductsExpanded, setIsProductsExpanded] = useState(false);
+  const [isMetricsExpanded, setIsMetricsExpanded] = useState(false);
+  const [selectedHistorySource, setSelectedHistorySource] = useState<HistorySource | null>(null);
+  const productsSection = findRewardSection(details.rewardSections, 'products');
+  const metricsSection = findRewardSection(details.rewardSections, 'metrics');
+  const products = productsSection ? sortRewardItems(productsSection.items) : [];
+  const metrics = metricsSection ? sortRewardItems(metricsSection.items) : [];
+  const historySources = getHistorySources(details.history.groups.flatMap((group) => group.items));
+  const availableTabs = useMemo(
+    () => getAvailableBrandDetailsTabs(details, metricsSection),
+    [details, metricsSection]
+  );
+  const selectedTab = availableTabs.some((tab) => tab.id === activeTab) ? activeTab : availableTabs[0].id;
+
+  useEffect(() => {
+    if (availableTabs.some((tab) => tab.id === activeTab)) {
+      return;
+    }
+
+    setActiveTab(availableTabs[0].id);
+  }, [activeTab, availableTabs]);
+
+  return (
+    <>
+      <section className="brand-details-tabs-card">
+        <div className="brand-details-tabs" role="tablist" aria-label={ariaLabel}>
+          {availableTabs.map((tab) => (
+            <button
+              className={selectedTab === tab.id ? 'brand-details-tabs__item brand-details-tabs__item--active' : 'brand-details-tabs__item'}
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={selectedTab === tab.id}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="brand-details-content">
+        {selectedTab === 'coins' ? (
+          <CoinsTab
+            balance={details.coinBalance}
+            products={details.isCoinProductRedemptionEnabled && productsSection ? products : null}
+            productsEmptyText={productsSection?.emptyText || 'Пока нет активных товаров.'}
+            isProductsExpanded={isProductsExpanded}
+            onToggleProductsExpanded={() => setIsProductsExpanded((value) => !value)}
+          />
+        ) : null}
+
+        {selectedTab === 'metrics' ? (
+          <RewardTab
+            emptyText="Пока нет штампов"
+            items={metrics}
+            isExpanded={isMetricsExpanded}
+            onToggleExpanded={() => setIsMetricsExpanded((value) => !value)}
+          />
+        ) : null}
+
+        {selectedTab === 'history' ? (
+          <HistoryTab
+            emptyText={details.history.emptyText || 'Пока нет операций'}
+            sources={historySources}
+            onSelectSource={setSelectedHistorySource}
+          />
+        ) : null}
+      </section>
+
+      {selectedHistorySource ? (
+        <HistoryBottomSheet source={selectedHistorySource} onClose={() => setSelectedHistorySource(null)} />
+      ) : null}
+    </>
+  );
 }
 
 function CoinsTab({
