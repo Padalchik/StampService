@@ -56,7 +56,7 @@ import { ApiRequestError } from '../api/apiClient';
 import { formatRuPhoneInput, isRuPhoneInputComplete, normalizePhoneNumber } from '../validation/phoneNumber';
 import { RuPhoneInput } from '../components/RuPhoneInput';
 import { formatRuDateTime } from '../format/dateTime';
-import { WalletBrandDetailsBlock } from '../wallet/WalletPage';
+import { WalletBrandDetailsBlock } from '../wallet/WalletBrandDetailsBlock';
 
 type OperationResult =
   | { kind: 'metric'; title: string; response: IssueMetricResponse | RedeemMetricResponse }
