@@ -348,7 +348,7 @@ function BrandDetailsScreen({
 
             {selectedTab === 'metrics' ? (
               <RewardTab
-                emptyText="Пока нет метрик"
+                emptyText="Пока нет штампов"
                 items={metrics}
                 isExpanded={isMetricsExpanded}
                 onToggleExpanded={() => setIsMetricsExpanded((value) => !value)}
@@ -387,7 +387,7 @@ function getAvailableBrandDetailsTabs(
   const tabs: BrandDetailsTabItem[] = [];
 
   if (metricsSection) {
-    tabs.push({ id: 'metrics', label: 'Метрики' });
+    tabs.push({ id: 'metrics', label: 'Штампы' });
   }
 
   if (productsSection) {
@@ -538,7 +538,7 @@ function findRewardSection(
         return kind.includes('coin') || title.includes('товар') || title.includes('монет');
       }
 
-      return kind.includes('metric') || title.includes('метрик');
+      return kind.includes('metric') || title.includes('штамп');
     }) ?? null
   );
 }

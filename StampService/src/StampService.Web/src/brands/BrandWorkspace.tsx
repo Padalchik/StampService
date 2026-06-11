@@ -368,7 +368,7 @@ function ManagementWorkspace({
 function getOperationTabs(workspace: BrandWorkspaceResponse): WorkspaceTabItem<OperationType>[] {
   return [
     workspace.isMetricsEnabled && (workspace.canIssue || workspace.canRedeem)
-      ? { id: 'metrics', label: 'Метрики' }
+      ? { id: 'metrics', label: 'Штампы' }
       : null,
     workspace.isCoinsEnabled && workspace.canRedeem && workspace.isCoinProductRedemptionEnabled
       ? { id: 'products', label: 'Товары' }
@@ -422,7 +422,7 @@ function getManagementTabs({
   showBrandSettings: boolean;
 }): WorkspaceTabItem<ManagementType>[] {
   return [
-    showMetricManagement ? { id: 'metrics', label: 'Метрики' } : null,
+    showMetricManagement ? { id: 'metrics', label: 'Штампы' } : null,
     showCoinProductManagement ? { id: 'products', label: 'Товары' } : null,
     showStaffManagement ? { id: 'staff', label: 'Сотрудники' } : null,
     showBrandSettings ? { id: 'brand', label: 'Бренд' } : null
@@ -475,7 +475,7 @@ function MetricManagementPanel({
   async function submitCreate() {
     const parsedAmount = Number(newRedemptionAmount);
     if (!newName.trim() || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
-      setError('Укажите название метрики и положительное количество для списания.');
+      setError('Укажите название штампа и положительное количество для списания.');
       setStatus('');
       return;
     }
@@ -491,7 +491,7 @@ function MetricManagementPanel({
       });
       setNewName('');
       setNewRedemptionAmount('');
-      setStatus('Метрика создана.');
+      setStatus('Штамп создан.');
       await refreshAllMetrics();
     } catch (requestError) {
       setError(getUserMessage(requestError));
@@ -517,7 +517,7 @@ function MetricManagementPanel({
   async function submitUpdate(metricId: string) {
     const parsedAmount = Number(editRedemptionAmount);
     if (!editName.trim() || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
-      setError('Укажите название метрики и положительное количество для списания.');
+      setError('Укажите название штампа и положительное количество для списания.');
       setStatus('');
       return;
     }
@@ -532,7 +532,7 @@ function MetricManagementPanel({
         redemptionAmount: parsedAmount
       });
       cancelEdit();
-      setStatus('Метрика обновлена.');
+      setStatus('Штамп обновлен.');
       await refreshAllMetrics();
     } catch (requestError) {
       setError(getUserMessage(requestError));
@@ -547,9 +547,9 @@ function MetricManagementPanel({
         <div>
           <div className="section-heading__title">
             <BarChart3 size={22} />
-            <h2>Управление метриками</h2>
+            <h2>Управление штампами</h2>
           </div>
-          <p>Создание и редактирование метрик бренда.</p>
+          <p>Создание и редактирование штампов бренда.</p>
         </div>
         <button className="button-secondary button-compact" type="button" onClick={() => void refreshAllMetrics()}>
           <RefreshCw size={17} />
@@ -576,12 +576,12 @@ function MetricManagementPanel({
         </button>
       </div>
 
-      {isLoading ? <p className="muted-text">Загружаем метрики...</p> : null}
+      {isLoading ? <p className="muted-text">Загружаем штампы...</p> : null}
       {error ? <p className="form-status form-status--error">{error}</p> : null}
       {status ? <p className="form-status form-status--ok">{status}</p> : null}
 
       {!isLoading && metrics.length === 0 ? (
-        <p className="muted-text">Метрик пока нет.</p>
+        <p className="muted-text">Штампов пока нет.</p>
       ) : null}
 
       <div className="metric-management-list">
@@ -1098,7 +1098,7 @@ function BrandSettingsPanel({
             <Settings size={22} />
             <h2>Настройки бренда</h2>
           </div>
-          <p>Включение метрик, монеток и способов списания.</p>
+          <p>Включение штампов, монеток и способов списания.</p>
         </div>
         <button type="button" disabled={isSubmitting || !canSave} onClick={() => void submit()}>
           <Save size={17} />
@@ -1108,8 +1108,8 @@ function BrandSettingsPanel({
 
       <div className="settings-grid">
         <ToggleRow
-          title="Учитывать метрики"
-          description="Метрики доступны клиентам и сотрудникам."
+          title="Учитывать штампы"
+          description="Штампы доступны клиентам и сотрудникам."
           checked={isMetricsEnabled}
           onChange={setIsMetricsEnabled}
         />
@@ -1210,7 +1210,7 @@ function IssueMetricPanel({
   async function submit() {
     const parsedAmount = Number(amount);
     if (!metricId || !isRuPhoneInputComplete(phoneNumber) || !Number.isInteger(parsedAmount) || parsedAmount <= 0) {
-      setError('Выберите метрику, укажите телефон клиента и положительное количество.');
+      setError('Выберите штамп, укажите телефон клиента и положительное количество.');
       return;
     }
 
@@ -1224,7 +1224,7 @@ function IssueMetricPanel({
         amount: parsedAmount,
         comment: comment.trim() || undefined
       });
-      setResult({ kind: 'metric', title: 'Метрика выдана', response });
+      setResult({ kind: 'metric', title: 'Штамп выдан', response });
       setAmount('');
       setComment('');
     } catch (requestError) {
@@ -1235,11 +1235,11 @@ function IssueMetricPanel({
   }
 
   return (
-    <OperationPanel icon={<BadgePlus size={20} />} title="Выдать метрику">
+    <OperationPanel icon={<BadgePlus size={20} />} title="Выдать штамп">
       {metricsError ? <p className="form-status form-status--error">{metricsError}</p> : null}
       <div className="work-form">
         <label>
-          Метрика
+          Штамп
           <select value={metricId} onChange={(event) => setMetricId(event.target.value)}>
             {metrics.map((metric) => (
               <option key={metric.id} value={metric.id}>
@@ -1316,7 +1316,7 @@ function RedeemMetricPanel({ brandId }: { brandId: string }) {
         redemptionCode: redemptionCode.trim(),
         comment: 'Redeem metric'
       });
-      setResult({ kind: 'metric', title: 'Метрика списана', response });
+      setResult({ kind: 'metric', title: 'Штамп списан', response });
       setOptions(null);
       setRedemptionCode('');
     } catch (requestError) {
@@ -1327,7 +1327,7 @@ function RedeemMetricPanel({ brandId }: { brandId: string }) {
   }
 
   return (
-    <OperationPanel icon={<TicketMinus size={20} />} title="Списать метрику">
+    <OperationPanel icon={<TicketMinus size={20} />} title="Списать штамп">
       <div className="work-form">
         <label>
           Код списания клиента
@@ -1335,14 +1335,14 @@ function RedeemMetricPanel({ brandId }: { brandId: string }) {
         </label>
         <button className="button-secondary" type="button" disabled={isLoading} onClick={() => void loadOptions()}>
           <Search size={17} />
-          Показать метрики
+          Показать штампы
         </button>
       </div>
 
       {options ? (
         <div className="operation-options">
           <p className="operation-options__customer">Клиент: {options.customerName}</p>
-          {options.metrics.length === 0 ? <p className="muted-text">Доступных метрик нет.</p> : null}
+          {options.metrics.length === 0 ? <p className="muted-text">Доступных штампов нет.</p> : null}
           {[...options.metrics].sort(compareRedeemableMetrics).map((metric) => (
             <div className="operation-option" key={metric.metricDefinitionId}>
               <div>
@@ -1641,7 +1641,7 @@ function CustomerBalancesPanel({
       {balances ? (
         <div className="operation-result">
           <strong>Клиент: {balances.customerName}</strong>
-          {isMetricsEnabled && activeBalances.length === 0 ? <span>Активных метрик пока нет</span> : null}
+          {isMetricsEnabled && activeBalances.length === 0 ? <span>Активных штампов пока нет</span> : null}
           {isMetricsEnabled
             ? activeBalances.map((balance) => (
                 <span key={balance.metricDefinitionId}>
