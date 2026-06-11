@@ -65,8 +65,8 @@ type StaffOperationResult =
   | { kind: 'remove'; response: { userName: string; phoneNumber?: string | null } };
 
 type RootSection = 'operations' | 'management';
-type OperationType = 'metrics' | 'products' | 'coins' | 'customer';
-type OperationAction = 'issue' | 'redeem' | 'balances';
+type OperationType = 'metrics' | 'coins' | 'customer';
+type OperationAction = 'issue' | 'purchase' | 'redeem' | 'balances';
 type ManagementType = 'metrics' | 'products' | 'staff' | 'brand';
 
 type WorkspaceTabItem<T extends string> = {
@@ -310,11 +310,11 @@ function OperationWorkspace({
       {activeOperationType === 'metrics' && activeOperationAction === 'redeem' ? (
         <RedeemMetricPanel brandId={workspace.brandId} />
       ) : null}
-      {activeOperationType === 'products' ? (
-        <PurchaseCoinProductPanel brandId={workspace.brandId} />
-      ) : null}
       {activeOperationType === 'coins' && activeOperationAction === 'issue' ? (
         <IssueCoinsPanel brandId={workspace.brandId} />
+      ) : null}
+      {activeOperationType === 'coins' && activeOperationAction === 'purchase' ? (
+        <PurchaseCoinProductPanel brandId={workspace.brandId} />
       ) : null}
       {activeOperationType === 'coins' && activeOperationAction === 'redeem' ? (
         <RedeemCoinsPanel brandId={workspace.brandId} />
@@ -370,11 +370,12 @@ function getOperationTabs(workspace: BrandWorkspaceResponse): WorkspaceTabItem<O
     workspace.isMetricsEnabled && (workspace.canIssue || workspace.canRedeem)
       ? { id: 'metrics', label: 'Штампы' }
       : null,
-    workspace.isCoinsEnabled && workspace.canRedeem && workspace.isCoinProductRedemptionEnabled
-      ? { id: 'products', label: 'Товары' }
-      : null,
     workspace.isCoinsEnabled
-      && (workspace.canIssue || (workspace.canRedeem && workspace.isManualCoinRedemptionEnabled))
+      && (
+        workspace.canIssue
+        || (workspace.canRedeem && workspace.isCoinProductRedemptionEnabled)
+        || (workspace.canRedeem && workspace.isManualCoinRedemptionEnabled)
+      )
       ? { id: 'coins', label: 'Монетки' }
       : null,
     workspace.canViewBalances && (workspace.isMetricsEnabled || workspace.isCoinsEnabled)
@@ -397,8 +398,11 @@ function getOperationActionTabs(
   if (operationType === 'coins') {
     return [
       workspace.isCoinsEnabled && workspace.canIssue ? { id: 'issue', label: 'Начислить' } : null,
+      workspace.isCoinsEnabled && workspace.canRedeem && workspace.isCoinProductRedemptionEnabled
+        ? { id: 'purchase', label: 'Выдать товар' }
+        : null,
       workspace.isCoinsEnabled && workspace.canRedeem && workspace.isManualCoinRedemptionEnabled
-        ? { id: 'redeem', label: 'Списать' }
+        ? { id: 'redeem', label: 'Списать вручную' }
         : null
     ].filter((tab): tab is WorkspaceTabItem<OperationAction> => tab !== null);
   }
