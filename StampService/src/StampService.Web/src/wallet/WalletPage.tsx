@@ -578,11 +578,14 @@ function findRewardSection(
 
 function sortRewardItems(items: UserWalletBrandRewardItemResponse[]): UserWalletBrandRewardItemResponse[] {
   return [...items].sort((left, right) => {
-    if (left.isAvailable !== right.isAvailable) {
-      return Number(right.isAvailable) - Number(left.isAvailable);
+    const leftRank = getRewardSortRank(left);
+    const rightRank = getRewardSortRank(right);
+
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
     }
 
-    if (!left.isAvailable && !right.isAvailable) {
+    if (leftRank === 1 && rightRank === 1) {
       const leftProgress = getProgress(left.progressText);
       const rightProgress = getProgress(right.progressText);
 
@@ -598,6 +601,19 @@ function sortRewardItems(items: UserWalletBrandRewardItemResponse[]): UserWallet
 
     return 0;
   });
+}
+
+function getRewardSortRank(item: UserWalletBrandRewardItemResponse): number {
+  if (item.isAvailable) {
+    return 0;
+  }
+
+  const progress = getProgress(item.progressText);
+  if (progress && progress.value > 0) {
+    return 1;
+  }
+
+  return 2;
 }
 
 function getRewardStatusText(item: UserWalletBrandRewardItemResponse): string {
