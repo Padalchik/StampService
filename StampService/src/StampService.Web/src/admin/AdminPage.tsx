@@ -717,7 +717,7 @@ function AdminDemoTab({
             <Building2 size={20} />
             <h3>Демо-бренды</h3>
           </div>
-          <p>Создает набор брендов с разными настройками, метриками и товарами.</p>
+          <p>Создает набор брендов с разными настройками, штампами и товарами.</p>
           <button type="button" disabled={isSubmitting === 'brands'} onClick={() => void submitCreateDemoBrands()}>
             Создать демо-бренды
           </button>
@@ -789,8 +789,8 @@ function getUserMessage(error: unknown): string {
 const operationTypeOptions = [
   { value: 'IssueCoins', label: 'Начисление монет' },
   { value: 'RedeemCoins', label: 'Списание монет' },
-  { value: 'IssueMetric', label: 'Начисление метрики' },
-  { value: 'RedeemMetric', label: 'Списание метрики' },
+  { value: 'IssueMetric', label: 'Начисление штампа' },
+  { value: 'RedeemMetric', label: 'Списание штампа' },
   { value: 'PurchaseCoinProduct', label: 'Выдача товара' },
   { value: 'AddStaff', label: 'Добавление сотрудника' },
   { value: 'UpdateRewardSettings', label: 'Настройки наград' }
@@ -875,15 +875,15 @@ function formatReasonCode(reasonCode: string): string {
     'access.denied': 'нет доступа',
     'brand.not_found': 'бренд не найден',
     'brand.coins_disabled': 'монеты выключены',
-    'brand.metrics_disabled': 'метрики выключены',
+    'brand.metrics_disabled': 'штампы выключены',
     'brand.coin_product_redemption_disabled': 'выдача товаров выключена',
     'brand.manual_coin_redemption_disabled': 'ручное списание монет выключено',
     'coin.insufficient_funds': 'недостаточно монет',
     'coin.wallet_not_found': 'кошелек не найден',
     'coin_product.inactive': 'товар неактивен',
     'coin_product.not_found': 'товар не найден',
-    'metric.inactive': 'метрика неактивна',
-    'metric.not_found': 'метрика не найдена',
+    'metric.inactive': 'штамп неактивен',
+    'metric.not_found': 'штамп не найден',
     'metric_balance.insufficient_funds': 'недостаточно баланса',
     'metric_balance.not_found': 'баланс не найден',
     'recipient.not_found': 'пользователь не найден',

@@ -1,4 +1,5 @@
 import { apiRequest } from '../api/apiClient';
+import { type UserWalletBrandDetailsResponse } from '../wallet/walletApi';
 
 export type MyBrandResponse = {
   brandId: string;
@@ -160,12 +161,29 @@ export type BrandCustomerBalancesResponse = {
   balances: BrandCustomerMetricBalanceResponse[];
 };
 
+export type BrandCustomerCardResponse = {
+  brandId: string;
+  customerUserId: string;
+  customerName: string;
+  customerPhoneNumber: string;
+  details: UserWalletBrandDetailsResponse;
+};
+
 export function getMyBrands(): Promise<MyBrandsResponse> {
   return apiRequest<MyBrandsResponse>('/api/brands/mine');
 }
 
 export function getBrandWorkspace(brandId: string): Promise<BrandWorkspaceResponse> {
   return apiRequest<BrandWorkspaceResponse>(`/api/brands/${brandId}/workspace`);
+}
+
+export function getBrandCustomerCard(
+  brandId: string,
+  customerPhoneNumber: string
+): Promise<BrandCustomerCardResponse> {
+  return apiRequest<BrandCustomerCardResponse>(
+    `/api/brands/${brandId}/customer-card?customerPhoneNumber=${encodeURIComponent(customerPhoneNumber)}`
+  );
 }
 
 export function getBrandStaff(brandId: string): Promise<BrandStaffResponse[]> {

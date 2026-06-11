@@ -103,6 +103,10 @@ public class GetUserWalletBrandDetailsHandler
             query.UserId,
             query.BrandId,
             brandName,
+            brand.IsMetricsEnabled,
+            brand.IsCoinsEnabled,
+            brand.IsCoinProductRedemptionEnabled,
+            coinBalance,
             BuildRewardSections(
                 brand.IsCoinsEnabled,
                 brand.IsMetricsEnabled,

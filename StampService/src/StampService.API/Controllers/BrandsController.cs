@@ -5,6 +5,7 @@ using StampService.Application.Abstractions;
 using StampService.Application.Brands.Commands.AddBrandStaffByPhone;
 using StampService.Application.Brands.Commands.RemoveBrandStaff;
 using StampService.Application.Brands.Commands.UpdateBrandRewardSettings;
+using StampService.Application.Brands.Queries.GetBrandCustomerCard;
 using StampService.Application.Brands.Queries.GetBrandStaff;
 using StampService.Application.Brands.Queries.GetBrandWorkspace;
 using StampService.Application.Brands.Queries.GetMyBrands;
@@ -43,6 +44,25 @@ public class BrandsController : ApiControllerBase
 
         return await handler.Handle(
             new GetBrandWorkspaceQuery(userIdResult.Value, brandId),
+            cancellationToken);
+    }
+
+    [HttpGet("{brandId:guid}/customer-card")]
+    public async Task<EndpointResult<BrandCustomerCardResponse>> GetCustomerCard(
+        Guid brandId,
+        [FromQuery] string customerPhoneNumber,
+        [FromServices] IQueryHandler<BrandCustomerCardResponse, GetBrandCustomerCardQuery> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<BrandCustomerCardResponse>();
+
+        return await handler.Handle(
+            new GetBrandCustomerCardQuery(
+                userIdResult.Value,
+                brandId,
+                customerPhoneNumber),
             cancellationToken);
     }
 

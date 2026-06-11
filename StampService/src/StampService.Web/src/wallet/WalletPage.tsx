@@ -266,30 +266,10 @@ function BrandDetailsScreen({
   error: string;
   onBack: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<BrandDetailsTab>('metrics');
-  const [isProductsExpanded, setIsProductsExpanded] = useState(false);
-  const [isMetricsExpanded, setIsMetricsExpanded] = useState(false);
-  const [selectedHistorySource, setSelectedHistorySource] = useState<HistorySource | null>(null);
   const brandName = details?.brandName || 'Бренд';
   const productsSection = details ? findRewardSection(details.rewardSections, 'products') : null;
   const metricsSection = details ? findRewardSection(details.rewardSections, 'metrics') : null;
-  const products = productsSection ? sortRewardItems(productsSection.items) : [];
-  const metrics = metricsSection ? sortRewardItems(metricsSection.items) : [];
-  const historySources = details ? getHistorySources(details.history.groups.flatMap((group) => group.items)) : [];
   const metaText = details ? getBrandDetailsMetaText(details, productsSection, metricsSection) : 'Загрузка данных';
-  const availableTabs = useMemo(
-    () => getAvailableBrandDetailsTabs(productsSection, metricsSection),
-    [productsSection, metricsSection]
-  );
-  const selectedTab = availableTabs.some((tab) => tab.id === activeTab) ? activeTab : availableTabs[0].id;
-
-  useEffect(() => {
-    if (!details || availableTabs.some((tab) => tab.id === activeTab)) {
-      return;
-    }
-
-    setActiveTab(availableTabs[0].id);
-  }, [activeTab, availableTabs, details]);
 
   return (
     <div className="brand-detail-page">
@@ -318,62 +298,13 @@ function BrandDetailsScreen({
       ) : null}
 
       {!isLoading && details ? (
-        <>
-          <section className="brand-details-tabs-card">
-            <div className="brand-details-tabs" role="tablist" aria-label="Разделы бренда">
-              {availableTabs.map((tab) => (
-                <button
-                  className={selectedTab === tab.id ? 'brand-details-tabs__item brand-details-tabs__item--active' : 'brand-details-tabs__item'}
-                  key={tab.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={selectedTab === tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="brand-details-content">
-            {selectedTab === 'products' ? (
-              <RewardTab
-                emptyText="Пока нет товаров"
-                items={products}
-                isExpanded={isProductsExpanded}
-                onToggleExpanded={() => setIsProductsExpanded((value) => !value)}
-              />
-            ) : null}
-
-            {selectedTab === 'metrics' ? (
-              <RewardTab
-                emptyText="Пока нет метрик"
-                items={metrics}
-                isExpanded={isMetricsExpanded}
-                onToggleExpanded={() => setIsMetricsExpanded((value) => !value)}
-              />
-            ) : null}
-
-            {selectedTab === 'history' ? (
-              <HistoryTab
-                emptyText={details.history.emptyText || 'Пока нет операций'}
-                sources={historySources}
-                onSelectSource={setSelectedHistorySource}
-              />
-            ) : null}
-          </section>
-        </>
-      ) : null}
-
-      {selectedHistorySource ? (
-        <HistoryBottomSheet source={selectedHistorySource} onClose={() => setSelectedHistorySource(null)} />
+        <WalletBrandDetailsBlock details={details} ariaLabel="Разделы бренда" />
       ) : null}
     </div>
   );
 }
 
-type BrandDetailsTab = 'products' | 'metrics' | 'history';
+type BrandDetailsTab = 'metrics' | 'coins' | 'history';
 
 type BrandDetailsTabItem = {
   id: BrandDetailsTab;
@@ -381,22 +312,139 @@ type BrandDetailsTabItem = {
 };
 
 function getAvailableBrandDetailsTabs(
-  productsSection: UserWalletBrandRewardSectionResponse | null,
+  details: UserWalletBrandDetailsResponse | null,
   metricsSection: UserWalletBrandRewardSectionResponse | null
 ): BrandDetailsTabItem[] {
   const tabs: BrandDetailsTabItem[] = [];
 
-  if (metricsSection) {
-    tabs.push({ id: 'metrics', label: 'Метрики' });
+  if (details?.isMetricsEnabled && metricsSection) {
+    tabs.push({ id: 'metrics', label: 'Штампы' });
   }
 
-  if (productsSection) {
-    tabs.push({ id: 'products', label: 'Товары' });
+  if (details?.isCoinsEnabled) {
+    tabs.push({ id: 'coins', label: 'Монетки' });
   }
 
   tabs.push({ id: 'history', label: 'История' });
 
   return tabs;
+}
+
+export function WalletBrandDetailsBlock({
+  details,
+  ariaLabel = 'Разделы бренда'
+}: {
+  details: UserWalletBrandDetailsResponse;
+  ariaLabel?: string;
+}) {
+  const [activeTab, setActiveTab] = useState<BrandDetailsTab>('metrics');
+  const [isProductsExpanded, setIsProductsExpanded] = useState(false);
+  const [isMetricsExpanded, setIsMetricsExpanded] = useState(false);
+  const [selectedHistorySource, setSelectedHistorySource] = useState<HistorySource | null>(null);
+  const productsSection = findRewardSection(details.rewardSections, 'products');
+  const metricsSection = findRewardSection(details.rewardSections, 'metrics');
+  const products = productsSection ? sortRewardItems(productsSection.items) : [];
+  const metrics = metricsSection ? sortRewardItems(metricsSection.items) : [];
+  const historySources = getHistorySources(details.history.groups.flatMap((group) => group.items));
+  const availableTabs = useMemo(
+    () => getAvailableBrandDetailsTabs(details, metricsSection),
+    [details, metricsSection]
+  );
+  const selectedTab = availableTabs.some((tab) => tab.id === activeTab) ? activeTab : availableTabs[0].id;
+
+  useEffect(() => {
+    if (availableTabs.some((tab) => tab.id === activeTab)) {
+      return;
+    }
+
+    setActiveTab(availableTabs[0].id);
+  }, [activeTab, availableTabs]);
+
+  return (
+    <>
+      <section className="brand-details-tabs-card">
+        <div className="brand-details-tabs" role="tablist" aria-label={ariaLabel}>
+          {availableTabs.map((tab) => (
+            <button
+              className={selectedTab === tab.id ? 'brand-details-tabs__item brand-details-tabs__item--active' : 'brand-details-tabs__item'}
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={selectedTab === tab.id}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="brand-details-content">
+        {selectedTab === 'coins' ? (
+          <CoinsTab
+            balance={details.coinBalance}
+            products={details.isCoinProductRedemptionEnabled && productsSection ? products : null}
+            productsEmptyText={productsSection?.emptyText || 'Пока нет активных товаров.'}
+            isProductsExpanded={isProductsExpanded}
+            onToggleProductsExpanded={() => setIsProductsExpanded((value) => !value)}
+          />
+        ) : null}
+
+        {selectedTab === 'metrics' ? (
+          <RewardTab
+            emptyText="Пока нет штампов"
+            items={metrics}
+            isExpanded={isMetricsExpanded}
+            onToggleExpanded={() => setIsMetricsExpanded((value) => !value)}
+          />
+        ) : null}
+
+        {selectedTab === 'history' ? (
+          <HistoryTab
+            emptyText={details.history.emptyText || 'Пока нет операций'}
+            sources={historySources}
+            onSelectSource={setSelectedHistorySource}
+          />
+        ) : null}
+      </section>
+
+      {selectedHistorySource ? (
+        <HistoryBottomSheet source={selectedHistorySource} onClose={() => setSelectedHistorySource(null)} />
+      ) : null}
+    </>
+  );
+}
+
+function CoinsTab({
+  balance,
+  products,
+  productsEmptyText,
+  isProductsExpanded,
+  onToggleProductsExpanded
+}: {
+  balance: number;
+  products: UserWalletBrandRewardItemResponse[] | null;
+  productsEmptyText: string;
+  isProductsExpanded: boolean;
+  onToggleProductsExpanded: () => void;
+}) {
+  return (
+    <div className="brand-coins-tab">
+      <article className="brand-coin-balance-card">
+        <span>Баланс</span>
+        <strong>{formatCoinCount(balance)}</strong>
+      </article>
+
+      {products ? (
+        <RewardTab
+          emptyText={productsEmptyText}
+          items={products}
+          isExpanded={isProductsExpanded}
+          onToggleExpanded={onToggleProductsExpanded}
+        />
+      ) : null}
+    </div>
+  );
 }
 
 type RewardTabProps = {
@@ -538,18 +586,21 @@ function findRewardSection(
         return kind.includes('coin') || title.includes('товар') || title.includes('монет');
       }
 
-      return kind.includes('metric') || title.includes('метрик');
+      return kind.includes('metric') || title.includes('штамп');
     }) ?? null
   );
 }
 
 function sortRewardItems(items: UserWalletBrandRewardItemResponse[]): UserWalletBrandRewardItemResponse[] {
   return [...items].sort((left, right) => {
-    if (left.isAvailable !== right.isAvailable) {
-      return Number(right.isAvailable) - Number(left.isAvailable);
+    const leftRank = getRewardSortRank(left);
+    const rightRank = getRewardSortRank(right);
+
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
     }
 
-    if (!left.isAvailable && !right.isAvailable) {
+    if (leftRank === 1 && rightRank === 1) {
       const leftProgress = getProgress(left.progressText);
       const rightProgress = getProgress(right.progressText);
 
@@ -565,6 +616,19 @@ function sortRewardItems(items: UserWalletBrandRewardItemResponse[]): UserWallet
 
     return 0;
   });
+}
+
+function getRewardSortRank(item: UserWalletBrandRewardItemResponse): number {
+  if (item.isAvailable) {
+    return 0;
+  }
+
+  const progress = getProgress(item.progressText);
+  if (progress && progress.value > 0) {
+    return 1;
+  }
+
+  return 2;
 }
 
 function getRewardStatusText(item: UserWalletBrandRewardItemResponse): string {
@@ -637,7 +701,9 @@ function getBrandDetailsMetaText(
     (count, section) => count + section.items.filter((item) => item.isAvailable).length,
     0
   );
-  const balanceText = productsSection?.balanceText || metricsSection?.balanceText || '';
+  const balanceText = details.isCoinsEnabled
+    ? formatCoinCount(details.coinBalance)
+    : productsSection?.balanceText || metricsSection?.balanceText || '';
   const rewardText = availableCount > 0 ? formatRewardCount(availableCount) : 'пока нет доступных наград';
 
   return [balanceText, rewardText].filter(Boolean).join(' · ');

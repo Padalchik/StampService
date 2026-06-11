@@ -86,6 +86,10 @@ export type UserWalletBrandDetailsResponse = {
   userId: string;
   brandId: string;
   brandName: string;
+  isMetricsEnabled: boolean;
+  isCoinsEnabled: boolean;
+  isCoinProductRedemptionEnabled: boolean;
+  coinBalance: number;
   rewardSections: UserWalletBrandRewardSectionResponse[];
   history: UserWalletBrandHistorySectionResponse;
   hintText: string;
