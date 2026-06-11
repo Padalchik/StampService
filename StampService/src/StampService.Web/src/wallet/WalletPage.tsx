@@ -278,8 +278,8 @@ function BrandDetailsScreen({
   const historySources = details ? getHistorySources(details.history.groups.flatMap((group) => group.items)) : [];
   const metaText = details ? getBrandDetailsMetaText(details, productsSection, metricsSection) : 'Загрузка данных';
   const availableTabs = useMemo(
-    () => getAvailableBrandDetailsTabs(productsSection, metricsSection),
-    [productsSection, metricsSection]
+    () => getAvailableBrandDetailsTabs(details, metricsSection),
+    [details, metricsSection]
   );
   const selectedTab = availableTabs.some((tab) => tab.id === activeTab) ? activeTab : availableTabs[0].id;
 
@@ -337,12 +337,13 @@ function BrandDetailsScreen({
           </section>
 
           <section className="brand-details-content">
-            {selectedTab === 'products' ? (
-              <RewardTab
-                emptyText="Пока нет товаров"
-                items={products}
-                isExpanded={isProductsExpanded}
-                onToggleExpanded={() => setIsProductsExpanded((value) => !value)}
+            {selectedTab === 'coins' ? (
+              <CoinsTab
+                balance={details.coinBalance}
+                products={details.isCoinProductRedemptionEnabled && productsSection ? products : null}
+                productsEmptyText={productsSection?.emptyText || 'Пока нет активных товаров.'}
+                isProductsExpanded={isProductsExpanded}
+                onToggleProductsExpanded={() => setIsProductsExpanded((value) => !value)}
               />
             ) : null}
 
@@ -373,7 +374,7 @@ function BrandDetailsScreen({
   );
 }
 
-type BrandDetailsTab = 'products' | 'metrics' | 'history';
+type BrandDetailsTab = 'metrics' | 'coins' | 'history';
 
 type BrandDetailsTabItem = {
   id: BrandDetailsTab;
@@ -381,22 +382,54 @@ type BrandDetailsTabItem = {
 };
 
 function getAvailableBrandDetailsTabs(
-  productsSection: UserWalletBrandRewardSectionResponse | null,
+  details: UserWalletBrandDetailsResponse | null,
   metricsSection: UserWalletBrandRewardSectionResponse | null
 ): BrandDetailsTabItem[] {
   const tabs: BrandDetailsTabItem[] = [];
 
-  if (metricsSection) {
+  if (details?.isMetricsEnabled && metricsSection) {
     tabs.push({ id: 'metrics', label: 'Штампы' });
   }
 
-  if (productsSection) {
-    tabs.push({ id: 'products', label: 'Товары' });
+  if (details?.isCoinsEnabled) {
+    tabs.push({ id: 'coins', label: 'Монетки' });
   }
 
   tabs.push({ id: 'history', label: 'История' });
 
   return tabs;
+}
+
+function CoinsTab({
+  balance,
+  products,
+  productsEmptyText,
+  isProductsExpanded,
+  onToggleProductsExpanded
+}: {
+  balance: number;
+  products: UserWalletBrandRewardItemResponse[] | null;
+  productsEmptyText: string;
+  isProductsExpanded: boolean;
+  onToggleProductsExpanded: () => void;
+}) {
+  return (
+    <div className="brand-coins-tab">
+      <article className="brand-coin-balance-card">
+        <span>Баланс</span>
+        <strong>{formatCoinCount(balance)}</strong>
+      </article>
+
+      {products ? (
+        <RewardTab
+          emptyText={productsEmptyText}
+          items={products}
+          isExpanded={isProductsExpanded}
+          onToggleExpanded={onToggleProductsExpanded}
+        />
+      ) : null}
+    </div>
+  );
 }
 
 type RewardTabProps = {
@@ -637,7 +670,9 @@ function getBrandDetailsMetaText(
     (count, section) => count + section.items.filter((item) => item.isAvailable).length,
     0
   );
-  const balanceText = productsSection?.balanceText || metricsSection?.balanceText || '';
+  const balanceText = details.isCoinsEnabled
+    ? formatCoinCount(details.coinBalance)
+    : productsSection?.balanceText || metricsSection?.balanceText || '';
   const rewardText = availableCount > 0 ? formatRewardCount(availableCount) : 'пока нет доступных наград';
 
   return [balanceText, rewardText].filter(Boolean).join(' · ');

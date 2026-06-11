@@ -755,6 +755,34 @@ p {
   list-style: none;
 }
 
+.brand-coins-tab {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.brand-coin-balance-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid #dce6ef;
+  border-radius: 16px;
+  padding: 12px;
+  background: #fff;
+}
+
+.brand-coin-balance-card span {
+  color: #6c7a89;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.brand-coin-balance-card strong {
+  color: #12263a;
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
 .brand-reward-card {
   display: grid;
   gap: 10px;

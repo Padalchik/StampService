@@ -70,6 +70,10 @@ public class GetUserWalletBrandDetailsHandlerTests
         Assert.True(result.IsSuccess);
         Assert.Equal(brand.Id, result.Value.BrandId);
         Assert.False(string.IsNullOrWhiteSpace(result.Value.BrandName));
+        Assert.True(result.Value.IsMetricsEnabled);
+        Assert.True(result.Value.IsCoinsEnabled);
+        Assert.True(result.Value.IsCoinProductRedemptionEnabled);
+        Assert.Equal(8, result.Value.CoinBalance);
 
         var coinSection = Assert.Single(result.Value.RewardSections, section => section.Kind == "CoinProducts");
         Assert.Equal("Монетки: 8", coinSection.BalanceText);
@@ -159,6 +163,10 @@ public class GetUserWalletBrandDetailsHandlerTests
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
+        Assert.False(result.Value.IsMetricsEnabled);
+        Assert.True(result.Value.IsCoinsEnabled);
+        Assert.False(result.Value.IsCoinProductRedemptionEnabled);
+        Assert.Equal(10, result.Value.CoinBalance);
         Assert.DoesNotContain(result.Value.RewardSections, section => section.Kind == "Metrics");
         Assert.DoesNotContain(result.Value.RewardSections, section => section.Kind == "CoinProducts");
         Assert.Contains(result.Value.History.Groups, group => group.Kind == "Coin");
