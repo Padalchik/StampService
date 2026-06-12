@@ -51,11 +51,11 @@ import {
   type RedeemMetricResponse,
   type UpdateBrandResponse
 } from './brandWorkspaceApi';
-import { ApiRequestError } from '../api/apiClient';
-import { formatRuPhoneInput, isRuPhoneInputComplete, normalizePhoneNumber } from '../validation/phoneNumber';
+import { formatRuPhoneInput, isRuPhoneInputComplete } from '../validation/phoneNumber';
 import { RuPhoneInput } from '../components/RuPhoneInput';
 import { formatRuDateTime } from '../format/dateTime';
 import { WalletBrandDetailsBlock } from '../wallet/WalletBrandDetailsBlock';
+import { BrandCustomerSearchScreen } from './BrandCustomerSearchScreen';
 
 type OperationResult =
   | { kind: 'metric'; title: string; response: IssueMetricResponse | RedeemMetricResponse }
@@ -68,6 +68,7 @@ type StaffOperationResult =
 type OperationType = 'metrics' | 'coins';
 type OperationAction = 'issue' | 'purchase' | 'redeem';
 type ManagementType = 'metrics' | 'products' | 'staff' | 'brand';
+type BrandWorkspaceScreen = 'customer-search' | 'customer-work' | 'settings';
 
 type WorkspaceTabItem<T extends string> = {
   id: T;
@@ -87,7 +88,7 @@ export function BrandWorkspace({
   const [activeOperationAction, setActiveOperationAction] = useState<OperationAction>('issue');
   const [selectedCustomer, setSelectedCustomer] = useState<BrandCustomerCardResponse | null>(null);
   const [customerCardError, setCustomerCardError] = useState('');
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [activeScreen, setActiveScreen] = useState<BrandWorkspaceScreen>('customer-search');
 
   useEffect(() => {
     if (!workspace.isMetricsEnabled || !workspace.canIssue) {
@@ -144,7 +145,7 @@ export function BrandWorkspace({
     }
   }, [activeOperationAction, currentOperationAction]);
 
-  if (isSettingsOpen) {
+  if (activeScreen === 'settings') {
     return (
       <BrandSettingsPage
         workspace={workspace}
@@ -168,7 +169,7 @@ export function BrandWorkspace({
             type="button"
             aria-label="Управление брендом"
             title="Управление брендом"
-            onClick={() => setIsSettingsOpen(true)}
+            onClick={() => setActiveScreen('settings')}
           >
             <Settings size={20} aria-hidden="true" />
           </button>
@@ -181,11 +182,18 @@ export function BrandWorkspace({
         </section>
       ) : null}
 
-      {workspace.canViewBalances && !selectedCustomer ? (
-        <CustomerLookupPanel brandId={workspace.brandId} onCustomerFound={setSelectedCustomer} />
+      {workspace.canViewBalances && activeScreen === 'customer-search' ? (
+        <BrandCustomerSearchScreen
+          brandId={workspace.brandId}
+          onCustomerFound={(customer) => {
+            setSelectedCustomer(customer);
+            setCustomerCardError('');
+            setActiveScreen('customer-work');
+          }}
+        />
       ) : null}
 
-      {workspace.canViewBalances && selectedCustomer ? (
+      {workspace.canViewBalances && selectedCustomer && activeScreen === 'customer-work' ? (
         <SelectedCustomerWorkspace
           customer={selectedCustomer}
           customerCardError={customerCardError}
@@ -254,65 +262,6 @@ function WorkspaceTabs<T extends string>({
         ))}
       </div>
     </div>
-  );
-}
-
-function CustomerLookupPanel({
-  brandId,
-  onCustomerFound
-}: {
-  brandId: string;
-  onCustomerFound: (customer: BrandCustomerCardResponse) => void;
-}) {
-  const [phoneNumber, setPhoneNumber] = useState(formatRuPhoneInput(''));
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [notFound, setNotFound] = useState(false);
-
-  async function submit() {
-    const normalizedPhone = normalizePhoneNumber(phoneNumber);
-    if (!isRuPhoneInputComplete(phoneNumber) || !normalizedPhone.ok) {
-      setError(normalizedPhone.ok ? 'Укажите телефон клиента.' : normalizedPhone.message);
-      setNotFound(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-    setNotFound(false);
-
-    try {
-      const response = await getBrandCustomerCard(brandId, normalizedPhone.value);
-      onCustomerFound(response);
-    } catch (requestError) {
-      if (requestError instanceof ApiRequestError && requestError.status === 404) {
-        setNotFound(true);
-        return;
-      }
-
-      setError(getUserMessage(requestError));
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  return (
-    <OperationPanel icon={<Search size={20} />} title="Найти клиента">
-      <div className="work-form">
-        <label>
-          Телефон клиента
-          <RuPhoneInput value={phoneNumber} onValueChange={setPhoneNumber} />
-        </label>
-        <button type="button" disabled={isLoading || !isRuPhoneInputComplete(phoneNumber)} onClick={() => void submit()}>
-          Найти клиента
-        </button>
-      </div>
-
-      {notFound ? (
-        <p className="form-status form-status--error">Клиент не найден. Проверьте номер телефона.</p>
-      ) : null}
-      {error ? <p className="form-status form-status--error">{error}</p> : null}
-    </OperationPanel>
   );
 }
 
