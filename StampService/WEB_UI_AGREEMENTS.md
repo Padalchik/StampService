@@ -557,8 +557,10 @@ Brand workspace в React web UI теперь проектируется как m
 
 Навигационная модель:
 
-- первое состояние workspace - поиск клиента по телефону;
+- первое состояние workspace - отдельный экран поиска клиента по телефону;
 - поиск клиента не создает пользователя автоматически: это read-only открытие карточки существующего пользователя по активной `Phone` identity;
+- экран поиска может показывать таблицу `Недавние номера`: последние успешно открытые телефоны и дату открытия, сохраненные в `localStorage` отдельно для каждого `brandId`;
+- `localStorage` в поиске клиента используется только как локальное UX-удобство для повторного открытия карточки, не заменяет backend-проверки доступа и не является бизнес-аудитом;
 - второе состояние workspace - выбранный клиент: сверху карточка клиента, ниже операции над ним;
 - карточка клиента показывает имя, телефон и общий блок `Штампы` / `Монетки` / `История`;
 - операции внутри выбранного клиента делятся на `Штампы` и `Монетки`; выдача товаров за монетки находится действием внутри `Монеток`;
@@ -570,7 +572,7 @@ Brand workspace в React web UI теперь проектируется как m
 Правила реализации:
 
 - источник прав доступа - только `BrandWorkspaceResponse`: `canIssue`, `canRedeem`, `canViewBalances`, `canManageBrand`, `canManageMetrics`, `canManageStaff` и reward flags;
-- frontend не переносит бизнес-правила из Application;
+- frontend не переносит бизнес-правила из Application; локальные UX-кэши вроде недавних телефонов не должны хранить internal ids и не должны использоваться как источник истины;
 - для открытия карточки клиента используется thin API `GET /api/brands/{brandId}/customer-card` и typed client `getBrandCustomerCard`;
 - backend/Application нормализует телефон, проверяет доступ, ищет существующую активную `Phone` identity и возвращает карточку клиента; frontend не реализует поиск клиента сам;
 - существующие функции `getBrandWorkspace`, `getIssueMetricOptions`, `getRedeemMetricOptions`, `getCoinProductPurchaseOptions`, `issueMetricByPhone`, `redeemMetric`, `issueCoinsByPhone`, `redeemCoins`, `purchaseCoinProduct` остаются основной интеграционной поверхностью операций;
@@ -583,9 +585,9 @@ Brand workspace в React web UI теперь проектируется как m
 
 - `BrandWorkspacePage` является контейнером: хранит выбранный `BrandWorkspaceResponse`, вызывает `getBrandWorkspace(brandId)` и переключает selector/workspace;
 - `BrandSelector` отвечает только за список рабочих брендов, loading/error/empty states и открытие выбранного бренда;
-- `BrandWorkspace` отвечает за рабочую область конкретного бренда и не содержит логики загрузки списка брендов;
-- `CustomerLookupPanel` внутри `BrandWorkspace` отвечает за форму поиска клиента по телефону;
-- `SelectedCustomerWorkspace` внутри `BrandWorkspace` отвечает за выбранную карточку клиента и операции над ней;
+- `BrandWorkspace` отвечает за рабочую область конкретного бренда, не содержит логики загрузки списка брендов и переключает внутренние экраны: поиск клиента, работа с клиентом, настройки бренда;
+- `BrandCustomerSearchScreen` отвечает за экран поиска клиента по телефону, вызов `getBrandCustomerCard`, обработку not found/error states и локальную таблицу `Недавние номера`;
+- `SelectedCustomerWorkspace` внутри `BrandWorkspace` отвечает за экран работы с выбранным клиентом: карточку клиента и операции над ней;
 - `BrandSettingsPage` внутри `BrandWorkspace` отвечает за отдельный экран управления брендом и переиспользует management-панели;
 - блок `Штампы` / `Монетки` / `История` в карточке клиента должен переиспользовать `WalletBrandDetailsBlock`, а не дублировать визуальную реализацию наград;
 - `initialBrandId` сохраняет сценарий прямого открытия workspace, а `initialBrands` позволяют использовать уже загруженный список из `AppShell`;
@@ -598,9 +600,10 @@ Brand workspace в React web UI теперь проектируется как m
 - верх экрана: отдельная плашка/hero-зона бренда без локальной кнопки `Назад`;
 - в плашке бренда показываются название, человекочитаемая роль и кнопка-шестерёнка для настроек, если управление доступно; flags/chips и технические поля не показываются;
 - переключатели уровней оформляются как segmented controls;
-- рабочая зона показывает один активный сценарий;
+- рабочая зона показывает один активный сценарий: поиск клиента или работа с найденным клиентом;
 - карточками являются формы, options и результаты, без большой общей surface-panel вокруг всего workspace;
 - плашка выбранного клиента не должна превращаться в toolbar: основные действия смены клиента/ручного обновления не закреплены в ней;
 - selector рабочих брендов проектируется как компактный mobile-first список: avatar с первой буквой, название бренда, человекочитаемая роль и действие `Открыть`; raw `roleSystemName` не показывается;
+- таблица `Недавние номера` находится под формой поиска, показывает телефон в той же маске, что phone input, дату открытия и действие повторного открытия карточки;
 - стили находятся в `src/StampService.Web/src/styles.css`, scoped к brand workspace;
-- основные компоненты находятся в `src/StampService.Web/src/brands/BrandWorkspacePage.tsx`, `BrandSelector.tsx`, `BrandWorkspace.tsx`; typed API client остается в `src/StampService.Web/src/brands/brandWorkspaceApi.ts`; общий wallet-блок наград находится в `src/StampService.Web/src/wallet/WalletBrandDetailsBlock.tsx`.
+- основные компоненты находятся в `src/StampService.Web/src/brands/BrandWorkspacePage.tsx`, `BrandSelector.tsx`, `BrandWorkspace.tsx`, `BrandCustomerSearchScreen.tsx`; typed API client остается в `src/StampService.Web/src/brands/brandWorkspaceApi.ts`; общий wallet-блок наград находится в `src/StampService.Web/src/wallet/WalletBrandDetailsBlock.tsx`.
