@@ -55,10 +55,6 @@ export function BrandWorkspacePage({
         key={`${workspace.brandId}-${homeNavigationKey}`}
         workspace={workspace}
         onWorkspaceUpdated={(updatedWorkspace) => setWorkspace(updatedWorkspace)}
-        onBack={() => {
-          setWorkspace(null);
-          setWorkspaceError('');
-        }}
       />
     );
   }

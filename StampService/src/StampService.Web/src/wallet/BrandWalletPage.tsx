@@ -1,4 +1,3 @@
-import { ArrowLeft } from 'lucide-react';
 import { RedemptionCodeCard } from './RedemptionCodeCard';
 import { WalletBrandDetailsBlock, findWalletBrandRewardSection } from './WalletBrandDetailsBlock';
 import {
@@ -13,8 +12,7 @@ export function BrandWalletPage({
   redemptionCode,
   isRefreshingCode,
   codeRefreshError,
-  onRefreshCode,
-  onBack
+  onRefreshCode
 }: {
   details: UserWalletBrandDetailsResponse | null;
   isLoading: boolean;
@@ -23,7 +21,6 @@ export function BrandWalletPage({
   isRefreshingCode: boolean;
   codeRefreshError: string;
   onRefreshCode: () => void;
-  onBack: () => void;
 }) {
   const brandName = details?.brandName || 'Бренд';
   const productsSection = details ? findWalletBrandRewardSection(details.rewardSections, 'products') : null;
@@ -32,13 +29,6 @@ export function BrandWalletPage({
 
   return (
     <div className="brand-detail-page">
-      <div className="brand-details-topline">
-        <button className="button-secondary button-compact" type="button" onClick={onBack}>
-          <ArrowLeft size={17} />
-          Назад
-        </button>
-      </div>
-
       <section className="brand-details-hero">
         <h2>{brandName}</h2>
         <p>{metaText}</p>

@@ -1,6 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
-  ArrowLeft,
   BadgePlus,
   BarChart3,
   Coins,
@@ -52,11 +51,11 @@ import {
   type RedeemMetricResponse,
   type UpdateBrandResponse
 } from './brandWorkspaceApi';
-import { ApiRequestError } from '../api/apiClient';
-import { formatRuPhoneInput, isRuPhoneInputComplete, normalizePhoneNumber } from '../validation/phoneNumber';
+import { formatRuPhoneInput, isRuPhoneInputComplete } from '../validation/phoneNumber';
 import { RuPhoneInput } from '../components/RuPhoneInput';
 import { formatRuDateTime } from '../format/dateTime';
 import { WalletBrandDetailsBlock } from '../wallet/WalletBrandDetailsBlock';
+import { BrandCustomerSearchScreen, rememberRecentCustomerPhone } from './BrandCustomerSearchScreen';
 
 type OperationResult =
   | { kind: 'metric'; title: string; response: IssueMetricResponse | RedeemMetricResponse }
@@ -69,6 +68,19 @@ type StaffOperationResult =
 type OperationType = 'metrics' | 'coins';
 type OperationAction = 'issue' | 'purchase' | 'redeem';
 type ManagementType = 'metrics' | 'products' | 'staff' | 'brand';
+type BrandWorkspaceScreen = 'customer-search' | 'customer-work' | 'settings';
+type DraftCustomerCard = {
+  kind: 'draft';
+  brandId: string;
+  customerName: string;
+  customerPhoneNumber: string;
+};
+type SavedCustomerCard = BrandCustomerCardResponse & { kind?: 'saved' };
+type SelectedCustomerCard = DraftCustomerCard | SavedCustomerCard;
+type CustomerOperationTarget = {
+  customerName: string;
+  customerPhoneNumber: string;
+};
 
 type WorkspaceTabItem<T extends string> = {
   id: T;
@@ -77,20 +89,18 @@ type WorkspaceTabItem<T extends string> = {
 
 export function BrandWorkspace({
   workspace,
-  onWorkspaceUpdated,
-  onBack
+  onWorkspaceUpdated
 }: {
   workspace: BrandWorkspaceResponse;
   onWorkspaceUpdated: (workspace: BrandWorkspaceResponse) => void;
-  onBack: () => void;
 }) {
   const [metrics, setMetrics] = useState<MetricResponse[]>([]);
   const [metricsError, setMetricsError] = useState('');
   const [activeOperationType, setActiveOperationType] = useState<OperationType>('metrics');
   const [activeOperationAction, setActiveOperationAction] = useState<OperationAction>('issue');
-  const [selectedCustomer, setSelectedCustomer] = useState<BrandCustomerCardResponse | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<SelectedCustomerCard | null>(null);
   const [customerCardError, setCustomerCardError] = useState('');
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [activeScreen, setActiveScreen] = useState<BrandWorkspaceScreen>('customer-search');
 
   useEffect(() => {
     if (!workspace.isMetricsEnabled || !workspace.canIssue) {
@@ -118,7 +128,7 @@ export function BrandWorkspace({
   const showStaffManagement = workspace.canManageStaff;
   const showBrandSettings = workspace.canManageBrand;
 
-  const operationTabs = getOperationTabs(workspace);
+  const operationTabs = selectedCustomer?.kind === 'draft' ? getDraftOperationTabs(workspace) : getOperationTabs(workspace);
   const managementTabs = getManagementTabs({
     showMetricManagement,
     showCoinProductManagement,
@@ -129,7 +139,7 @@ export function BrandWorkspace({
     ? activeOperationType
     : operationTabs[0]?.id;
   const operationActionTabs = currentOperationType
-    ? getOperationActionTabs(workspace, currentOperationType)
+    ? getCustomerOperationActionTabs(workspace, currentOperationType, selectedCustomer)
     : [];
   const currentOperationAction = operationActionTabs.some((tab) => tab.id === activeOperationAction)
     ? activeOperationAction
@@ -147,12 +157,11 @@ export function BrandWorkspace({
     }
   }, [activeOperationAction, currentOperationAction]);
 
-  if (isSettingsOpen) {
+  if (activeScreen === 'settings') {
     return (
       <BrandSettingsPage
         workspace={workspace}
         managementTabs={managementTabs}
-        onBack={() => setIsSettingsOpen(false)}
         onWorkspaceUpdated={onWorkspaceUpdated}
         onMetricsChanged={workspace.canIssue ? loadIssueMetrics : undefined}
       />
@@ -161,13 +170,6 @@ export function BrandWorkspace({
 
   return (
     <div className="brand-workspace-page brand-workspace-console">
-      <div className="brand-workspace-topline">
-        <button className="button-secondary button-compact" type="button" onClick={onBack}>
-          <ArrowLeft size={17} />
-          Назад
-        </button>
-      </div>
-
       <section className="brand-workspace-hero">
         <div>
           <h2>{workspace.brandName}</h2>
@@ -179,7 +181,7 @@ export function BrandWorkspace({
             type="button"
             aria-label="Управление брендом"
             title="Управление брендом"
-            onClick={() => setIsSettingsOpen(true)}
+            onClick={() => setActiveScreen('settings')}
           >
             <Settings size={20} aria-hidden="true" />
           </button>
@@ -192,11 +194,24 @@ export function BrandWorkspace({
         </section>
       ) : null}
 
-      {workspace.canViewBalances && !selectedCustomer ? (
-        <CustomerLookupPanel brandId={workspace.brandId} onCustomerFound={setSelectedCustomer} />
+      {workspace.canViewBalances && activeScreen === 'customer-search' ? (
+        <BrandCustomerSearchScreen
+          brandId={workspace.brandId}
+          onCustomerFound={(customer) => {
+            setSelectedCustomer(customer);
+            setCustomerCardError('');
+            setActiveScreen('customer-work');
+          }}
+          onCustomerNotFound={(phoneNumber) => {
+            setSelectedCustomer(createDraftCustomerCard(workspace.brandId, phoneNumber));
+            setCustomerCardError('');
+            setActiveOperationAction('issue');
+            setActiveScreen('customer-work');
+          }}
+        />
       ) : null}
 
-      {workspace.canViewBalances && selectedCustomer ? (
+      {workspace.canViewBalances && selectedCustomer && activeScreen === 'customer-work' ? (
         <SelectedCustomerWorkspace
           customer={selectedCustomer}
           customerCardError={customerCardError}
@@ -209,7 +224,7 @@ export function BrandWorkspace({
           metricsError={metricsError}
           onOperationTypeChange={(nextType) => {
             setActiveOperationType(nextType);
-            const nextActions = getOperationActionTabs(workspace, nextType);
+            const nextActions = getCustomerOperationActionTabs(workspace, nextType, selectedCustomer);
             if (nextActions[0]) {
               setActiveOperationAction(nextActions[0].id);
             }
@@ -229,8 +244,12 @@ export function BrandWorkspace({
     setCustomerCardError('');
 
     try {
+      const wasDraftCustomer = selectedCustomer.kind === 'draft';
       const response = await getBrandCustomerCard(workspace.brandId, selectedCustomer.customerPhoneNumber);
       setSelectedCustomer(response);
+      if (wasDraftCustomer) {
+        rememberRecentCustomerPhone(workspace.brandId, response.customerPhoneNumber);
+      }
     } catch (requestError) {
       setCustomerCardError(getUserMessage(requestError));
     }
@@ -268,65 +287,6 @@ function WorkspaceTabs<T extends string>({
   );
 }
 
-function CustomerLookupPanel({
-  brandId,
-  onCustomerFound
-}: {
-  brandId: string;
-  onCustomerFound: (customer: BrandCustomerCardResponse) => void;
-}) {
-  const [phoneNumber, setPhoneNumber] = useState(formatRuPhoneInput(''));
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [notFound, setNotFound] = useState(false);
-
-  async function submit() {
-    const normalizedPhone = normalizePhoneNumber(phoneNumber);
-    if (!isRuPhoneInputComplete(phoneNumber) || !normalizedPhone.ok) {
-      setError(normalizedPhone.ok ? 'Укажите телефон клиента.' : normalizedPhone.message);
-      setNotFound(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-    setNotFound(false);
-
-    try {
-      const response = await getBrandCustomerCard(brandId, normalizedPhone.value);
-      onCustomerFound(response);
-    } catch (requestError) {
-      if (requestError instanceof ApiRequestError && requestError.status === 404) {
-        setNotFound(true);
-        return;
-      }
-
-      setError(getUserMessage(requestError));
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  return (
-    <OperationPanel icon={<Search size={20} />} title="Найти клиента">
-      <div className="work-form">
-        <label>
-          Телефон клиента
-          <RuPhoneInput value={phoneNumber} onValueChange={setPhoneNumber} />
-        </label>
-        <button type="button" disabled={isLoading || !isRuPhoneInputComplete(phoneNumber)} onClick={() => void submit()}>
-          Найти клиента
-        </button>
-      </div>
-
-      {notFound ? (
-        <p className="form-status form-status--error">Клиент не найден. Проверьте номер телефона.</p>
-      ) : null}
-      {error ? <p className="form-status form-status--error">{error}</p> : null}
-    </OperationPanel>
-  );
-}
-
 function SelectedCustomerWorkspace({
   customer,
   customerCardError,
@@ -341,7 +301,7 @@ function SelectedCustomerWorkspace({
   onOperationActionChange,
   onCustomerChanged
 }: {
-  customer: BrandCustomerCardResponse;
+  customer: SelectedCustomerCard;
   customerCardError: string;
   operationTabs: WorkspaceTabItem<OperationType>[];
   actionTabs: WorkspaceTabItem<OperationAction>[];
@@ -359,14 +319,21 @@ function SelectedCustomerWorkspace({
       <section className="brand-customer-card">
         <div className="brand-customer-card__header">
           <div>
-            <span className="brand-customer-card__eyebrow">Клиент</span>
+            <span className="brand-customer-card__eyebrow">{customer.kind === 'draft' ? 'Новый клиент' : 'Клиент'}</span>
             <h3>{customer.customerName}</h3>
-            <p>{customer.customerPhoneNumber}</p>
+            <p>{formatRuPhoneInput(customer.customerPhoneNumber)}</p>
           </div>
         </div>
 
         {customerCardError ? <p className="form-status form-status--error">{customerCardError}</p> : null}
-        <WalletBrandDetailsBlock details={customer.details} ariaLabel="Разделы карточки клиента" />
+        {customer.kind === 'draft' ? (
+          <div className="brand-customer-card__draft">
+            <p>У этого клиента пока нет истории в системе.</p>
+            <p>Клиент будет создан автоматически при первом начислении.</p>
+          </div>
+        ) : (
+          <WalletBrandDetailsBlock details={customer.details} ariaLabel="Разделы карточки клиента" />
+        )}
       </section>
 
       <section className="brand-customer-operations">
@@ -412,7 +379,7 @@ function OperationWorkspace({
   onCustomerChanged
 }: {
   workspace: BrandWorkspaceResponse;
-  customer: BrandCustomerCardResponse;
+  customer: SelectedCustomerCard;
   metrics: MetricResponse[];
   metricsError: string;
   operationTabs: WorkspaceTabItem<OperationType>[];
@@ -455,13 +422,11 @@ function OperationWorkspace({
 function BrandSettingsPage({
   workspace,
   managementTabs,
-  onBack,
   onMetricsChanged,
   onWorkspaceUpdated
 }: {
   workspace: BrandWorkspaceResponse;
   managementTabs: WorkspaceTabItem<ManagementType>[];
-  onBack: () => void;
   onMetricsChanged?: () => Promise<void>;
   onWorkspaceUpdated: (workspace: BrandWorkspaceResponse) => void;
 }) {
@@ -478,13 +443,6 @@ function BrandSettingsPage({
 
   return (
     <div className="brand-workspace-page brand-workspace-console">
-      <div className="brand-workspace-topline">
-        <button className="button-secondary button-compact" type="button" onClick={onBack}>
-          <ArrowLeft size={17} />
-          Назад
-        </button>
-      </div>
-
       <section className="brand-workspace-hero">
         <div>
           <h2>Управление брендом</h2>
@@ -559,6 +517,31 @@ function getOperationTabs(workspace: BrandWorkspaceResponse): WorkspaceTabItem<O
       ? { id: 'coins', label: 'Монетки' }
       : null
   ].filter((tab): tab is WorkspaceTabItem<OperationType> => tab !== null);
+}
+
+function getDraftOperationTabs(workspace: BrandWorkspaceResponse): WorkspaceTabItem<OperationType>[] {
+  return [
+    workspace.isMetricsEnabled && workspace.canIssue ? { id: 'metrics', label: 'Штампы' } : null,
+    workspace.isCoinsEnabled && workspace.canIssue ? { id: 'coins', label: 'Монетки' } : null
+  ].filter((tab): tab is WorkspaceTabItem<OperationType> => tab !== null);
+}
+
+function getCustomerOperationActionTabs(
+  workspace: BrandWorkspaceResponse,
+  operationType: OperationType,
+  customer: SelectedCustomerCard | null
+): WorkspaceTabItem<OperationAction>[] {
+  if (customer?.kind === 'draft') {
+    if (operationType === 'metrics') {
+      return workspace.isMetricsEnabled && workspace.canIssue ? [{ id: 'issue', label: 'Выдать' }] : [];
+    }
+
+    if (operationType === 'coins') {
+      return workspace.isCoinsEnabled && workspace.canIssue ? [{ id: 'issue', label: 'Начислить' }] : [];
+    }
+  }
+
+  return getOperationActionTabs(workspace, operationType);
 }
 
 function getOperationActionTabs(
@@ -1367,7 +1350,7 @@ function IssueMetricPanel({
   metricsError,
   onCustomerChanged
 }: {
-  customer: BrandCustomerCardResponse;
+  customer: CustomerOperationTarget;
   metrics: MetricResponse[];
   metricsError: string;
   onCustomerChanged: () => Promise<void>;
@@ -1553,7 +1536,7 @@ function IssueCoinsPanel({
   onCustomerChanged
 }: {
   brandId: string;
-  customer: BrandCustomerCardResponse;
+  customer: CustomerOperationTarget;
   onCustomerChanged: () => Promise<void>;
 }) {
   const [amount, setAmount] = useState('');
@@ -1822,6 +1805,15 @@ function OperationFeedback({ error, result }: { error: string; result: Operation
       <span>Баланс: {result.response.balanceValue}</span>
     </div>
   );
+}
+
+function createDraftCustomerCard(brandId: string, customerPhoneNumber: string): DraftCustomerCard {
+  return {
+    kind: 'draft',
+    brandId,
+    customerName: 'Новый клиент',
+    customerPhoneNumber
+  };
 }
 
 function formatRoleName(roleSystemName: string): string {
