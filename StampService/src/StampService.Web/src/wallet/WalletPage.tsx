@@ -151,19 +151,21 @@ function WalletBrandCard({
   const metaText = getBrandMetaText(brand, rewards.length);
 
   return (
-    <article className={`wallet-brand-card ${isSelected ? 'wallet-brand-card--selected' : ''}`}>
-      <header className="wallet-brand-card__top">
-        <div className="wallet-brand-card__title">
-          <h3>{brand.brandName}</h3>
-          <p className="wallet-brand-card__meta">{metaText}</p>
-        </div>
-        <button className="wallet-brand-card__open" type="button" onClick={onOpen}>
-          Открыть
-        </button>
-      </header>
+    <button
+      className={`wallet-brand-card ${isSelected ? 'wallet-brand-card--selected' : ''}`}
+      type="button"
+      onClick={onOpen}
+      aria-label={`Открыть кошелёк бренда ${brand.brandName}`}
+    >
+      <span className="wallet-brand-card__top">
+        <span className="wallet-brand-card__title">
+          <span className="wallet-brand-card__name">{brand.brandName}</span>
+          <span className="wallet-brand-card__meta">{metaText}</span>
+        </span>
+      </span>
 
       {visibleRewards.length > 0 ? (
-        <div className="wallet-reward-chips" aria-label="Доступные награды">
+        <span className="wallet-reward-chips" aria-label="Доступные награды">
           {visibleRewards.map((reward) => (
             <span className="wallet-reward-chip" key={reward.key}>
               {reward.name}
@@ -172,9 +174,9 @@ function WalletBrandCard({
           {hiddenRewardCount > 0 ? (
             <span className="wallet-reward-chip wallet-reward-chip--more">+{hiddenRewardCount} ещё</span>
           ) : null}
-        </div>
+        </span>
       ) : null}
-    </article>
+    </button>
   );
 }
 
