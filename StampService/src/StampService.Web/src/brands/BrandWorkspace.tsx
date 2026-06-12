@@ -1,6 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
-  ArrowLeft,
   BadgePlus,
   BarChart3,
   Coins,
@@ -77,12 +76,10 @@ type WorkspaceTabItem<T extends string> = {
 
 export function BrandWorkspace({
   workspace,
-  onWorkspaceUpdated,
-  onBack
+  onWorkspaceUpdated
 }: {
   workspace: BrandWorkspaceResponse;
   onWorkspaceUpdated: (workspace: BrandWorkspaceResponse) => void;
-  onBack: () => void;
 }) {
   const [metrics, setMetrics] = useState<MetricResponse[]>([]);
   const [metricsError, setMetricsError] = useState('');
@@ -152,7 +149,6 @@ export function BrandWorkspace({
       <BrandSettingsPage
         workspace={workspace}
         managementTabs={managementTabs}
-        onBack={() => setIsSettingsOpen(false)}
         onWorkspaceUpdated={onWorkspaceUpdated}
         onMetricsChanged={workspace.canIssue ? loadIssueMetrics : undefined}
       />
@@ -161,13 +157,6 @@ export function BrandWorkspace({
 
   return (
     <div className="brand-workspace-page brand-workspace-console">
-      <div className="brand-workspace-topline">
-        <button className="button-secondary button-compact" type="button" onClick={onBack}>
-          <ArrowLeft size={17} />
-          Назад
-        </button>
-      </div>
-
       <section className="brand-workspace-hero">
         <div>
           <h2>{workspace.brandName}</h2>
@@ -455,13 +444,11 @@ function OperationWorkspace({
 function BrandSettingsPage({
   workspace,
   managementTabs,
-  onBack,
   onMetricsChanged,
   onWorkspaceUpdated
 }: {
   workspace: BrandWorkspaceResponse;
   managementTabs: WorkspaceTabItem<ManagementType>[];
-  onBack: () => void;
   onMetricsChanged?: () => Promise<void>;
   onWorkspaceUpdated: (workspace: BrandWorkspaceResponse) => void;
 }) {
@@ -478,13 +465,6 @@ function BrandSettingsPage({
 
   return (
     <div className="brand-workspace-page brand-workspace-console">
-      <div className="brand-workspace-topline">
-        <button className="button-secondary button-compact" type="button" onClick={onBack}>
-          <ArrowLeft size={17} />
-          Назад
-        </button>
-      </div>
-
       <section className="brand-workspace-hero">
         <div>
           <h2>Управление брендом</h2>

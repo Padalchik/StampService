@@ -74,11 +74,6 @@ export function WalletPage({ homeNavigationKey }: { homeNavigationKey: number })
         isRefreshingCode={isRefreshingCode}
         codeRefreshError={error}
         onRefreshCode={() => void loadWallet(true)}
-        onBack={() => {
-          setSelectedBrandId(null);
-          setBrandDetails(null);
-          setBrandError('');
-        }}
       />
     );
   }

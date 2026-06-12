@@ -678,12 +678,6 @@ p {
   min-width: 0;
 }
 
-.brand-details-topline {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-}
-
 .brand-details-hero {
   display: grid;
   gap: 8px;
@@ -1164,12 +1158,6 @@ p {
 .brand-workspace-console *::before,
 .brand-workspace-console *::after {
   min-width: 0;
-}
-
-.brand-workspace-topline {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
 }
 
 .brand-workspace-hero {

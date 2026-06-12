@@ -638,3 +638,26 @@ Application details-сценарий возвращает web-ready данные
 - `src/StampService.Application/Brands/Queries/GetBrandCustomerCard/*`;
 - `src/StampService.Contracts/DTOs/Brands/BrandCustomerCardResponse.cs`;
 - `src/StampService.Web/src/styles.css`.
+
+## Web UI: актуальная навигационная модель карточек
+
+Актуально на 2026-06-12.
+
+В React Web UI упрощена навигация внутри основных пользовательских поверхностей. Новое правило: если элемент списка визуально является плашкой/карточкой сущности, сама плашка является основным действием открытия. Отдельные текстовые кнопки `Открыть` внутри таких плашек не нужны, если у элемента нет второго независимого действия.
+
+Применено к кошельку пользователя:
+
+- в `WalletPage` карточка бренда в списке `Мои бренды` открывает кошелёк наград бренда по клику на всю плашку;
+- отдельная кнопка `Открыть` из карточки бренда удалена;
+- карточка реализована как интерактивный элемент с hover/focus-состояниями в `src/StampService.Web/src/styles.css`;
+- загрузка данных бренда по-прежнему идёт через существующий typed API client `getBrandDetails`, без изменений Application/API.
+
+Также из web-экранов удалены локальные кнопки `Назад`. В текущей UX-модели возврат к корню раздела выполняется через основную навигацию приложения: повторный выбор раздела `Мой кошелёк` или `Работа`/`Бренды` сбрасывает соответствующую локальную вложенность. Это сохраняет правило home/root action для пунктов навигации и убирает дублирующие локальные back-controls.
+
+Затронутые web-файлы:
+
+- `src/StampService.Web/src/wallet/WalletPage.tsx`;
+- `src/StampService.Web/src/wallet/BrandWalletPage.tsx`;
+- `src/StampService.Web/src/brands/BrandWorkspacePage.tsx`;
+- `src/StampService.Web/src/brands/BrandWorkspace.tsx`;
+- `src/StampService.Web/src/styles.css`.
