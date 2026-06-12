@@ -1244,6 +1244,22 @@ p {
   overflow-wrap: anywhere;
 }
 
+.brand-customer-card__draft {
+  border: 1px solid #dce6ef;
+  border-radius: 12px;
+  padding: 14px;
+  background: #f8fbfd;
+  color: #465869;
+}
+
+.brand-customer-card__draft p {
+  margin: 0;
+}
+
+.brand-customer-card__draft p + p {
+  margin-top: 6px;
+}
+
 .brand-customer-operations {
   display: grid;
   gap: 10px;
@@ -1277,12 +1293,13 @@ p {
   min-height: 40px;
   border: 0;
   border-radius: 12px;
-  padding: 0 10px;
+  padding: 0 8px;
   background: transparent;
   color: #526171;
   font-size: 14px;
   font-weight: 600;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  white-space: nowrap;
 }
 
 .workspace-tabs__item--active {
@@ -2067,6 +2084,10 @@ p {
 .operation-panel__heading h3 {
   margin: 0;
   font-size: 18px;
+}
+
+.recent-customer-phones__heading {
+  justify-content: space-between;
 }
 
 .recent-customer-phones__table {
@@ -2926,6 +2947,17 @@ p {
 @media (max-width: 760px) {
   .app-shell {
     grid-template-columns: 1fr;
+  }
+
+  .workspace-tabs__item {
+    flex: 1 1 auto;
+    min-height: 38px;
+    padding: 0 4px;
+    font-size: 13px;
+  }
+
+  .workspace-tabs {
+    display: flex;
   }
 
   .sidebar {

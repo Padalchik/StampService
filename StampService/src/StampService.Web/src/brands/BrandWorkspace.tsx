@@ -55,7 +55,7 @@ import { formatRuPhoneInput, isRuPhoneInputComplete } from '../validation/phoneN
 import { RuPhoneInput } from '../components/RuPhoneInput';
 import { formatRuDateTime } from '../format/dateTime';
 import { WalletBrandDetailsBlock } from '../wallet/WalletBrandDetailsBlock';
-import { BrandCustomerSearchScreen } from './BrandCustomerSearchScreen';
+import { BrandCustomerSearchScreen, rememberRecentCustomerPhone } from './BrandCustomerSearchScreen';
 
 type OperationResult =
   | { kind: 'metric'; title: string; response: IssueMetricResponse | RedeemMetricResponse }
@@ -69,6 +69,18 @@ type OperationType = 'metrics' | 'coins';
 type OperationAction = 'issue' | 'purchase' | 'redeem';
 type ManagementType = 'metrics' | 'products' | 'staff' | 'brand';
 type BrandWorkspaceScreen = 'customer-search' | 'customer-work' | 'settings';
+type DraftCustomerCard = {
+  kind: 'draft';
+  brandId: string;
+  customerName: string;
+  customerPhoneNumber: string;
+};
+type SavedCustomerCard = BrandCustomerCardResponse & { kind?: 'saved' };
+type SelectedCustomerCard = DraftCustomerCard | SavedCustomerCard;
+type CustomerOperationTarget = {
+  customerName: string;
+  customerPhoneNumber: string;
+};
 
 type WorkspaceTabItem<T extends string> = {
   id: T;
@@ -86,7 +98,7 @@ export function BrandWorkspace({
   const [metricsError, setMetricsError] = useState('');
   const [activeOperationType, setActiveOperationType] = useState<OperationType>('metrics');
   const [activeOperationAction, setActiveOperationAction] = useState<OperationAction>('issue');
-  const [selectedCustomer, setSelectedCustomer] = useState<BrandCustomerCardResponse | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<SelectedCustomerCard | null>(null);
   const [customerCardError, setCustomerCardError] = useState('');
   const [activeScreen, setActiveScreen] = useState<BrandWorkspaceScreen>('customer-search');
 
@@ -116,7 +128,7 @@ export function BrandWorkspace({
   const showStaffManagement = workspace.canManageStaff;
   const showBrandSettings = workspace.canManageBrand;
 
-  const operationTabs = getOperationTabs(workspace);
+  const operationTabs = selectedCustomer?.kind === 'draft' ? getDraftOperationTabs(workspace) : getOperationTabs(workspace);
   const managementTabs = getManagementTabs({
     showMetricManagement,
     showCoinProductManagement,
@@ -127,7 +139,7 @@ export function BrandWorkspace({
     ? activeOperationType
     : operationTabs[0]?.id;
   const operationActionTabs = currentOperationType
-    ? getOperationActionTabs(workspace, currentOperationType)
+    ? getCustomerOperationActionTabs(workspace, currentOperationType, selectedCustomer)
     : [];
   const currentOperationAction = operationActionTabs.some((tab) => tab.id === activeOperationAction)
     ? activeOperationAction
@@ -190,6 +202,12 @@ export function BrandWorkspace({
             setCustomerCardError('');
             setActiveScreen('customer-work');
           }}
+          onCustomerNotFound={(phoneNumber) => {
+            setSelectedCustomer(createDraftCustomerCard(workspace.brandId, phoneNumber));
+            setCustomerCardError('');
+            setActiveOperationAction('issue');
+            setActiveScreen('customer-work');
+          }}
         />
       ) : null}
 
@@ -206,7 +224,7 @@ export function BrandWorkspace({
           metricsError={metricsError}
           onOperationTypeChange={(nextType) => {
             setActiveOperationType(nextType);
-            const nextActions = getOperationActionTabs(workspace, nextType);
+            const nextActions = getCustomerOperationActionTabs(workspace, nextType, selectedCustomer);
             if (nextActions[0]) {
               setActiveOperationAction(nextActions[0].id);
             }
@@ -226,8 +244,12 @@ export function BrandWorkspace({
     setCustomerCardError('');
 
     try {
+      const wasDraftCustomer = selectedCustomer.kind === 'draft';
       const response = await getBrandCustomerCard(workspace.brandId, selectedCustomer.customerPhoneNumber);
       setSelectedCustomer(response);
+      if (wasDraftCustomer) {
+        rememberRecentCustomerPhone(workspace.brandId, response.customerPhoneNumber);
+      }
     } catch (requestError) {
       setCustomerCardError(getUserMessage(requestError));
     }
@@ -279,7 +301,7 @@ function SelectedCustomerWorkspace({
   onOperationActionChange,
   onCustomerChanged
 }: {
-  customer: BrandCustomerCardResponse;
+  customer: SelectedCustomerCard;
   customerCardError: string;
   operationTabs: WorkspaceTabItem<OperationType>[];
   actionTabs: WorkspaceTabItem<OperationAction>[];
@@ -297,14 +319,21 @@ function SelectedCustomerWorkspace({
       <section className="brand-customer-card">
         <div className="brand-customer-card__header">
           <div>
-            <span className="brand-customer-card__eyebrow">Клиент</span>
+            <span className="brand-customer-card__eyebrow">{customer.kind === 'draft' ? 'Новый клиент' : 'Клиент'}</span>
             <h3>{customer.customerName}</h3>
-            <p>{customer.customerPhoneNumber}</p>
+            <p>{formatRuPhoneInput(customer.customerPhoneNumber)}</p>
           </div>
         </div>
 
         {customerCardError ? <p className="form-status form-status--error">{customerCardError}</p> : null}
-        <WalletBrandDetailsBlock details={customer.details} ariaLabel="Разделы карточки клиента" />
+        {customer.kind === 'draft' ? (
+          <div className="brand-customer-card__draft">
+            <p>У этого клиента пока нет истории в системе.</p>
+            <p>Клиент будет создан автоматически при первом начислении.</p>
+          </div>
+        ) : (
+          <WalletBrandDetailsBlock details={customer.details} ariaLabel="Разделы карточки клиента" />
+        )}
       </section>
 
       <section className="brand-customer-operations">
@@ -350,7 +379,7 @@ function OperationWorkspace({
   onCustomerChanged
 }: {
   workspace: BrandWorkspaceResponse;
-  customer: BrandCustomerCardResponse;
+  customer: SelectedCustomerCard;
   metrics: MetricResponse[];
   metricsError: string;
   operationTabs: WorkspaceTabItem<OperationType>[];
@@ -488,6 +517,31 @@ function getOperationTabs(workspace: BrandWorkspaceResponse): WorkspaceTabItem<O
       ? { id: 'coins', label: 'Монетки' }
       : null
   ].filter((tab): tab is WorkspaceTabItem<OperationType> => tab !== null);
+}
+
+function getDraftOperationTabs(workspace: BrandWorkspaceResponse): WorkspaceTabItem<OperationType>[] {
+  return [
+    workspace.isMetricsEnabled && workspace.canIssue ? { id: 'metrics', label: 'Штампы' } : null,
+    workspace.isCoinsEnabled && workspace.canIssue ? { id: 'coins', label: 'Монетки' } : null
+  ].filter((tab): tab is WorkspaceTabItem<OperationType> => tab !== null);
+}
+
+function getCustomerOperationActionTabs(
+  workspace: BrandWorkspaceResponse,
+  operationType: OperationType,
+  customer: SelectedCustomerCard | null
+): WorkspaceTabItem<OperationAction>[] {
+  if (customer?.kind === 'draft') {
+    if (operationType === 'metrics') {
+      return workspace.isMetricsEnabled && workspace.canIssue ? [{ id: 'issue', label: 'Выдать' }] : [];
+    }
+
+    if (operationType === 'coins') {
+      return workspace.isCoinsEnabled && workspace.canIssue ? [{ id: 'issue', label: 'Начислить' }] : [];
+    }
+  }
+
+  return getOperationActionTabs(workspace, operationType);
 }
 
 function getOperationActionTabs(
@@ -1296,7 +1350,7 @@ function IssueMetricPanel({
   metricsError,
   onCustomerChanged
 }: {
-  customer: BrandCustomerCardResponse;
+  customer: CustomerOperationTarget;
   metrics: MetricResponse[];
   metricsError: string;
   onCustomerChanged: () => Promise<void>;
@@ -1482,7 +1536,7 @@ function IssueCoinsPanel({
   onCustomerChanged
 }: {
   brandId: string;
-  customer: BrandCustomerCardResponse;
+  customer: CustomerOperationTarget;
   onCustomerChanged: () => Promise<void>;
 }) {
   const [amount, setAmount] = useState('');
@@ -1751,6 +1805,15 @@ function OperationFeedback({ error, result }: { error: string; result: Operation
       <span>Баланс: {result.response.balanceValue}</span>
     </div>
   );
+}
+
+function createDraftCustomerCard(brandId: string, customerPhoneNumber: string): DraftCustomerCard {
+  return {
+    kind: 'draft',
+    brandId,
+    customerName: 'Новый клиент',
+    customerPhoneNumber
+  };
 }
 
 function formatRoleName(roleSystemName: string): string {

@@ -11,7 +11,7 @@ import {
 } from './brandWorkspaceApi';
 
 const recentCustomerPhonesStoragePrefix = 'stampservice.brandCustomerSearch.recentPhones';
-const recentCustomerPhonesLimit = 10;
+const recentCustomerPhonesLimit = 6;
 
 type RecentCustomerPhone = {
   phoneNumber: string;
@@ -21,16 +21,17 @@ type RecentCustomerPhone = {
 type BrandCustomerSearchScreenProps = {
   brandId: string;
   onCustomerFound: (customer: BrandCustomerCardResponse) => void;
+  onCustomerNotFound: (phoneNumber: string) => void;
 };
 
 export function BrandCustomerSearchScreen({
   brandId,
-  onCustomerFound
+  onCustomerFound,
+  onCustomerNotFound
 }: BrandCustomerSearchScreenProps) {
   const [phoneNumber, setPhoneNumber] = useState(formatRuPhoneInput(''));
   const [openingPhoneNumber, setOpeningPhoneNumber] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [notFound, setNotFound] = useState(false);
   const [recentPhones, setRecentPhones] = useState<RecentCustomerPhone[]>(() => loadRecentCustomerPhones(brandId));
 
   useEffect(() => {
@@ -41,7 +42,6 @@ export function BrandCustomerSearchScreen({
     const normalizedPhone = normalizePhoneNumber(phoneNumber);
     if (!isRuPhoneInputComplete(phoneNumber) || !normalizedPhone.ok) {
       setError(normalizedPhone.ok ? 'Укажите телефон клиента.' : normalizedPhone.message);
-      setNotFound(false);
       return;
     }
 
@@ -51,7 +51,6 @@ export function BrandCustomerSearchScreen({
   async function openCustomer(customerPhoneNumber: string) {
     setOpeningPhoneNumber(customerPhoneNumber);
     setError('');
-    setNotFound(false);
 
     try {
       const response = await getBrandCustomerCard(brandId, customerPhoneNumber);
@@ -59,7 +58,7 @@ export function BrandCustomerSearchScreen({
       onCustomerFound(response);
     } catch (requestError) {
       if (requestError instanceof ApiRequestError && requestError.status === 404) {
-        setNotFound(true);
+        onCustomerNotFound(customerPhoneNumber);
         return;
       }
 
@@ -86,9 +85,6 @@ export function BrandCustomerSearchScreen({
           </button>
         </div>
 
-        {notFound ? (
-          <p className="form-status form-status--error">Клиент не найден. Проверьте номер телефона.</p>
-        ) : null}
         {error ? <p className="form-status form-status--error">{error}</p> : null}
       </OperationPanel>
 
@@ -96,6 +92,10 @@ export function BrandCustomerSearchScreen({
         phones={recentPhones}
         openingPhoneNumber={openingPhoneNumber}
         onOpen={(recentPhoneNumber) => void openCustomer(recentPhoneNumber)}
+        onClear={() => {
+          clearRecentCustomerPhones(brandId);
+          setRecentPhones([]);
+        }}
       />
     </>
   );
@@ -104,16 +104,28 @@ export function BrandCustomerSearchScreen({
 function RecentCustomerPhonesTable({
   phones,
   openingPhoneNumber,
-  onOpen
+  onOpen,
+  onClear
 }: {
   phones: RecentCustomerPhone[];
   openingPhoneNumber: string | null;
   onOpen: (phoneNumber: string) => void;
+  onClear: () => void;
 }) {
   return (
     <section className="operation-panel recent-customer-phones">
-      <div className="operation-panel__heading">
+      <div className="operation-panel__heading recent-customer-phones__heading">
         <h3>Недавние номера</h3>
+        {phones.length > 0 ? (
+          <button
+            className="button-secondary button-compact"
+            type="button"
+            disabled={openingPhoneNumber !== null}
+            onClick={onClear}
+          >
+            Очистить
+          </button>
+        ) : null}
       </div>
 
       {phones.length === 0 ? (
@@ -175,7 +187,7 @@ function getUserMessage(error: unknown): string {
   return getApiErrorMessage(error, 'Не удалось выполнить запрос.');
 }
 
-function rememberRecentCustomerPhone(brandId: string, phoneNumber: string): RecentCustomerPhone[] {
+export function rememberRecentCustomerPhone(brandId: string, phoneNumber: string): RecentCustomerPhone[] {
   const nextPhones = [
     { phoneNumber, openedAt: new Date().toISOString() },
     ...loadRecentCustomerPhones(brandId).filter((phone) => phone.phoneNumber !== phoneNumber)
@@ -206,6 +218,14 @@ function loadRecentCustomerPhones(brandId: string): RecentCustomerPhone[] {
 function saveRecentCustomerPhones(brandId: string, phones: RecentCustomerPhone[]) {
   try {
     localStorage.setItem(getRecentCustomerPhonesStorageKey(brandId), JSON.stringify(phones));
+  } catch {
+    // localStorage is a best-effort convenience cache.
+  }
+}
+
+function clearRecentCustomerPhones(brandId: string) {
+  try {
+    localStorage.removeItem(getRecentCustomerPhonesStorageKey(brandId));
   } catch {
     // localStorage is a best-effort convenience cache.
   }
