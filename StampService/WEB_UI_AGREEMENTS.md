@@ -560,7 +560,7 @@ Brand workspace в React web UI теперь проектируется как m
 
 - первое состояние workspace - отдельный экран поиска клиента по телефону;
 - поиск клиента не создает пользователя автоматически: это read-only открытие карточки существующего пользователя по активной `Phone` identity;
-- если клиент не найден, frontend открывает локальную draft-карточку нового клиента на основе введенного телефона; это не backend-сущность, не запись в БД и не исключение из read-only правила поиска;
+- если клиент не найден, `GET /api/brands/{brandId}/customer-card` должен вернуть обычный lookup-ответ `found=false`, а frontend открывает локальную draft-карточку нового клиента на основе введенного телефона; это не backend-сущность, не запись в БД и не исключение из read-only правила поиска;
 - экран поиска может показывать таблицу `Недавние номера`: до 6 последних успешно открытых телефонов и дату открытия, сохраненные в `localStorage` отдельно для каждого `brandId`;
 - `localStorage` в поиске клиента используется только как локальное UX-удобство для повторного открытия успешно открытых карточек, не заменяет backend-проверки доступа и не является бизнес-аудитом;
 - второе состояние workspace - выбранный клиент: сверху карточка клиента, ниже операции над ним;
@@ -578,6 +578,7 @@ Brand workspace в React web UI теперь проектируется как m
 - источник прав доступа - только `BrandWorkspaceResponse`: `canIssue`, `canRedeem`, `canViewBalances`, `canManageBrand`, `canManageMetrics`, `canManageStaff` и reward flags;
 - frontend не переносит бизнес-правила из Application; локальные UX-кэши вроде недавних телефонов не должны хранить internal ids и не должны использоваться как источник истины;
 - для открытия карточки клиента используется thin API `GET /api/brands/{brandId}/customer-card` и typed client `getBrandCustomerCard`;
+- typed client получает lookup DTO (`found` + nullable `card`): `found=true` открывает обычную карточку, `found=false` открывает draft-карточку, а реальные ошибки доступа/валидации продолжают идти через общий API error flow;
 - backend/Application нормализует телефон, проверяет доступ, ищет существующую активную `Phone` identity и возвращает карточку клиента; frontend не реализует поиск клиента сам и использует not found только как UX-сигнал для draft-карточки;
 - существующие функции `getBrandWorkspace`, `getIssueMetricOptions`, `getRedeemMetricOptions`, `getCoinProductPurchaseOptions`, `issueMetricByPhone`, `redeemMetric`, `issueCoinsByPhone`, `redeemCoins`, `purchaseCoinProduct` остаются основной интеграционной поверхностью операций;
 - management-сценарии штампов, товаров, сотрудников и настроек бренда переиспользуют текущие панели и API-вызовы;

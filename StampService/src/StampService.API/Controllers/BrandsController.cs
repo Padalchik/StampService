@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using FluentResults;
 using StampService.API.EndpointResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Brands.Commands.AddBrandStaffByPhone;
@@ -9,6 +10,7 @@ using StampService.Application.Brands.Queries.GetBrandCustomerCard;
 using StampService.Application.Brands.Queries.GetBrandStaff;
 using StampService.Application.Brands.Queries.GetBrandWorkspace;
 using StampService.Application.Brands.Queries.GetMyBrands;
+using StampService.Application.Errors;
 using StampService.Contracts.DTOs.Brands;
 
 namespace StampService.API.Controllers;
@@ -48,7 +50,7 @@ public class BrandsController : ApiControllerBase
     }
 
     [HttpGet("{brandId:guid}/customer-card")]
-    public async Task<EndpointResult<BrandCustomerCardResponse>> GetCustomerCard(
+    public async Task<EndpointResult<BrandCustomerCardLookupResponse>> GetCustomerCard(
         Guid brandId,
         [FromQuery] string customerPhoneNumber,
         [FromServices] IQueryHandler<BrandCustomerCardResponse, GetBrandCustomerCardQuery> handler,
@@ -56,14 +58,22 @@ public class BrandsController : ApiControllerBase
     {
         var userIdResult = GetUserId();
         if (userIdResult.IsFailed)
-            return userIdResult.ToResult<BrandCustomerCardResponse>();
+            return userIdResult.ToResult<BrandCustomerCardLookupResponse>();
 
-        return await handler.Handle(
+        var cardResult = await handler.Handle(
             new GetBrandCustomerCardQuery(
                 userIdResult.Value,
                 brandId,
                 customerPhoneNumber),
             cancellationToken);
+
+        if (cardResult.IsSuccess)
+            return Result.Ok(new BrandCustomerCardLookupResponse(true, cardResult.Value));
+
+        if (IsCustomerNotFound(cardResult))
+            return Result.Ok(new BrandCustomerCardLookupResponse(false, null));
+
+        return Result.Fail<BrandCustomerCardLookupResponse>(cardResult.Errors);
     }
 
     [HttpGet("{brandId:guid}/staff")]
@@ -139,5 +149,12 @@ public class BrandsController : ApiControllerBase
                 brandId,
                 staffUserId),
             cancellationToken);
+    }
+
+    private static bool IsCustomerNotFound(Result<BrandCustomerCardResponse> result)
+    {
+        return result.Errors.Count == 1
+            && result.Errors[0] is AppError appError
+            && appError.Code == AppErrorCodes.Recipient.NotFound;
     }
 }

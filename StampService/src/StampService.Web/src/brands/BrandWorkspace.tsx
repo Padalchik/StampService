@@ -246,9 +246,14 @@ export function BrandWorkspace({
     try {
       const wasDraftCustomer = selectedCustomer.kind === 'draft';
       const response = await getBrandCustomerCard(workspace.brandId, selectedCustomer.customerPhoneNumber);
-      setSelectedCustomer(response);
+      if (!response.found || !response.card) {
+        setCustomerCardError('Клиент пока не найден. Повторите обновление после начисления.');
+        return;
+      }
+
+      setSelectedCustomer(response.card);
       if (wasDraftCustomer) {
-        rememberRecentCustomerPhone(workspace.brandId, response.customerPhoneNumber);
+        rememberRecentCustomerPhone(workspace.brandId, response.card.customerPhoneNumber);
       }
     } catch (requestError) {
       setCustomerCardError(getUserMessage(requestError));

@@ -1,6 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Search } from 'lucide-react';
-import { ApiRequestError } from '../api/apiClient';
 import { getApiErrorMessage } from '../api/errorMessages';
 import { RuPhoneInput } from '../components/RuPhoneInput';
 import { formatRuDateTime } from '../format/dateTime';
@@ -54,14 +53,13 @@ export function BrandCustomerSearchScreen({
 
     try {
       const response = await getBrandCustomerCard(brandId, customerPhoneNumber);
-      setRecentPhones(rememberRecentCustomerPhone(brandId, response.customerPhoneNumber));
-      onCustomerFound(response);
-    } catch (requestError) {
-      if (requestError instanceof ApiRequestError && requestError.status === 404) {
+      if (response.found && response.card) {
+        setRecentPhones(rememberRecentCustomerPhone(brandId, response.card.customerPhoneNumber));
+        onCustomerFound(response.card);
+      } else {
         onCustomerNotFound(customerPhoneNumber);
-        return;
       }
-
+    } catch (requestError) {
       setError(getUserMessage(requestError));
     } finally {
       setOpeningPhoneNumber(null);

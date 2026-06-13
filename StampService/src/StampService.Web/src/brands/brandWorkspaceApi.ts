@@ -169,6 +169,11 @@ export type BrandCustomerCardResponse = {
   details: UserWalletBrandDetailsResponse;
 };
 
+export type BrandCustomerCardLookupResponse = {
+  found: boolean;
+  card?: BrandCustomerCardResponse | null;
+};
+
 export function getMyBrands(): Promise<MyBrandsResponse> {
   return apiRequest<MyBrandsResponse>('/api/brands/mine');
 }
@@ -180,8 +185,8 @@ export function getBrandWorkspace(brandId: string): Promise<BrandWorkspaceRespon
 export function getBrandCustomerCard(
   brandId: string,
   customerPhoneNumber: string
-): Promise<BrandCustomerCardResponse> {
-  return apiRequest<BrandCustomerCardResponse>(
+): Promise<BrandCustomerCardLookupResponse> {
+  return apiRequest<BrandCustomerCardLookupResponse>(
     `/api/brands/${brandId}/customer-card?customerPhoneNumber=${encodeURIComponent(customerPhoneNumber)}`
   );
 }
