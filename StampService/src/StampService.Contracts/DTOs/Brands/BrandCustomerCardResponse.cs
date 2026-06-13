@@ -8,3 +8,7 @@ public record BrandCustomerCardResponse(
     string CustomerName,
     string CustomerPhoneNumber,
     UserWalletBrandDetailsResponse Details);
+
+public record BrandCustomerCardLookupResponse(
+    bool Found,
+    BrandCustomerCardResponse? Card);
