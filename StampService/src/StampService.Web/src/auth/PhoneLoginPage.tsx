@@ -1,8 +1,8 @@
-import { FormEvent, useMemo, useState } from 'react';
-import { CheckCircle2, LogIn, MessageSquareText, ShieldCheck } from 'lucide-react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, LogIn, MessageSquareText, ShieldCheck, Smartphone } from 'lucide-react';
 import { ApiRequestError } from '../api/apiClient';
 import { useAuth } from './AuthContext';
-import { requestPhoneAuthCode, verifyPhoneAuthCode } from './authApi';
+import { getPhoneAuthSmsSettings, requestPhoneAuthCode, verifyPhoneAuthCode } from './authApi';
 import { formatRuPhoneInput, isRuPhoneInputComplete, normalizePhoneNumber } from '../validation/phoneNumber';
 import { formatRuTime } from '../format/dateTime';
 import { RuPhoneInput } from '../components/RuPhoneInput';
@@ -18,6 +18,8 @@ export function PhoneLoginPage() {
   const [status, setStatus] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSmsEnabled, setIsSmsEnabled] = useState(false);
+  const [isSmsSettingsLoading, setIsSmsSettingsLoading] = useState(true);
 
   const formattedExpiresAt = useMemo(() => {
     if (!expiresAt) {
@@ -27,8 +29,34 @@ export function PhoneLoginPage() {
     return formatRuTime(expiresAt);
   }, [expiresAt]);
 
-  async function handleRequestCode(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSmsSettings() {
+      try {
+        const response = await getPhoneAuthSmsSettings();
+        if (isMounted) {
+          setIsSmsEnabled(response.isEnabled);
+        }
+      } catch {
+        if (isMounted) {
+          setIsSmsEnabled(false);
+        }
+      } finally {
+        if (isMounted) {
+          setIsSmsSettingsLoading(false);
+        }
+      }
+    }
+
+    void loadSmsSettings();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  async function requestCode(sendSms: boolean) {
     setError('');
     setStatus('');
     setIsSubmitting(true);
@@ -40,16 +68,21 @@ export function PhoneLoginPage() {
         return;
       }
 
-      const response = await requestPhoneAuthCode(normalizedPhone.value);
+      const response = await requestPhoneAuthCode(normalizedPhone.value, sendSms);
       setPhoneNumber(formatRuPhoneInput(normalizedPhone.value));
       setExpiresAt(response.expiresAt);
       setStep('code');
-      setStatus('Код подтверждения отправлен.');
+      setStatus(sendSms ? 'Код отправлен по SMS.' : 'Код отправлен администратору в Telegram.');
     } catch (requestError) {
       setError(getUserMessage(requestError));
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function handleRequestCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await requestCode(false);
   }
 
   async function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
@@ -101,6 +134,20 @@ export function PhoneLoginPage() {
             <button type="submit" disabled={isSubmitting || !isRuPhoneInputComplete(phoneNumber)}>
               <MessageSquareText size={18} />
               Получить код
+            </button>
+            <button
+              className="button-secondary"
+              type="button"
+              disabled={
+                isSubmitting
+                || isSmsSettingsLoading
+                || !isSmsEnabled
+                || !isRuPhoneInputComplete(phoneNumber)
+              }
+              onClick={() => void requestCode(true)}
+            >
+              <Smartphone size={18} />
+              Получить код по СМС
             </button>
           </form>
         ) : (
@@ -164,6 +211,10 @@ function getUserMessage(error: unknown): string {
 
     if (error.errors.some((item) => item.code === 'auth.phone_code_invalid')) {
       return 'Код неверен или устарел.';
+    }
+
+    if (error.errors.some((item) => item.code === 'auth.phone_sms_disabled')) {
+      return 'Отправка кода по SMS сейчас выключена.';
     }
 
     return error.message;

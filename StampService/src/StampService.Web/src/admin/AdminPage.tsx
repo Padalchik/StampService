@@ -1,4 +1,4 @@
-import { Building2, ClipboardList, Plus, RefreshCw, Search, ShieldCheck, UserRoundCheck, X } from 'lucide-react';
+import { Building2, ClipboardList, Plus, RefreshCw, Search, ShieldCheck, Smartphone, UserRoundCheck, X } from 'lucide-react';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getApiErrorMessage } from '../api/errorMessages';
 import { useAuth } from '../auth/AuthContext';
@@ -9,13 +9,15 @@ import {
   createUserDemoData,
   getAdminBrands,
   getBusinessAuditLogs,
+  getPhoneAuthSmsSettings,
   reassignBrandOwner,
   resetDemoDatabase,
+  updatePhoneAuthSmsSettings,
   type AdminBrandResponse,
   type BusinessAuditLogResponse
 } from './adminApi';
 
-type AdminTab = 'brands' | 'audit' | 'demo';
+type AdminTab = 'brands' | 'audit' | 'settings' | 'demo';
 
 export function AdminPage() {
   const auth = useAuth();
@@ -60,6 +62,8 @@ export function AdminPage() {
       ) : null}
 
       {activeTab === 'audit' ? <AdminAuditTab brands={brands} /> : null}
+
+      {activeTab === 'settings' ? <AdminSettingsTab /> : null}
 
       {activeTab === 'demo' ? (
         <AdminDemoTab
@@ -123,6 +127,15 @@ function AdminTabs({ activeTab, onChange }: { activeTab: AdminTab; onChange: (ta
         Журнал
       </button>
       <button
+        className={activeTab === 'settings' ? 'admin-tabs__item admin-tabs__item--active' : 'admin-tabs__item'}
+        type="button"
+        role="tab"
+        aria-selected={activeTab === 'settings'}
+        onClick={() => onChange('settings')}
+      >
+        Настройки
+      </button>
+      <button
         className={activeTab === 'demo' ? 'admin-tabs__item admin-tabs__item--active' : 'admin-tabs__item'}
         type="button"
         role="tab"
@@ -132,6 +145,80 @@ function AdminTabs({ activeTab, onChange }: { activeTab: AdminTab; onChange: (ta
         Демо
       </button>
     </div>
+  );
+}
+
+function AdminSettingsTab() {
+  const [isSmsEnabled, setIsSmsEnabled] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
+
+  async function loadSettings() {
+    setIsLoading(true);
+    setError('');
+    try {
+      const response = await getPhoneAuthSmsSettings();
+      setIsSmsEnabled(response.isEnabled);
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadSettings();
+  }, []);
+
+  async function toggleSms(nextValue: boolean) {
+    setIsSaving(true);
+    setError('');
+    setStatus('');
+    try {
+      const response = await updatePhoneAuthSmsSettings(nextValue);
+      setIsSmsEnabled(response.isEnabled);
+      setStatus(response.isEnabled ? 'SMS-коды входа включены.' : 'SMS-коды входа выключены.');
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <section className="admin-tab-panel" aria-label="Настройки">
+      {error ? <p className="form-status form-status--error">{error}</p> : null}
+      {status ? <p className="form-status form-status--ok">{status}</p> : null}
+
+      <div className="admin-demo-grid">
+        <article className="admin-demo-card">
+          <div className="admin-demo-card__header">
+            <Smartphone size={20} />
+            <h3>SMS-коды входа</h3>
+          </div>
+          <p>
+            {isSmsEnabled
+              ? 'Коды входа отправляются клиенту по SMS и администратору в Telegram.'
+              : 'Коды входа отправляются только администратору в Telegram.'}
+          </p>
+          <label className="admin-switch-row">
+            <input
+              type="checkbox"
+              checked={isSmsEnabled}
+              disabled={isLoading || isSaving}
+              onChange={(event) => void toggleSms(event.target.checked)}
+            />
+            <span className="admin-switch-row__control" aria-hidden="true" />
+            <span className="admin-switch-row__label">
+              {isSmsEnabled ? 'SMS включены' : 'SMS выключены'}
+            </span>
+          </label>
+          {isLoading ? <p className="muted-text">Загружаем настройки...</p> : null}
+        </article>
+      </div>
+    </section>
   );
 }
 

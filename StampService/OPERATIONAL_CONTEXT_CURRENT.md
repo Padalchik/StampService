@@ -1,6 +1,6 @@
 # StampService: текущий операционный контекст
 
-Актуально на 2026-06-11, Europe/Moscow.
+Актуально на 2026-06-15, Europe/Moscow.
 
 Этот файл нужен для быстрого старта нового чата. Это не changelog и не детальная карта всех файлов. Здесь зафиксированы цель проекта, архитектурные границы, ключевые доменные решения и рабочие договоренности.
 
@@ -672,3 +672,30 @@ Application details-сценарий возвращает web-ready данные
 - `src/StampService.Web/src/brands/BrandWorkspacePage.tsx`;
 - `src/StampService.Web/src/brands/BrandWorkspace.tsx`;
 - `src/StampService.Web/src/styles.css`.
+
+## OTP по телефону и SMS-доставка
+
+Актуально на 2026-06-15.
+
+Телефонный вход остается phone-first OTP-сценарием: Application создает и проверяет одноразовый код для нормализованного номера, а доставка кода является инфраструктурной деталью за портом `IPhoneAuthCodeSender`. Вход по телефону не должен зависеть от Telegram session state или UI-технических ids.
+
+Для доставки OTP теперь используются два канала:
+
+- Telegram-уведомление системному администратору остается базовым dev/admin-каналом и используется при обычной кнопке `Получить код`;
+- SMS через SmsAero используется только когда клиент явно выбирает SMS-доставку на экране входа.
+
+Разделение каналов является частью контракта запроса кода: `RequestPhoneAuthCodeRequest` содержит флаг `SendSms`. Если `SendSms=false`, код отправляется только администратору в Telegram. Если `SendSms=true`, код также отправляется клиенту по SMS, но только при включенной системной настройке SMS-кодов.
+
+Системная настройка SMS-доставки хранится в БД как singleton `PhoneAuthSmsSettings`, а не только в `appsettings`. Это сделано, чтобы администратор мог включать/выключать SMS-коды из web-админки без изменения конфигурационных файлов. Конфигурация `SmsAero:SendAuthCodes` используется только как начальное/fallback-значение при первом создании singleton-настройки. Runtime-решение о доступности SMS должно проверять `IPhoneAuthSmsSettingsRepository`.
+
+SmsAero credentials (`SmsAero:Login`, `SmsAero:ApiKey`) остаются инфраструктурной конфигурацией API host и должны задаваться через user-secrets/переменные окружения, а не храниться в репозитории. Текст SMS для клиента: `Код авторизации: {Код}`. Номер для SmsAero отправляется в формате без `+`.
+
+Архитектурная раскладка:
+
+- Domain: `PhoneAuthSmsSettings` описывает singleton-настройку включения SMS OTP;
+- Application: `IPhoneAuthSmsSettingsRepository`, команды/запросы админки и проверка настройки в `AuthService` перед созданием SMS OTP;
+- Infrastructure: EF mapping/repository, `SmsAeroPhoneAuthCodeSender`, `TelegramAdminPhoneAuthCodeSender`, `CompositePhoneAuthCodeSender`;
+- API: публичное чтение доступности SMS для login UI и admin endpoints для чтения/изменения настройки;
+- Web: login UI показывает отдельную кнопку SMS, а admin UI управляет настройкой через тумблер.
+
+Важно: проверка настройки должна быть и во frontend для UX, и в backend/Application/Infrastructure для безопасности и консистентности. Если SMS выключены, кнопка SMS на login disabled, а серверный сценарий с `SendSms=true` возвращает доменную ошибку `auth.phone_sms_disabled` и не должен молча отправлять SMS.

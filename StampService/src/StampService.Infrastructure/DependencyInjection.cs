@@ -51,9 +51,24 @@ public static class DependencyInjection
         services.AddScoped<IBusinessAuditSink, BusinessAuditSink>();
         services.AddScoped<IDemoDatabaseResetService, DemoDatabaseResetService>();
         services.AddScoped<IPhoneAuthCodeRepository, PhoneAuthCodeRepository>();
+        services.AddScoped<IPhoneAuthSmsSettingsRepository, PhoneAuthSmsSettingsRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddSingleton<HttpClient>();
-        services.AddScoped<IPhoneAuthCodeSender, TelegramAdminPhoneAuthCodeSender>();
+        services.Configure<SmsAeroOptions>(options =>
+        {
+            options.Login = configuration["SmsAero:Login"];
+            options.ApiKey = configuration["SmsAero:ApiKey"];
+            options.SendAuthCodes = !bool.TryParse(configuration["SmsAero:SendAuthCodes"], out var sendAuthCodes)
+                || sendAuthCodes;
+        });
+        services.AddScoped<TelegramAdminPhoneAuthCodeSender>();
+        services.AddScoped<SmsAeroPhoneAuthCodeSender>();
+        services.AddScoped<IPhoneAuthCodeSender>(provider => new CompositePhoneAuthCodeSender(
+            new IPhoneAuthCodeSender[]
+            {
+                provider.GetRequiredService<TelegramAdminPhoneAuthCodeSender>(),
+                provider.GetRequiredService<SmsAeroPhoneAuthCodeSender>()
+            }));
         services.AddScoped<StampService.Application.CustomerNotifications.ICustomerNotificationService, TelegramCustomerNotificationService>();
         services.AddScoped<ILedgerOperationLock, PostgresLedgerOperationLock>();
         services.AddScoped<ITelegramLinkSessionProtector, CompactTelegramLinkSessionProtector>();

@@ -1639,6 +1639,82 @@ p {
   gap: 12px;
 }
 
+.admin-switch-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  min-height: 42px;
+  color: #1f2933;
+  cursor: pointer;
+}
+
+.admin-switch-row input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.admin-switch-row__control {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  border: 1px solid #c8d2dc;
+  border-radius: 999px;
+  background: #eef3f7;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.admin-switch-row__control::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(31, 41, 51, 0.22);
+  content: "";
+  transition: transform 0.18s ease;
+}
+
+.admin-switch-row input:checked + .admin-switch-row__control {
+  border-color: #1769aa;
+  background: #1769aa;
+}
+
+.admin-switch-row input:checked + .admin-switch-row__control::after {
+  transform: translateX(20px);
+}
+
+.admin-switch-row input:focus-visible + .admin-switch-row__control {
+  outline: 3px solid rgba(23, 105, 170, 0.18);
+  outline-offset: 2px;
+}
+
+.admin-switch-row input:disabled + .admin-switch-row__control,
+.admin-switch-row input:disabled ~ .admin-switch-row__label {
+  opacity: 0.55;
+}
+
+.admin-switch-row:has(input:disabled) {
+  cursor: not-allowed;
+}
+
+.admin-switch-row__label {
+  min-width: 0;
+  color: #1f2933;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
 .admin-demo-card__header {
   display: flex;
   align-items: center;

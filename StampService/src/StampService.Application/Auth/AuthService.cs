@@ -14,19 +14,22 @@ public class AuthService : IAuthService
     private readonly ITelegramValidationService _telegramValidationService;
     private readonly IPhoneAuthCodeService _phoneAuthCodeService;
     private readonly IPhoneAccountService _phoneAccountService;
+    private readonly IPhoneAuthSmsSettingsRepository _phoneAuthSmsSettingsRepository;
 
     public AuthService(
         IUserRepository userRepository,
         IJwtTokenService jwtTokenService,
         ITelegramValidationService telegramValidationService,
         IPhoneAuthCodeService phoneAuthCodeService,
-        IPhoneAccountService phoneAccountService)
+        IPhoneAccountService phoneAccountService,
+        IPhoneAuthSmsSettingsRepository phoneAuthSmsSettingsRepository)
     {
         _userRepository = userRepository;
         _jwtTokenService = jwtTokenService;
         _telegramValidationService = telegramValidationService;
         _phoneAuthCodeService = phoneAuthCodeService;
         _phoneAccountService = phoneAccountService;
+        _phoneAuthSmsSettingsRepository = phoneAuthSmsSettingsRepository;
     }
 
     public async Task<Result<AuthResponse>> LoginAsync(
@@ -57,10 +60,18 @@ public class AuthService : IAuthService
         RequestPhoneAuthCodeRequest request,
         CancellationToken cancellationToken)
     {
+        if (request.SendSms)
+        {
+            var smsSettings = await _phoneAuthSmsSettingsRepository.GetOrCreateAsync(cancellationToken);
+            if (!smsSettings.IsEnabled)
+                return Result.Fail(AuthErrors.PhoneSmsDisabled());
+        }
+
         var requestResult = await _phoneAuthCodeService.RequestCodeAsync(
             request.PhoneNumber,
             nameof(request.PhoneNumber),
-            cancellationToken);
+            cancellationToken,
+            request.SendSms);
         if (requestResult.IsFailed)
             return Result.Fail(requestResult.Errors);
 
