@@ -35,6 +35,7 @@ public class UsersController : ApiControllerBase
 
     [HttpPost("me/redemption-code")]
     public async Task<EndpointResult<CreateRedemptionCodeResponse>> CreateRedemptionCode(
+        [FromQuery] bool forceRefreshCode,
         [FromServices] ICommandHandler<CreateRedemptionCodeResponse, CreateRedemptionCodeCommand> handler,
         CancellationToken cancellationToken)
     {
@@ -42,7 +43,7 @@ public class UsersController : ApiControllerBase
         if (userIdResult.IsFailed)
             return userIdResult.ToResult<CreateRedemptionCodeResponse>();
 
-        var command = new CreateRedemptionCodeCommand(userIdResult.Value);
+        var command = new CreateRedemptionCodeCommand(userIdResult.Value, forceRefreshCode);
 
         return await handler.Handle(command, cancellationToken);
     }

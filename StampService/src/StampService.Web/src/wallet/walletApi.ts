@@ -102,6 +102,13 @@ export function openUserWallet(forceRefreshCode = false): Promise<UserWalletResp
   });
 }
 
+export function getCurrentRedemptionCode(forceRefreshCode = false): Promise<UserWalletRedemptionCodeResponse> {
+  const query = forceRefreshCode ? '?forceRefreshCode=true' : '';
+  return apiRequest<UserWalletRedemptionCodeResponse>(`/api/users/me/redemption-code${query}`, {
+    method: 'POST'
+  });
+}
+
 export function getBrandDetails(brandId: string): Promise<UserWalletBrandDetailsResponse> {
   return apiRequest<UserWalletBrandDetailsResponse>(`/api/wallet/brands/${brandId}/details`);
 }

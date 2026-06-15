@@ -3,12 +3,15 @@ import { getApiErrorMessage } from '../api/errorMessages';
 import { BrandWalletPage } from './BrandWalletPage';
 import { RedemptionCodeCard } from './RedemptionCodeCard';
 import {
+  getCurrentRedemptionCode,
   getBrandDetails,
   openUserWallet,
   type UserWalletBrandDetailsResponse,
   type UserWalletBrandOverviewResponse,
   type UserWalletResponse
 } from './walletApi';
+
+const redemptionCodeRefreshIntervalMs = 5000;
 
 export function WalletPage({ homeNavigationKey }: { homeNavigationKey: number }) {
   const [wallet, setWallet] = useState<UserWalletResponse | null>(null);
@@ -20,6 +23,8 @@ export function WalletPage({ homeNavigationKey }: { homeNavigationKey: number })
   const [isBrandLoading, setIsBrandLoading] = useState(false);
   const [brandError, setBrandError] = useState('');
   const hasRequestedInitialWallet = useRef(false);
+  const hasLoadedWallet = useRef(false);
+  const isCodeRefreshInFlight = useRef(false);
 
   useEffect(() => {
     if (hasRequestedInitialWallet.current) {
@@ -28,6 +33,25 @@ export function WalletPage({ homeNavigationKey }: { homeNavigationKey: number })
 
     hasRequestedInitialWallet.current = true;
     void loadWallet(false);
+  }, []);
+
+  useEffect(() => {
+    function refreshIfVisible() {
+      if (document.visibilityState === 'visible') {
+        void refreshRedemptionCode({ silent: true });
+      }
+    }
+
+    const intervalId = window.setInterval(refreshIfVisible, redemptionCodeRefreshIntervalMs);
+
+    document.addEventListener('visibilitychange', refreshIfVisible);
+    window.addEventListener('focus', refreshIfVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+      window.removeEventListener('focus', refreshIfVisible);
+    };
   }, []);
 
   useEffect(() => {
@@ -48,11 +72,55 @@ export function WalletPage({ homeNavigationKey }: { homeNavigationKey: number })
     try {
       const response = await openUserWallet(forceRefreshCode);
       setWallet(response);
+      hasLoadedWallet.current = true;
     } catch (requestError) {
       setError(getUserMessage(requestError));
     } finally {
       setIsLoading(false);
       setIsRefreshingCode(false);
+    }
+  }
+
+  async function refreshRedemptionCode({
+    forceRefreshCode = false,
+    silent = false
+  }: {
+    forceRefreshCode?: boolean;
+    silent?: boolean;
+  } = {}) {
+    if (!hasLoadedWallet.current) {
+      return;
+    }
+
+    if (isCodeRefreshInFlight.current) {
+      return;
+    }
+
+    isCodeRefreshInFlight.current = true;
+    if (!silent) {
+      setError('');
+      setIsRefreshingCode(true);
+    }
+
+    try {
+      const redemptionCode = await getCurrentRedemptionCode(forceRefreshCode);
+      setWallet((currentWallet) =>
+        currentWallet
+          ? {
+              ...currentWallet,
+              redemptionCode
+            }
+          : currentWallet
+      );
+    } catch (requestError) {
+      if (!silent) {
+        setError(getUserMessage(requestError));
+      }
+    } finally {
+      isCodeRefreshInFlight.current = false;
+      if (!silent) {
+        setIsRefreshingCode(false);
+      }
     }
   }
 
@@ -73,7 +141,7 @@ export function WalletPage({ homeNavigationKey }: { homeNavigationKey: number })
         redemptionCode={wallet?.redemptionCode.code}
         isRefreshingCode={isRefreshingCode}
         codeRefreshError={error}
-        onRefreshCode={() => void loadWallet(true)}
+        onRefreshCode={() => void refreshRedemptionCode({ forceRefreshCode: true })}
       />
     );
   }
@@ -86,7 +154,7 @@ export function WalletPage({ homeNavigationKey }: { homeNavigationKey: number })
           isRefreshing={isRefreshingCode}
           error={error}
           className="wallet-sticky-code"
-          onRefresh={() => void loadWallet(true)}
+          onRefresh={() => void refreshRedemptionCode({ forceRefreshCode: true })}
         />
 
         <section className="wallet-brands-panel">
