@@ -7,7 +7,8 @@ public interface IPhoneAuthCodeService
     Task<Result<PhoneAuthCodeRequestResult>> RequestCodeAsync(
         string phoneNumber,
         string? invalidField,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        bool sendSms = false);
 
     Task<Result<PhoneAuthCodeVerificationResult>> VerifyCodeAsync(
         string phoneNumber,

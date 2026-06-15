@@ -25,7 +25,35 @@ public class PhoneAuthServiceTests
         Assert.Equal("+79991234567", code.PhoneNumber);
         Assert.Equal("123456", code.Code);
         Assert.Equal(1, fixture.PhoneCodes.SaveCount);
-        Assert.Equal(("+79991234567", "123456"), Assert.Single(fixture.Sender.SentCodes));
+        Assert.Equal(("+79991234567", "123456", false), Assert.Single(fixture.Sender.SentCodes));
+    }
+
+    [Fact]
+    public async Task RequestPhoneCode_WhenSmsRequestedAndDisabled_ShouldFailWithoutPersistingCode()
+    {
+        var fixture = CreateFixture(smsEnabled: false);
+
+        var result = await fixture.Service.RequestPhoneCodeAsync(
+            new RequestPhoneAuthCodeRequest("+7 (999) 123-45-67", SendSms: true),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Contains(result.Errors, error => error.Metadata["error_code"].Equals("auth.phone_sms_disabled"));
+        Assert.Empty(fixture.PhoneCodes.Codes);
+        Assert.Empty(fixture.Sender.SentCodes);
+    }
+
+    [Fact]
+    public async Task RequestPhoneCode_WhenSmsRequestedAndEnabled_ShouldPassSmsFlagToSender()
+    {
+        var fixture = CreateFixture();
+
+        var result = await fixture.Service.RequestPhoneCodeAsync(
+            new RequestPhoneAuthCodeRequest("+7 (999) 123-45-67", SendSms: true),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(("+79991234567", "123456", true), Assert.Single(fixture.Sender.SentCodes));
     }
 
     [Theory]
@@ -85,7 +113,7 @@ public class PhoneAuthServiceTests
         Assert.Empty(fixture.Users.Users);
     }
 
-    private static Fixture CreateFixture()
+    private static Fixture CreateFixture(bool smsEnabled = true)
     {
         var now = new DateTimeOffset(2026, 5, 17, 10, 0, 0, TimeSpan.Zero);
         var users = new FakeUserRepository();
@@ -100,12 +128,14 @@ public class PhoneAuthServiceTests
         var phoneAccountService = new PhoneAccountService(
             users,
             new CuteUserDisplayNameGenerator());
+        var smsSettings = new FakePhoneAuthSmsSettingsRepository(smsEnabled);
         var service = new AuthService(
             users,
             new FakeJwtTokenService(),
             new AlwaysValidTelegramValidationService(),
             phoneAuthCodeService,
-            phoneAccountService);
+            phoneAccountService,
+            smsSettings);
 
         return new Fixture(service, users, phoneCodes, sender, now);
     }
@@ -166,15 +196,36 @@ public class PhoneAuthServiceTests
 
     private sealed class FakePhoneAuthCodeSender : IPhoneAuthCodeSender
     {
-        public List<(string PhoneNumber, string Code)> SentCodes { get; } = [];
+        public List<(string PhoneNumber, string Code, bool SendSms)> SentCodes { get; } = [];
 
         public Task<Result> SendAsync(
             string phoneNumber,
             string code,
+            bool sendSms,
             CancellationToken cancellationToken)
         {
-            SentCodes.Add((phoneNumber, code));
+            SentCodes.Add((phoneNumber, code, sendSms));
             return Task.FromResult(Result.Ok());
+        }
+    }
+
+    private sealed class FakePhoneAuthSmsSettingsRepository : IPhoneAuthSmsSettingsRepository
+    {
+        private readonly PhoneAuthSmsSettings _settings;
+
+        public FakePhoneAuthSmsSettingsRepository(bool isEnabled)
+        {
+            _settings = PhoneAuthSmsSettings.Create(isEnabled);
+        }
+
+        public Task<PhoneAuthSmsSettings> GetOrCreateAsync(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_settings);
+        }
+
+        public Task SaveAsync(CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
         }
     }
 

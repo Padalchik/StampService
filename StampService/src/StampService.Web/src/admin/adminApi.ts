@@ -60,6 +60,10 @@ export type BusinessAuditLogsResponse = {
   take: number;
 };
 
+export type PhoneAuthSmsSettingsResponse = {
+  isEnabled: boolean;
+};
+
 export type BusinessAuditLogFilters = {
   occurredFromUtc?: string;
   occurredToUtc?: string;
@@ -94,6 +98,17 @@ export function getBusinessAuditLogs(filters: BusinessAuditLogFilters): Promise<
 
   const query = params.toString();
   return apiRequest<BusinessAuditLogsResponse>(`/api/admin/audit-logs${query ? `?${query}` : ''}`);
+}
+
+export function getPhoneAuthSmsSettings(): Promise<PhoneAuthSmsSettingsResponse> {
+  return apiRequest<PhoneAuthSmsSettingsResponse>('/api/admin/auth-sms-settings');
+}
+
+export function updatePhoneAuthSmsSettings(isEnabled: boolean): Promise<PhoneAuthSmsSettingsResponse> {
+  return apiRequest<PhoneAuthSmsSettingsResponse>('/api/admin/auth-sms-settings', {
+    method: 'PUT',
+    body: { isEnabled }
+  });
 }
 
 export function createBrandWithOwner(

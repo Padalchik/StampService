@@ -300,7 +300,7 @@ public class PhoneLinkHandlerTests
     {
         public List<(string PhoneNumber, string Code)> SentCodes { get; } = [];
 
-        public Task<Result> SendAsync(string phoneNumber, string code, CancellationToken cancellationToken)
+        public Task<Result> SendAsync(string phoneNumber, string code, bool sendSms, CancellationToken cancellationToken)
         {
             SentCodes.Add((phoneNumber, code));
             return Task.FromResult(Result.Ok());

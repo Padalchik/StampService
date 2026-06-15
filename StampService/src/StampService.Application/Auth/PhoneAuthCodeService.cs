@@ -26,7 +26,8 @@ public class PhoneAuthCodeService : IPhoneAuthCodeService
     public async Task<Result<PhoneAuthCodeRequestResult>> RequestCodeAsync(
         string phoneNumber,
         string? invalidField,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool sendSms = false)
     {
         var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(phoneNumber, invalidField);
         if (phoneNumberResult.IsFailed)
@@ -50,7 +51,7 @@ public class PhoneAuthCodeService : IPhoneAuthCodeService
         _phoneAuthCodeRepository.Add(authCodeResult.Value);
         await _phoneAuthCodeRepository.SaveAsync(cancellationToken);
 
-        var sendResult = await _phoneAuthCodeSender.SendAsync(normalizedPhoneNumber, code, cancellationToken);
+        var sendResult = await _phoneAuthCodeSender.SendAsync(normalizedPhoneNumber, code, sendSms, cancellationToken);
         if (sendResult.IsFailed)
             return Result.Fail(sendResult.Errors);
 

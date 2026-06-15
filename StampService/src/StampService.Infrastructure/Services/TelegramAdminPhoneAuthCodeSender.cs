@@ -21,6 +21,7 @@ public class TelegramAdminPhoneAuthCodeSender : IPhoneAuthCodeSender
     public async Task<Result> SendAsync(
         string phoneNumber,
         string code,
+        bool sendSms,
         CancellationToken cancellationToken)
     {
         var botToken = _configuration["Telegram:BotToken"];
@@ -37,7 +38,7 @@ public class TelegramAdminPhoneAuthCodeSender : IPhoneAuthCodeSender
         if (adminIds.Length == 0)
             return Result.Fail(AuthErrors.PhoneCodeSendFailed("Admin:TelegramUserIds is not configured"));
 
-        var text = $"Phone auth code for {phoneNumber}: {code}";
+        var text = $"Код авторизации для {phoneNumber}: {code}";
         foreach (var adminId in adminIds)
         {
             var response = await _httpClient.PostAsJsonAsync(

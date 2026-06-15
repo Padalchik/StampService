@@ -27,6 +27,15 @@ public class AuthController : ControllerBase
         return await authService.RequestPhoneCodeAsync(request, cancellationToken);
     }
 
+    [HttpGet("phone/sms-settings")]
+    public async Task<EndpointResult<PhoneAuthSmsSettingsResponse>> GetPhoneSmsSettings(
+        [FromServices] IPhoneAuthSmsSettingsRepository settingsRepository,
+        CancellationToken cancellationToken)
+    {
+        var settings = await settingsRepository.GetOrCreateAsync(cancellationToken);
+        return FluentResults.Result.Ok(settings.ToResponse());
+    }
+
     [HttpPost("phone/verify")]
     public async Task<EndpointResult<AuthResponse>> VerifyPhoneCode(
         VerifyPhoneAuthCodeRequest request,

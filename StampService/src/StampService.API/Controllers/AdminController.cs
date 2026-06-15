@@ -4,6 +4,8 @@ using FluentResults;
 using StampService.API.EndpointResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Administration;
+using StampService.Application.Auth.Commands.UpdatePhoneAuthSmsSettings;
+using StampService.Application.Auth.Queries.GetPhoneAuthSmsSettings;
 using StampService.Application.Audit.Queries.GetBusinessAuditLogs;
 using StampService.Application.Brands.Commands.CreateBrandWithOwner;
 using StampService.Application.Brands.Commands.ReassignBrandOwner;
@@ -12,6 +14,7 @@ using StampService.Application.Demo.Commands.CreateDemoBrands;
 using StampService.Application.Demo.Commands.CreateUserDemoData;
 using StampService.Application.Demo.Commands.ResetDemoDatabase;
 using StampService.Contracts.DTOs.Audit;
+using StampService.Contracts.DTOs.Auth;
 using StampService.Contracts.DTOs.Brands;
 using StampService.Contracts.DTOs.Demo;
 
@@ -80,6 +83,37 @@ public class AdminController : ApiControllerBase
                 operationType,
                 operationStatus,
                 take ?? 50),
+            cancellationToken);
+    }
+
+    [HttpGet("auth-sms-settings")]
+    public async Task<EndpointResult<PhoneAuthSmsSettingsResponse>> GetAuthSmsSettings(
+        [FromServices] IQueryHandler<PhoneAuthSmsSettingsResponse, GetPhoneAuthSmsSettingsQuery> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<PhoneAuthSmsSettingsResponse>();
+
+        return await handler.Handle(
+            new GetPhoneAuthSmsSettingsQuery(AdminActor.FromUser(userIdResult.Value)),
+            cancellationToken);
+    }
+
+    [HttpPut("auth-sms-settings")]
+    public async Task<EndpointResult<PhoneAuthSmsSettingsResponse>> UpdateAuthSmsSettings(
+        UpdatePhoneAuthSmsSettingsRequest request,
+        [FromServices] ICommandHandler<PhoneAuthSmsSettingsResponse, UpdatePhoneAuthSmsSettingsCommand> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<PhoneAuthSmsSettingsResponse>();
+
+        return await handler.Handle(
+            new UpdatePhoneAuthSmsSettingsCommand(
+                AdminActor.FromUser(userIdResult.Value),
+                request.IsEnabled),
             cancellationToken);
     }
 

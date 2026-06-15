@@ -18,6 +18,11 @@ public static class AuthErrors
             AppErrorCodes.Auth.PhoneCodeSendFailed,
             message);
 
+    public static AppError PhoneSmsDisabled() =>
+        AppError.Conflict(
+            AppErrorCodes.Auth.PhoneSmsDisabled,
+            "SMS delivery for phone auth codes is disabled");
+
     public static AppError TelegramLoginDataInvalid() =>
         AppError.Authentication(
             AppErrorCodes.Auth.TelegramLoginDataInvalid,

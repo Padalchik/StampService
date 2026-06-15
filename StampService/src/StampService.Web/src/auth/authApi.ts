@@ -10,11 +10,21 @@ export type RequestPhoneAuthCodeResponse = {
   expiresAt: string;
 };
 
-export function requestPhoneAuthCode(phoneNumber: string): Promise<RequestPhoneAuthCodeResponse> {
+export type PhoneAuthSmsSettingsResponse = {
+  isEnabled: boolean;
+};
+
+export function requestPhoneAuthCode(phoneNumber: string, sendSms = false): Promise<RequestPhoneAuthCodeResponse> {
   return apiRequest<RequestPhoneAuthCodeResponse>('/api/auth/phone/code', {
     method: 'POST',
     authenticated: false,
-    body: { phoneNumber }
+    body: { phoneNumber, sendSms }
+  });
+}
+
+export function getPhoneAuthSmsSettings(): Promise<PhoneAuthSmsSettingsResponse> {
+  return apiRequest<PhoneAuthSmsSettingsResponse>('/api/auth/phone/sms-settings', {
+    authenticated: false
   });
 }
 

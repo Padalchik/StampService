@@ -12,6 +12,7 @@ public static class AppErrorCodes
     {
         public const string PhoneCodeInvalid = "auth.phone_code_invalid";
         public const string PhoneCodeSendFailed = "auth.phone_code_send_failed";
+        public const string PhoneSmsDisabled = "auth.phone_sms_disabled";
         public const string PhoneInvalid = "auth.phone_invalid";
         public const string TelegramCodeInvalid = "auth.telegram_code_invalid";
         public const string TelegramCodeSendFailed = "auth.telegram_code_send_failed";

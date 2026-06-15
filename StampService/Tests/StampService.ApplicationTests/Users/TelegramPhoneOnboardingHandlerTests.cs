@@ -233,7 +233,7 @@ public class TelegramPhoneOnboardingHandlerTests
 
     private sealed class FakePhoneAuthCodeSender : IPhoneAuthCodeSender
     {
-        public Task<Result> SendAsync(string phoneNumber, string code, CancellationToken cancellationToken)
+        public Task<Result> SendAsync(string phoneNumber, string code, bool sendSms, CancellationToken cancellationToken)
         {
             return Task.FromResult(Result.Ok());
         }
