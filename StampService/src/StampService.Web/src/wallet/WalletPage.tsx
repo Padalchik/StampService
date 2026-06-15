@@ -91,12 +91,11 @@ export function WalletPage({ homeNavigationKey }: { homeNavigationKey: number })
 
         <section className="wallet-brands-panel">
           <div className="section-heading section-heading--wallet">
-            <h2>Мои бренды</h2>
-            {wallet ? <span>{formatBrandCount(wallet.brands.length)}</span> : null}
+            <h2>Мои награды</h2>
           </div>
 
           {!wallet || wallet.brands.length === 0 ? (
-            <p className="muted-text">У вас пока нет брендов.</p>
+            <p className="muted-text">У вас пока что нет наград.</p>
           ) : (
             <div className="wallet-brand-list">
               {wallet.brands.map((brand) => (
@@ -207,10 +206,6 @@ function getBrandMetaText(brand: UserWalletBrandOverviewResponse, rewardCount: n
   }
 
   return 'Пока нет доступных наград';
-}
-
-function formatBrandCount(count: number): string {
-  return `${count} ${getRuPlural(count, 'бренд', 'бренда', 'брендов')}`;
 }
 
 function formatCoinCount(count: number): string {
