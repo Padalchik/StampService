@@ -72,7 +72,16 @@ public class GetBrandWorkspaceHandler : IQueryHandler<BrandWorkspaceResponse, Ge
             canViewBalances,
             canManageBrand,
             canManageMetrics,
-            await _brandAccessService.CanAsync(query.UserId, query.BrandId, PermissionCode.StaffManage, cancellationToken));
+            await _brandAccessService.CanAsync(query.UserId, query.BrandId, PermissionCode.StaffManage, cancellationToken),
+            new BrandWelcomeRewardSettingsResponse(
+                brand.IsWelcomeRewardsEnabled,
+                brand.WelcomeMetricRewards
+                    .Select(reward => new BrandWelcomeMetricRewardResponse(
+                        reward.MetricDefinitionId,
+                        reward.Amount))
+                    .ToArray(),
+                brand.WelcomeCoinsAmount,
+                brand.WelcomeRewardComment));
 
         return Result.Ok(response);
     }

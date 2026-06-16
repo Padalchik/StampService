@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using StampService.Infrastructure;
@@ -12,9 +13,11 @@ using StampService.Infrastructure;
 namespace StampService.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260616104841_AddBrandWelcomeRewardSettings")]
+    partial class AddBrandWelcomeRewardSettings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -274,6 +277,13 @@ namespace StampService.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasDefaultValue("Приветственная награда")
                         .HasColumnName("welcome_reward_comment");
+
+                    b.PrimitiveCollection<Guid[]>("_welcomeMetricDefinitionIds")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("welcome_metric_definition_ids")
+                        .HasDefaultValueSql("'{}'::uuid[]");
 
                     b.HasKey("Id");
 
@@ -939,33 +949,6 @@ namespace StampService.Infrastructure.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("StampService.Domain.Brand.Brand", b =>
-                {
-                    b.OwnsMany("StampService.Domain.Brand.BrandWelcomeMetricReward", "WelcomeMetricRewards", b1 =>
-                        {
-                            b1.Property<Guid>("brand_id")
-                                .HasColumnType("uuid");
-
-                            b1.Property<Guid>("MetricDefinitionId")
-                                .ValueGeneratedOnAdd()
-                                .HasColumnType("uuid")
-                                .HasColumnName("metric_definition_id");
-
-                            b1.Property<int>("Amount")
-                                .HasColumnType("integer")
-                                .HasColumnName("amount");
-
-                            b1.HasKey("brand_id", "MetricDefinitionId");
-
-                            b1.ToTable("brand_welcome_metric_rewards", (string)null);
-
-                            b1.WithOwner()
-                                .HasForeignKey("brand_id");
-                        });
-
-                    b.Navigation("WelcomeMetricRewards");
                 });
 
             modelBuilder.Entity("StampService.Domain.Brand.Location", b =>

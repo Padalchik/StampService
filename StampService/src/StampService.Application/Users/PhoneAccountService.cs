@@ -45,9 +45,24 @@ public class PhoneAccountService : IPhoneAccountService
         string? invalidField,
         CancellationToken cancellationToken)
     {
+        var accountResult = await GetOrCreateForBusinessOperationWithStatusAsync(
+            phoneNumber,
+            invalidField,
+            cancellationToken);
+
+        return accountResult.IsFailed
+            ? Result.Fail<User>(accountResult.Errors)
+            : Result.Ok(accountResult.Value.User);
+    }
+
+    public async Task<Result<PhoneAccountOperationResult>> GetOrCreateForBusinessOperationWithStatusAsync(
+        string phoneNumber,
+        string? invalidField,
+        CancellationToken cancellationToken)
+    {
         var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(phoneNumber, invalidField);
         if (phoneNumberResult.IsFailed)
-            return Result.Fail<User>(phoneNumberResult.Errors);
+            return Result.Fail<PhoneAccountOperationResult>(phoneNumberResult.Errors);
 
         var normalizedPhoneNumber = phoneNumberResult.Value;
         var metadata = JsonSerializer.Serialize(new
@@ -60,9 +75,11 @@ public class PhoneAccountService : IPhoneAccountService
             metadata,
             cancellationToken);
         if (accountResult.IsFailed)
-            return Result.Fail<User>(accountResult.Errors);
+            return Result.Fail<PhoneAccountOperationResult>(accountResult.Errors);
 
-        return Result.Ok(accountResult.Value.User);
+        return Result.Ok(new PhoneAccountOperationResult(
+            accountResult.Value.User,
+            accountResult.Value.Created));
     }
 
     public async Task<Result<User>> GetExistingForBusinessOperationAsync(

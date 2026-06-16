@@ -2,7 +2,9 @@ using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
 using StampService.Application.Brands.Queries.GetBrandCustomerCard;
+using StampService.Application.Coins;
 using StampService.Application.Errors;
+using StampService.Application.Metrics;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Brands;
 using StampService.Domain.Access;
@@ -13,18 +15,30 @@ public class CreateBrandCustomerByPhoneHandler
     : ICommandHandler<BrandCustomerCardResponse, CreateBrandCustomerByPhoneCommand>
 {
     private readonly IBrandAccessService _brandAccessService;
+    private readonly IBrandRepository _brandRepository;
+    private readonly ICoinLedgerService _coinLedgerService;
     private readonly IQueryHandler<BrandCustomerCardResponse, GetBrandCustomerCardQuery> _customerCardHandler;
+    private readonly IMetricLedgerService _metricLedgerService;
+    private readonly ILoyaltyMetricRepository _metricRepository;
     private readonly IPhoneAccountService _phoneAccountService;
     private readonly IUserRepository _userRepository;
 
     public CreateBrandCustomerByPhoneHandler(
         IBrandAccessService brandAccessService,
+        IBrandRepository brandRepository,
+        IMetricLedgerService metricLedgerService,
+        ICoinLedgerService coinLedgerService,
+        ILoyaltyMetricRepository metricRepository,
         IPhoneAccountService phoneAccountService,
         IUserRepository userRepository,
         IQueryHandler<BrandCustomerCardResponse, GetBrandCustomerCardQuery> customerCardHandler)
     {
         _brandAccessService = brandAccessService;
+        _brandRepository = brandRepository;
+        _coinLedgerService = coinLedgerService;
         _customerCardHandler = customerCardHandler;
+        _metricLedgerService = metricLedgerService;
+        _metricRepository = metricRepository;
         _phoneAccountService = phoneAccountService;
         _userRepository = userRepository;
     }
@@ -48,14 +62,32 @@ public class CreateBrandCustomerByPhoneHandler
         if (!canViewBalances)
             return Result.Fail(AccessErrors.Denied());
 
-        var customerResult = await _phoneAccountService.GetOrCreateForBusinessOperationAsync(
+        var brand = await _brandRepository.GetByIdAsync(command.BrandId, cancellationToken);
+        if (brand is null)
+            return Result.Fail(BrandErrors.NotFound());
+
+        var customerResult = await _phoneAccountService.GetOrCreateForBusinessOperationWithStatusAsync(
             command.Request.PhoneNumber,
             nameof(command.Request.PhoneNumber),
             cancellationToken);
         if (customerResult.IsFailed)
             return Result.Fail(customerResult.Errors);
 
-        await _userRepository.SaveAsync(cancellationToken);
+        var customer = customerResult.Value.User;
+        if (customerResult.Value.Created && brand.IsWelcomeRewardsEnabled)
+        {
+            var welcomeResult = await IssueWelcomeRewardsAsync(
+                brand,
+                customer.Id,
+                command.ActorUserId,
+                cancellationToken);
+            if (welcomeResult.IsFailed)
+                return Result.Fail(welcomeResult.Errors);
+        }
+        else
+        {
+            await _userRepository.SaveAsync(cancellationToken);
+        }
 
         return await _customerCardHandler.Handle(
             new GetBrandCustomerCardQuery(
@@ -63,5 +95,65 @@ public class CreateBrandCustomerByPhoneHandler
                 command.BrandId,
                 command.Request.PhoneNumber),
             cancellationToken);
+    }
+
+    private async Task<Result> IssueWelcomeRewardsAsync(
+        Domain.Brand.Brand brand,
+        Guid customerUserId,
+        Guid actorUserId,
+        CancellationToken cancellationToken)
+    {
+        var issuedAnyReward = false;
+        var comment = string.IsNullOrWhiteSpace(brand.WelcomeRewardComment)
+            ? "Приветственная награда"
+            : brand.WelcomeRewardComment;
+
+        if (brand.IsMetricsEnabled && brand.WelcomeMetricRewards.Count > 0)
+        {
+            var configuredMetricIds = brand.WelcomeMetricRewards
+                .Select(reward => reward.MetricDefinitionId)
+                .ToHashSet();
+            var metrics = await _metricRepository.GetByBrandAsync(brand.Id, cancellationToken);
+            var activeMetricIds = metrics
+                .Where(metric => metric.IsActive && configuredMetricIds.Contains(metric.Id))
+                .Select(metric => metric.Id)
+                .ToHashSet();
+
+            foreach (var welcomeMetric in brand.WelcomeMetricRewards.Where(reward => activeMetricIds.Contains(reward.MetricDefinitionId)))
+            {
+                var issueResult = await _metricLedgerService.IssueAsync(
+                    customerUserId,
+                    actorUserId,
+                    brand.Id,
+                    welcomeMetric.MetricDefinitionId,
+                    welcomeMetric.Amount,
+                    comment,
+                    cancellationToken);
+                if (issueResult.IsFailed)
+                    return Result.Fail(issueResult.Errors);
+
+                issuedAnyReward = true;
+            }
+        }
+
+        if (brand.IsCoinsEnabled && brand.WelcomeCoinsAmount > 0)
+        {
+            var issueResult = await _coinLedgerService.IssueAsync(
+                customerUserId,
+                actorUserId,
+                brand.Id,
+                brand.WelcomeCoinsAmount,
+                comment,
+                cancellationToken);
+            if (issueResult.IsFailed)
+                return Result.Fail(issueResult.Errors);
+
+            issuedAnyReward = true;
+        }
+
+        if (!issuedAnyReward)
+            await _userRepository.SaveAsync(cancellationToken);
+
+        return Result.Ok();
     }
 }

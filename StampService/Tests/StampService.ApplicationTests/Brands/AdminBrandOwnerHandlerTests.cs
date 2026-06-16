@@ -7,6 +7,7 @@ using StampService.Application.Brands.Commands.UpdateBrandRewardSettings;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.Access;
 using StampService.Domain.Brand;
+using StampService.Domain.Loyalty;
 using StampService.Domain.User;
 
 namespace StampService.ApplicationTests.Brands;
@@ -206,6 +207,82 @@ public class AdminBrandOwnerHandlerTests
         Assert.True(brand.IsCoinsEnabled);
         Assert.True(brand.IsCoinProductRedemptionEnabled);
         Assert.False(brand.IsManualCoinRedemptionEnabled);
+    }
+
+    [Fact]
+    public async Task UpdateBrandRewardSettings_WhenWelcomeRewardsAreConfigured_ShouldSaveWelcomeSettings()
+    {
+        var owner = User.Create("Owner").Value;
+        var brand = Brand.Create("Coffee").Value;
+        var metric = LoyaltyMetricDefinition.Create(brand.Id, "Visit", redemptionAmount: 5).Value;
+        var brandRepository = new FakeBrandRepository();
+        var metricRepository = new FakeLoyaltyMetricRepository();
+        var membershipRepository = new FakeBrandMembershipRepository();
+        brandRepository.AddExisting(brand);
+        metricRepository.AddExisting(metric);
+        membershipRepository.SetRole(owner.Id, brand.Id, SystemRoles.Owner);
+        var handler = new UpdateBrandRewardSettingsHandler(
+            new BrandAccessService(membershipRepository),
+            brandRepository,
+            metricRepository);
+
+        var result = await handler.Handle(
+            new UpdateBrandRewardSettingsCommand(
+                owner.Id,
+                brand.Id,
+                IsMetricsEnabled: true,
+                IsCoinsEnabled: true,
+                IsCoinProductRedemptionEnabled: true,
+                IsManualCoinRedemptionEnabled: false,
+                WelcomeMetrics: [new BrandWelcomeMetricRewardSetting(metric.Id, 2)],
+                WelcomeCoinsAmount: 7,
+                WelcomeRewardComment: "Приветственная награда",
+                IsWelcomeRewardsEnabled: true),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(brand.IsWelcomeRewardsEnabled);
+        Assert.Single(brand.WelcomeMetricRewards);
+        Assert.Equal(metric.Id, brand.WelcomeMetricRewards.Single().MetricDefinitionId);
+        Assert.Equal(2, brand.WelcomeMetricRewards.Single().Amount);
+        Assert.Equal(7, brand.WelcomeCoinsAmount);
+        Assert.Equal("Приветственная награда", brand.WelcomeRewardComment);
+        Assert.True(result.Value.WelcomeRewards.IsEnabled);
+    }
+
+    [Fact]
+    public async Task UpdateBrandRewardSettings_WhenWelcomeMetricDoesNotBelongToBrand_ShouldFail()
+    {
+        var owner = User.Create("Owner").Value;
+        var brand = Brand.Create("Coffee").Value;
+        var otherBrandMetric = LoyaltyMetricDefinition.Create(Guid.NewGuid(), "Visit", redemptionAmount: 5).Value;
+        var brandRepository = new FakeBrandRepository();
+        var metricRepository = new FakeLoyaltyMetricRepository();
+        var membershipRepository = new FakeBrandMembershipRepository();
+        brandRepository.AddExisting(brand);
+        metricRepository.AddExisting(otherBrandMetric);
+        membershipRepository.SetRole(owner.Id, brand.Id, SystemRoles.Owner);
+        var handler = new UpdateBrandRewardSettingsHandler(
+            new BrandAccessService(membershipRepository),
+            brandRepository,
+            metricRepository);
+
+        var result = await handler.Handle(
+            new UpdateBrandRewardSettingsCommand(
+                owner.Id,
+                brand.Id,
+                IsMetricsEnabled: true,
+                IsCoinsEnabled: true,
+                IsCoinProductRedemptionEnabled: true,
+                IsManualCoinRedemptionEnabled: false,
+                WelcomeMetrics: [new BrandWelcomeMetricRewardSetting(otherBrandMetric.Id, 1)],
+                WelcomeCoinsAmount: 0,
+                IsWelcomeRewardsEnabled: true),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.False(brand.IsWelcomeRewardsEnabled);
+        Assert.Empty(brand.WelcomeMetricRewards);
     }
 
     private static AdminAccessService CreateAdminAccessService(FakeUserRepository? userRepository = null)

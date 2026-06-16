@@ -352,6 +352,7 @@ function SelectedCustomerWorkspace({
     return (
       <NewCustomerWorkspace
         customer={customer}
+        workspace={workspace}
         customerCardError={customerCardError}
         onCreateCustomer={onCreateCustomer}
       />
@@ -404,16 +405,18 @@ function SelectedCustomerWorkspace({
 
 function NewCustomerWorkspace({
   customer,
+  workspace,
   customerCardError,
   onCreateCustomer
 }: {
   customer: DraftCustomerCard;
+  workspace: BrandWorkspaceResponse;
   customerCardError: string;
   onCreateCustomer: () => Promise<void>;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const canIssueWelcomeRewards = hasConfiguredWelcomeRewards();
+  const willIssueWelcomeRewards = hasConfiguredWelcomeRewards(workspace);
 
   async function submitCreateOnly() {
     setIsSubmitting(true);
@@ -447,17 +450,11 @@ function NewCustomerWorkspace({
         <div className="work-form">
           <div className="form-actions">
             <button type="button" disabled={isSubmitting} onClick={() => void submitCreateOnly()}>
-              Создать клиента
+              {willIssueWelcomeRewards
+                ? 'Создать клиента и выдать приветственные награды'
+                : 'Создать клиента'}
             </button>
           </div>
-
-          {canIssueWelcomeRewards ? (
-            <div className="form-actions">
-              <button type="button" disabled={isSubmitting} onClick={() => void submitCreateOnly()}>
-                Создать клиента и выдать приветственные награды
-              </button>
-            </div>
-          ) : null}
         </div>
 
         {customerCardError ? <p className="form-status form-status--error">{customerCardError}</p> : null}
@@ -467,8 +464,11 @@ function NewCustomerWorkspace({
   );
 }
 
-function hasConfiguredWelcomeRewards(): boolean {
-  return false;
+function hasConfiguredWelcomeRewards(workspace: BrandWorkspaceResponse): boolean {
+  const hasMetrics = workspace.isMetricsEnabled && workspace.welcomeRewards.metrics.length > 0;
+  const hasCoins = workspace.isCoinsEnabled && workspace.welcomeRewards.coinsAmount > 0;
+
+  return workspace.welcomeRewards.isEnabled && (hasMetrics || hasCoins);
 }
 
 function OperationWorkspace({
@@ -1279,6 +1279,19 @@ function BrandSettingsPanel({
   const [isManualCoinRedemptionEnabled, setIsManualCoinRedemptionEnabled] = useState(
     workspace.isManualCoinRedemptionEnabled
   );
+  const [isWelcomeRewardsEnabled, setIsWelcomeRewardsEnabled] = useState(workspace.welcomeRewards.isEnabled);
+  const [welcomeMetrics, setWelcomeMetrics] = useState(
+    workspace.welcomeRewards.metrics.map((metric) => ({
+      metricDefinitionId: metric.metricDefinitionId,
+      amount: String(metric.amount)
+    }))
+  );
+  const [welcomeCoinsAmount, setWelcomeCoinsAmount] = useState(
+    workspace.welcomeRewards.coinsAmount > 0 ? String(workspace.welcomeRewards.coinsAmount) : ''
+  );
+  const [welcomeRewardComment, setWelcomeRewardComment] = useState(workspace.welcomeRewards.comment);
+  const [settingsMetrics, setSettingsMetrics] = useState<MetricResponse[]>([]);
+  const [settingsMetricsError, setSettingsMetricsError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
@@ -1288,25 +1301,76 @@ function BrandSettingsPanel({
     setIsCoinsEnabled(workspace.isCoinsEnabled);
     setIsCoinProductRedemptionEnabled(workspace.isCoinProductRedemptionEnabled);
     setIsManualCoinRedemptionEnabled(workspace.isManualCoinRedemptionEnabled);
+    setIsWelcomeRewardsEnabled(workspace.welcomeRewards.isEnabled);
+    setWelcomeMetrics(workspace.welcomeRewards.metrics.map((metric) => ({
+      metricDefinitionId: metric.metricDefinitionId,
+      amount: String(metric.amount)
+    })));
+    setWelcomeCoinsAmount(workspace.welcomeRewards.coinsAmount > 0 ? String(workspace.welcomeRewards.coinsAmount) : '');
+    setWelcomeRewardComment(workspace.welcomeRewards.comment);
   }, [
     workspace.brandId,
     workspace.isMetricsEnabled,
     workspace.isCoinsEnabled,
     workspace.isCoinProductRedemptionEnabled,
-    workspace.isManualCoinRedemptionEnabled
+    workspace.isManualCoinRedemptionEnabled,
+    workspace.welcomeRewards
   ]);
+
+  useEffect(() => {
+    if (!workspace.canManageMetrics) {
+      setSettingsMetrics([]);
+      return;
+    }
+
+    let isCurrent = true;
+    setSettingsMetricsError('');
+
+    getManageMetrics(workspace.brandId)
+      .then((response) => {
+        if (isCurrent) {
+          setSettingsMetrics(response.filter((metric) => metric.isActive));
+        }
+      })
+      .catch((requestError) => {
+        if (isCurrent) {
+          setSettingsMetrics([]);
+          setSettingsMetricsError(getUserMessage(requestError));
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [workspace.brandId, workspace.canManageMetrics]);
 
   useEffect(() => {
     setError('');
     setStatus('');
   }, [workspace.brandId]);
 
+  const parsedWelcomeCoinsAmount = welcomeCoinsAmount.trim() ? Number(welcomeCoinsAmount) : 0;
+  const requestWelcomeMetrics = isMetricsEnabled
+    ? welcomeMetrics
+        .map((metric) => ({
+          metricDefinitionId: metric.metricDefinitionId,
+          amount: Number(metric.amount)
+        }))
+        .filter((metric) => metric.metricDefinitionId)
+    : [];
+  const requestWelcomeCoinsAmount = isCoinsEnabled && Number.isInteger(parsedWelcomeCoinsAmount)
+    ? parsedWelcomeCoinsAmount
+    : 0;
   const canSave = (isMetricsEnabled || isCoinsEnabled)
-    && (!isCoinsEnabled || isCoinProductRedemptionEnabled || isManualCoinRedemptionEnabled);
+    && (!isCoinsEnabled || isCoinProductRedemptionEnabled || isManualCoinRedemptionEnabled)
+    && Number.isInteger(parsedWelcomeCoinsAmount)
+    && parsedWelcomeCoinsAmount >= 0
+    && requestWelcomeMetrics.every((metric) => Number.isInteger(metric.amount) && metric.amount > 0)
+    && (!isWelcomeRewardsEnabled || requestWelcomeMetrics.length > 0 || requestWelcomeCoinsAmount > 0);
 
   async function submit() {
     if (!canSave) {
-      setError('Включите хотя бы один тип наград. Для монеток нужен хотя бы один способ списания.');
+      setError('Проверьте типы наград, способы списания и состав приветственных наград.');
       setStatus('');
       return;
     }
@@ -1320,7 +1384,13 @@ function BrandSettingsPanel({
         isMetricsEnabled,
         isCoinsEnabled,
         isCoinProductRedemptionEnabled,
-        isManualCoinRedemptionEnabled
+        isManualCoinRedemptionEnabled,
+        welcomeRewards: {
+          isEnabled: isWelcomeRewardsEnabled,
+          metrics: requestWelcomeMetrics,
+          coinsAmount: requestWelcomeCoinsAmount,
+          comment: welcomeRewardComment.trim() || undefined
+        }
       });
       onWorkspaceUpdated(mapUpdatedBrandToWorkspace(workspace, response));
       setStatus('Настройки сохранены.');
@@ -1374,9 +1444,86 @@ function BrandSettingsPanel({
         />
       </div>
 
+      <div className="welcome-rewards-settings">
+        <ToggleRow
+          title="Приветственные награды"
+          description="Награды будут выданы автоматически при ручном создании нового клиента."
+          checked={isWelcomeRewardsEnabled}
+          onChange={setIsWelcomeRewardsEnabled}
+        />
+
+        {isWelcomeRewardsEnabled ? (
+          <div className="welcome-rewards-settings__body">
+            {isMetricsEnabled && workspace.canManageMetrics ? (
+              <div className="work-form">
+                <span className="field-label">Штампы</span>
+                {settingsMetricsError ? <p className="form-status form-status--error">{settingsMetricsError}</p> : null}
+                {settingsMetrics.length === 0 ? (
+                  <p className="muted-text">Активных штампов пока нет.</p>
+                ) : (
+                  <div className="settings-check-list">
+                    {settingsMetrics.map((metric) => (
+                      <label className="settings-check-row" key={metric.id}>
+                        <input
+                          type="checkbox"
+                          checked={welcomeMetrics.some((reward) => reward.metricDefinitionId === metric.id)}
+                          onChange={(event) => {
+                            setWelcomeMetrics((current) => event.target.checked
+                              ? [...current, { metricDefinitionId: metric.id, amount: '1' }]
+                              : current.filter((reward) => reward.metricDefinitionId !== metric.id));
+                          }}
+                        />
+                        <span>{metric.name}</span>
+                        {welcomeMetrics.some((reward) => reward.metricDefinitionId === metric.id) ? (
+                          <input
+                            aria-label={`Количество штампов ${metric.name}`}
+                            inputMode="numeric"
+                            value={welcomeMetrics.find((reward) => reward.metricDefinitionId === metric.id)?.amount ?? '1'}
+                            onChange={(event) => {
+                              setWelcomeMetrics((current) => current.map((reward) => reward.metricDefinitionId === metric.id
+                                ? { ...reward, amount: event.target.value }
+                                : reward));
+                            }}
+                          />
+                        ) : null}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {isCoinsEnabled ? (
+              <div className="work-form">
+                <label>
+                  Монетки
+                  <input
+                    value={welcomeCoinsAmount}
+                    inputMode="numeric"
+                    onChange={(event) => setWelcomeCoinsAmount(event.target.value)}
+                    placeholder="0"
+                  />
+                </label>
+              </div>
+            ) : null}
+
+            <div className="work-form">
+              <label>
+                Комментарий
+                <input
+                  value={welcomeRewardComment}
+                  maxLength={200}
+                  onChange={(event) => setWelcomeRewardComment(event.target.value)}
+                />
+              </label>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
       {!canSave ? (
         <p className="form-status form-status--error">
-          Включите хотя бы один тип наград. Для монеток нужен хотя бы один способ списания.
+          Проверьте типы наград, способы списания и состав приветственных наград.
         </p>
       ) : null}
       {error ? <p className="form-status form-status--error">{error}</p> : null}
@@ -1421,7 +1568,8 @@ function mapUpdatedBrandToWorkspace(
     isMetricsEnabled: response.isMetricsEnabled,
     isCoinsEnabled: response.isCoinsEnabled,
     isCoinProductRedemptionEnabled: response.isCoinProductRedemptionEnabled,
-    isManualCoinRedemptionEnabled: response.isManualCoinRedemptionEnabled
+    isManualCoinRedemptionEnabled: response.isManualCoinRedemptionEnabled,
+    welcomeRewards: response.welcomeRewards
   };
 }
 

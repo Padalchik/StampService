@@ -26,6 +26,19 @@ export type BrandWorkspaceResponse = {
   canManageBrand: boolean;
   canManageMetrics: boolean;
   canManageStaff: boolean;
+  welcomeRewards: BrandWelcomeRewardSettings;
+};
+
+export type BrandWelcomeRewardSettings = {
+  isEnabled: boolean;
+  metrics: BrandWelcomeMetricReward[];
+  coinsAmount: number;
+  comment: string;
+};
+
+export type BrandWelcomeMetricReward = {
+  metricDefinitionId: string;
+  amount: number;
 };
 
 export type BrandStaffResponse = {
@@ -58,6 +71,7 @@ export type UpdateBrandResponse = {
   isCoinsEnabled: boolean;
   isCoinProductRedemptionEnabled: boolean;
   isManualCoinRedemptionEnabled: boolean;
+  welcomeRewards: BrandWelcomeRewardSettings;
   updatedAt?: string | null;
 };
 
@@ -231,6 +245,12 @@ export function updateBrandRewardSettings(
     isCoinsEnabled: boolean;
     isCoinProductRedemptionEnabled: boolean;
     isManualCoinRedemptionEnabled: boolean;
+    welcomeRewards?: {
+      isEnabled: boolean;
+      metrics: BrandWelcomeMetricReward[];
+      coinsAmount: number;
+      comment?: string;
+    };
   }
 ): Promise<UpdateBrandResponse> {
   return apiRequest<UpdateBrandResponse>(`/api/brands/${brandId}/reward-settings`, {

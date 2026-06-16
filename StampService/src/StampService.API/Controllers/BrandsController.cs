@@ -13,6 +13,7 @@ using StampService.Application.Brands.Queries.GetBrandWorkspace;
 using StampService.Application.Brands.Queries.GetMyBrands;
 using StampService.Application.Errors;
 using StampService.Contracts.DTOs.Brands;
+using StampService.Domain.Brand;
 
 namespace StampService.API.Controllers;
 
@@ -130,7 +131,13 @@ public class BrandsController : ApiControllerBase
                 request.IsMetricsEnabled,
                 request.IsCoinsEnabled,
                 request.IsCoinProductRedemptionEnabled,
-                request.IsManualCoinRedemptionEnabled),
+                request.IsManualCoinRedemptionEnabled,
+                request.WelcomeRewards?.Metrics?.Select(metric => new BrandWelcomeMetricRewardSetting(
+                    metric.MetricDefinitionId,
+                    metric.Amount)).ToArray(),
+                request.WelcomeRewards?.CoinsAmount ?? 0,
+                request.WelcomeRewards?.Comment,
+                request.WelcomeRewards?.IsEnabled),
             cancellationToken);
     }
 

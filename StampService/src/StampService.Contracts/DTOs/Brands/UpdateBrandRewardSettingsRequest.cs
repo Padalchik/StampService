@@ -4,4 +4,5 @@ public record UpdateBrandRewardSettingsRequest(
     bool IsMetricsEnabled,
     bool IsCoinsEnabled,
     bool IsCoinProductRedemptionEnabled,
-    bool IsManualCoinRedemptionEnabled);
+    bool IsManualCoinRedemptionEnabled,
+    BrandWelcomeRewardSettingsRequest? WelcomeRewards);
