@@ -81,7 +81,7 @@ public class IssueMetricByPhoneHandler : ICommandHandler<IssueMetricResponse, Is
         if (transactionValidation.IsFailed)
             return await RejectedAsync(command, transactionValidation.Errors, metric.BrandId, null, null, comment, cancellationToken);
 
-        var customerResult = await _phoneAccountService.GetOrCreateForBusinessOperationAsync(
+        var customerResult = await _phoneAccountService.GetExistingForBusinessOperationAsync(
             command.Request.PhoneNumber,
             nameof(command.Request.PhoneNumber),
             cancellationToken);

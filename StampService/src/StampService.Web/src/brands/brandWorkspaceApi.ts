@@ -191,6 +191,16 @@ export function getBrandCustomerCard(
   );
 }
 
+export function createBrandCustomerByPhone(
+  brandId: string,
+  phoneNumber: string
+): Promise<BrandCustomerCardResponse> {
+  return apiRequest<BrandCustomerCardResponse>(`/api/brands/${brandId}/customers/by-phone`, {
+    method: 'POST',
+    body: { phoneNumber }
+  });
+}
+
 export function getBrandStaff(brandId: string): Promise<BrandStaffResponse[]> {
   return apiRequest<BrandStaffResponse[]>(`/api/brands/${brandId}/staff`);
 }

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FluentResults;
 using StampService.Application.Auth;
+using StampService.Application.Errors;
 using StampService.Domain.User;
 
 namespace StampService.Application.Users;
@@ -62,6 +63,25 @@ public class PhoneAccountService : IPhoneAccountService
             return Result.Fail<User>(accountResult.Errors);
 
         return Result.Ok(accountResult.Value.User);
+    }
+
+    public async Task<Result<User>> GetExistingForBusinessOperationAsync(
+        string phoneNumber,
+        string? invalidField,
+        CancellationToken cancellationToken)
+    {
+        var phoneNumberResult = PhoneNumberNormalizer.NormalizeForAuth(phoneNumber, invalidField);
+        if (phoneNumberResult.IsFailed)
+            return Result.Fail<User>(phoneNumberResult.Errors);
+
+        var user = await _userRepository.GetByIdentityAsync(
+            IdentityType.Phone,
+            phoneNumberResult.Value,
+            cancellationToken);
+
+        return user is null
+            ? Result.Fail<User>(UserErrors.RecipientNotFound())
+            : Result.Ok(user);
     }
 
     public bool HasActivePhoneIdentity(User user)

@@ -4,6 +4,7 @@ using FluentResults;
 using StampService.API.EndpointResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Brands.Commands.AddBrandStaffByPhone;
+using StampService.Application.Brands.Commands.CreateBrandCustomerByPhone;
 using StampService.Application.Brands.Commands.RemoveBrandStaff;
 using StampService.Application.Brands.Commands.UpdateBrandRewardSettings;
 using StampService.Application.Brands.Queries.GetBrandCustomerCard;
@@ -74,6 +75,26 @@ public class BrandsController : ApiControllerBase
             return Result.Ok(new BrandCustomerCardLookupResponse(false, null));
 
         return Result.Fail<BrandCustomerCardLookupResponse>(cardResult.Errors);
+    }
+
+    [HttpPost("{brandId:guid}/customers/by-phone")]
+    public async Task<EndpointResult<BrandCustomerCardResponse>> CreateCustomerByPhone(
+        Guid brandId,
+        CreateBrandCustomerByPhoneRequest request,
+        [FromServices] ICommandHandler<BrandCustomerCardResponse, CreateBrandCustomerByPhoneCommand> handler,
+        CancellationToken cancellationToken)
+    {
+        var userIdResult = GetUserId();
+        if (userIdResult.IsFailed)
+            return userIdResult.ToResult<BrandCustomerCardResponse>();
+
+        return EndpointResult<BrandCustomerCardResponse>.Created(
+            await handler.Handle(
+                new CreateBrandCustomerByPhoneCommand(
+                    userIdResult.Value,
+                    brandId,
+                    request),
+                cancellationToken));
     }
 
     [HttpGet("{brandId:guid}/staff")]

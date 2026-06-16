@@ -19,6 +19,7 @@ import {
 import { getApiErrorMessage } from '../api/errorMessages';
 import {
   addBrandStaffByPhone,
+  createBrandCustomerByPhone,
   createCoinProduct,
   createMetric,
   deleteCoinProduct,
@@ -128,7 +129,7 @@ export function BrandWorkspace({
   const showStaffManagement = workspace.canManageStaff;
   const showBrandSettings = workspace.canManageBrand;
 
-  const operationTabs = selectedCustomer?.kind === 'draft' ? getDraftOperationTabs(workspace) : getOperationTabs(workspace);
+  const operationTabs = selectedCustomer?.kind === 'draft' ? [] : getOperationTabs(workspace);
   const managementTabs = getManagementTabs({
     showMetricManagement,
     showCoinProductManagement,
@@ -139,7 +140,7 @@ export function BrandWorkspace({
     ? activeOperationType
     : operationTabs[0]?.id;
   const operationActionTabs = currentOperationType
-    ? getCustomerOperationActionTabs(workspace, currentOperationType, selectedCustomer)
+    ? getOperationActionTabs(workspace, currentOperationType)
     : [];
   const currentOperationAction = operationActionTabs.some((tab) => tab.id === activeOperationAction)
     ? activeOperationAction
@@ -224,17 +225,34 @@ export function BrandWorkspace({
           metricsError={metricsError}
           onOperationTypeChange={(nextType) => {
             setActiveOperationType(nextType);
-            const nextActions = getCustomerOperationActionTabs(workspace, nextType, selectedCustomer);
+            const nextActions = getOperationActionTabs(workspace, nextType);
             if (nextActions[0]) {
               setActiveOperationAction(nextActions[0].id);
             }
           }}
           onOperationActionChange={setActiveOperationAction}
           onCustomerChanged={refreshSelectedCustomer}
+          onCreateCustomer={createSelectedDraftCustomer}
         />
       ) : null}
     </div>
   );
+
+  async function createSelectedDraftCustomer(): Promise<void> {
+    if (!selectedCustomer || selectedCustomer.kind !== 'draft') {
+      return;
+    }
+
+    setCustomerCardError('');
+    const card = await createAndReloadCustomerCard(selectedCustomer.customerPhoneNumber);
+    setSelectedCustomer(card);
+    rememberRecentCustomerPhone(workspace.brandId, card.customerPhoneNumber);
+  }
+
+  async function createAndReloadCustomerCard(customerPhoneNumber: string): Promise<BrandCustomerCardResponse> {
+    await createBrandCustomerByPhone(workspace.brandId, customerPhoneNumber);
+    return await loadCustomerCardByPhone(customerPhoneNumber);
+  }
 
   async function refreshSelectedCustomer() {
     if (!selectedCustomer) {
@@ -247,7 +265,7 @@ export function BrandWorkspace({
       const wasDraftCustomer = selectedCustomer.kind === 'draft';
       const response = await getBrandCustomerCard(workspace.brandId, selectedCustomer.customerPhoneNumber);
       if (!response.found || !response.card) {
-        setCustomerCardError('Клиент пока не найден. Повторите обновление после начисления.');
+        setCustomerCardError('Клиент пока не найден. Повторите обновление после создания.');
         return;
       }
 
@@ -258,6 +276,15 @@ export function BrandWorkspace({
     } catch (requestError) {
       setCustomerCardError(getUserMessage(requestError));
     }
+  }
+
+  async function loadCustomerCardByPhone(customerPhoneNumber: string): Promise<BrandCustomerCardResponse> {
+    const response = await getBrandCustomerCard(workspace.brandId, customerPhoneNumber);
+    if (!response.found || !response.card) {
+      throw new Error('Клиент пока не найден. Повторите обновление после создания.');
+    }
+
+    return response.card;
   }
 }
 
@@ -304,7 +331,8 @@ function SelectedCustomerWorkspace({
   metricsError,
   onOperationTypeChange,
   onOperationActionChange,
-  onCustomerChanged
+  onCustomerChanged,
+  onCreateCustomer
 }: {
   customer: SelectedCustomerCard;
   customerCardError: string;
@@ -318,27 +346,31 @@ function SelectedCustomerWorkspace({
   onOperationTypeChange: (type: OperationType) => void;
   onOperationActionChange: (action: OperationAction) => void;
   onCustomerChanged: () => Promise<void>;
+  onCreateCustomer: () => Promise<void>;
 }) {
+  if (customer.kind === 'draft') {
+    return (
+      <NewCustomerWorkspace
+        customer={customer}
+        customerCardError={customerCardError}
+        onCreateCustomer={onCreateCustomer}
+      />
+    );
+  }
+
   return (
     <div className="workspace-active-area">
       <section className="brand-customer-card">
         <div className="brand-customer-card__header">
           <div>
-            <span className="brand-customer-card__eyebrow">{customer.kind === 'draft' ? 'Новый клиент' : 'Клиент'}</span>
+            <span className="brand-customer-card__eyebrow">Клиент</span>
             <h3>{customer.customerName}</h3>
             <p>{formatRuPhoneInput(customer.customerPhoneNumber)}</p>
           </div>
         </div>
 
         {customerCardError ? <p className="form-status form-status--error">{customerCardError}</p> : null}
-        {customer.kind === 'draft' ? (
-          <div className="brand-customer-card__draft">
-            <p>У этого клиента пока нет истории в системе.</p>
-            <p>Клиент будет создан автоматически при первом начислении.</p>
-          </div>
-        ) : (
-          <WalletBrandDetailsBlock details={customer.details} ariaLabel="Разделы карточки клиента" />
-        )}
+        <WalletBrandDetailsBlock details={customer.details} ariaLabel="Разделы карточки клиента" />
       </section>
 
       <section className="brand-customer-operations">
@@ -368,6 +400,75 @@ function SelectedCustomerWorkspace({
       </section>
     </div>
   );
+}
+
+function NewCustomerWorkspace({
+  customer,
+  customerCardError,
+  onCreateCustomer
+}: {
+  customer: DraftCustomerCard;
+  customerCardError: string;
+  onCreateCustomer: () => Promise<void>;
+}) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const canIssueWelcomeRewards = hasConfiguredWelcomeRewards();
+
+  async function submitCreateOnly() {
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      await onCreateCustomer();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="workspace-active-area">
+      <section className="brand-customer-card">
+        <div className="brand-customer-card__header">
+          <div>
+            <span className="brand-customer-card__eyebrow">Новый клиент</span>
+            <h3>{customer.customerName}</h3>
+            <p>{formatRuPhoneInput(customer.customerPhoneNumber)}</p>
+          </div>
+        </div>
+
+        <div className="brand-customer-card__draft">
+          <p>Клиент с этим телефоном ещё не создан.</p>
+          <p>Начисления и другие операции будут доступны только после явного создания клиента.</p>
+        </div>
+
+        <div className="work-form">
+          <div className="form-actions">
+            <button type="button" disabled={isSubmitting} onClick={() => void submitCreateOnly()}>
+              Создать клиента
+            </button>
+          </div>
+
+          {canIssueWelcomeRewards ? (
+            <div className="form-actions">
+              <button type="button" disabled={isSubmitting} onClick={() => void submitCreateOnly()}>
+                Создать клиента и выдать приветственные награды
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        {customerCardError ? <p className="form-status form-status--error">{customerCardError}</p> : null}
+        {error ? <p className="form-status form-status--error">{error}</p> : null}
+      </section>
+    </div>
+  );
+}
+
+function hasConfiguredWelcomeRewards(): boolean {
+  return false;
 }
 
 function OperationWorkspace({
@@ -522,31 +623,6 @@ function getOperationTabs(workspace: BrandWorkspaceResponse): WorkspaceTabItem<O
       ? { id: 'coins', label: 'Монетки' }
       : null
   ].filter((tab): tab is WorkspaceTabItem<OperationType> => tab !== null);
-}
-
-function getDraftOperationTabs(workspace: BrandWorkspaceResponse): WorkspaceTabItem<OperationType>[] {
-  return [
-    workspace.isMetricsEnabled && workspace.canIssue ? { id: 'metrics', label: 'Штампы' } : null,
-    workspace.isCoinsEnabled && workspace.canIssue ? { id: 'coins', label: 'Монетки' } : null
-  ].filter((tab): tab is WorkspaceTabItem<OperationType> => tab !== null);
-}
-
-function getCustomerOperationActionTabs(
-  workspace: BrandWorkspaceResponse,
-  operationType: OperationType,
-  customer: SelectedCustomerCard | null
-): WorkspaceTabItem<OperationAction>[] {
-  if (customer?.kind === 'draft') {
-    if (operationType === 'metrics') {
-      return workspace.isMetricsEnabled && workspace.canIssue ? [{ id: 'issue', label: 'Выдать' }] : [];
-    }
-
-    if (operationType === 'coins') {
-      return workspace.isCoinsEnabled && workspace.canIssue ? [{ id: 'issue', label: 'Начислить' }] : [];
-    }
-  }
-
-  return getOperationActionTabs(workspace, operationType);
 }
 
 function getOperationActionTabs(
