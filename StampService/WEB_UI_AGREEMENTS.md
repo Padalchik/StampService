@@ -646,3 +646,13 @@ UX-правило: бинарные системные настройки ото
 - frontend не хранит настройку как постоянный локальный source of truth и после ошибки должен вернуть UI к фактическому состоянию.
 
 Эта настройка управляет только возможностью отправки OTP клиенту по SMS. Она не отключает базовую генерацию OTP и не отключает отправку кода администратору в Telegram для обычного dev/admin-сценария `Получить код`.
+
+## Demo reward notifications and web boundary
+
+Актуально на 2026-06-17.
+
+Web admin demo tool `createUserDemoData` остается thin UI поверх `POST /api/admin/demo/user-data` и `CreateUserDemoDataCommand`. Frontend не должен сам формировать Telegram-уведомления, вычислять доступные награды или дублировать ledger-логику. Его ответственность - собрать телефон существующего клиента и бренд, показать результат/ошибку и при необходимости обновить UI.
+
+Application-layer правило после bugfix: demo-fill начисляет стендовые монетки и штампы через ledger-сервисы и сам вызывает `ICustomerNotificationService` для issue-операций. Поэтому web, Telegram admin flow и любой другой host, который вызывает `CreateUserDemoDataCommand`, получают одинаковое поведение: при наличии активной Telegram identity у клиента ему уходят уведомления о demo-начислениях.
+
+При будущих изменениях demo UI не нужно добавлять отдельный frontend/API endpoint для "отправить уведомление". Если меняется состав demo-начислений, notification behavior должен меняться в Application handler или в общем notification service, а не в React-компоненте.

@@ -6,10 +6,13 @@ using StampService.Application.Auth;
 using StampService.Application.Brands;
 using StampService.Application.CoinProducts;
 using StampService.Application.Coins;
+using StampService.Application.CustomerNotifications;
 using StampService.Application.Demo;
 using StampService.Application.Errors;
 using StampService.Application.Metrics;
 using StampService.Application.Users;
+using StampService.Contracts.DTOs.Coins;
+using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Access;
 using StampService.Domain.Coins;
 using StampService.Domain.Loyalty;
@@ -25,6 +28,7 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
     private readonly IBrandRepository _brandRepository;
     private readonly ICoinLedgerService _coinLedgerService;
     private readonly ICoinProductRepository _coinProductRepository;
+    private readonly ICustomerNotificationService _customerNotificationService;
     private readonly ILoyaltyMetricRepository _metricRepository;
     private readonly IMetricLedgerService _metricLedgerService;
     private readonly IUserRepository _userRepository;
@@ -38,7 +42,8 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
         ICoinProductRepository coinProductRepository,
         ILoyaltyMetricRepository metricRepository,
         IMetricLedgerService metricLedgerService,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        ICustomerNotificationService? customerNotificationService = null)
     {
         _adminAccessService = adminAccessService;
         _brandCustomerService = brandCustomerService;
@@ -46,6 +51,7 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
         _brandRepository = brandRepository;
         _coinLedgerService = coinLedgerService;
         _coinProductRepository = coinProductRepository;
+        _customerNotificationService = customerNotificationService ?? NullCustomerNotificationService.Instance;
         _metricRepository = metricRepository;
         _metricLedgerService = metricLedgerService;
         _userRepository = userRepository;
@@ -103,7 +109,7 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
             return Result.Fail(productsResult.Errors);
 
         var ledgerResult = await CreateLedgerAsync(
-            customer.Id,
+            customer,
             admin.Id,
             command.BrandId,
             metricsResult.Value,
@@ -181,13 +187,14 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
     }
 
     private async Task<Result> CreateLedgerAsync(
-        Guid customerUserId,
+        User customer,
         Guid actorUserId,
         Guid brandId,
         IReadOnlyCollection<LoyaltyMetricDefinition> metrics,
         IReadOnlyCollection<CoinProduct> products,
         CancellationToken cancellationToken)
     {
+        var customerUserId = customer.Id;
         var orderedProducts = products
             .OrderBy(product => product.Price)
             .ToArray();
@@ -214,6 +221,10 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
         if (issueCoinsResult.IsFailed)
             return Result.Fail(issueCoinsResult.Errors);
 
+        await _customerNotificationService.NotifyCoinsIssuedAsync(
+            ToCoinOperationResponse(issueCoinsResult.Value, customer),
+            cancellationToken);
+
         var redeemCoinsResult = await _coinLedgerService.RedeemAsync(
             customerUserId,
             actorUserId,
@@ -234,13 +245,17 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
         if (bonusCoinsResult.IsFailed)
             return Result.Fail(bonusCoinsResult.Errors);
 
+        await _customerNotificationService.NotifyCoinsIssuedAsync(
+            ToCoinOperationResponse(bonusCoinsResult.Value, customer),
+            cancellationToken);
+
         var selectedMetrics = metrics
             .OrderBy(_ => Random.Shared.Next())
             .Take(Math.Min(metrics.Count, 3))
             .ToArray();
 
         var availableMetricResult = await CreateMetricBalanceAsync(
-            customerUserId,
+            customer,
             actorUserId,
             brandId,
             selectedMetrics[0],
@@ -251,7 +266,7 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
 
         var unavailableMetricTarget = Math.Max(1, selectedMetrics[1].RedemptionAmount - Random.Shared.Next(1, selectedMetrics[1].RedemptionAmount + 1));
         var unavailableMetricResult = await CreateMetricBalanceAsync(
-            customerUserId,
+            customer,
             actorUserId,
             brandId,
             selectedMetrics[1],
@@ -261,7 +276,7 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
             return Result.Fail(unavailableMetricResult.Errors);
 
         var usedRewardMetricResult = await CreateUsedRewardMetricBalanceAsync(
-            customerUserId,
+            customer,
             actorUserId,
             brandId,
             selectedMetrics[2],
@@ -273,13 +288,14 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
     }
 
     private async Task<Result> CreateMetricBalanceAsync(
-        Guid customerUserId,
+        User customer,
         Guid actorUserId,
         Guid brandId,
         LoyaltyMetricDefinition metric,
         int targetBalance,
         CancellationToken cancellationToken)
     {
+        var customerUserId = customer.Id;
         var issueMetricResult = await _metricLedgerService.IssueAsync(
             customerUserId,
             actorUserId,
@@ -289,18 +305,24 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
             Pick(DemoDataCatalog.MetricIssueComments),
             cancellationToken);
 
-        return issueMetricResult.IsFailed
-            ? Result.Fail(issueMetricResult.Errors)
-            : Result.Ok();
+        if (issueMetricResult.IsFailed)
+            return Result.Fail(issueMetricResult.Errors);
+
+        await _customerNotificationService.NotifyMetricIssuedAsync(
+            ToIssueMetricResponse(issueMetricResult.Value),
+            cancellationToken);
+
+        return Result.Ok();
     }
 
     private async Task<Result> CreateUsedRewardMetricBalanceAsync(
-        Guid customerUserId,
+        User customer,
         Guid actorUserId,
         Guid brandId,
         LoyaltyMetricDefinition metric,
         CancellationToken cancellationToken)
     {
+        var customerUserId = customer.Id;
         var issueAmount = metric.RedemptionAmount + Random.Shared.Next(2, 6);
         var issueMetricResult = await _metricLedgerService.IssueAsync(
             customerUserId,
@@ -312,6 +334,10 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
             cancellationToken);
         if (issueMetricResult.IsFailed)
             return Result.Fail(issueMetricResult.Errors);
+
+        await _customerNotificationService.NotifyMetricIssuedAsync(
+            ToIssueMetricResponse(issueMetricResult.Value),
+            cancellationToken);
 
         var redeemMetricResult = await _metricLedgerService.RedeemAsync(
             customerUserId,
@@ -352,6 +378,36 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
     private static string Pick(IReadOnlyCollection<string> items)
     {
         return items.ElementAt(Random.Shared.Next(items.Count));
+    }
+
+    private static CoinOperationResponse ToCoinOperationResponse(
+        CoinLedgerOperation operation,
+        User customer)
+    {
+        return new CoinOperationResponse(
+            operation.Transaction.Id,
+            operation.Wallet.Id,
+            operation.Wallet.BrandId,
+            customer.Id,
+            customer.Name,
+            operation.Transaction.Type.ToString(),
+            operation.Transaction.Amount,
+            operation.Wallet.Value,
+            operation.Transaction.CreatedAt);
+    }
+
+    private static IssueMetricResponse ToIssueMetricResponse(MetricLedgerOperation operation)
+    {
+        return new IssueMetricResponse(
+            operation.Transaction.Id,
+            operation.Balance.Id,
+            operation.Balance.BrandId,
+            operation.Balance.MetricDefinitionId,
+            operation.Balance.UserId,
+            operation.Transaction.Type.ToString(),
+            operation.Transaction.Amount,
+            operation.Balance.Value,
+            operation.Transaction.CreatedAt);
     }
 
     private async Task<User?> GetAdminUserAsync(AdminActor admin, CancellationToken cancellationToken)
