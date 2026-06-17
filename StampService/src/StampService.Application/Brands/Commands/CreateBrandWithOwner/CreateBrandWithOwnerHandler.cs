@@ -15,17 +15,20 @@ namespace StampService.Application.Brands.Commands.CreateBrandWithOwner;
 public class CreateBrandWithOwnerHandler : ICommandHandler<CreateBrandWithOwnerResponse, CreateBrandWithOwnerCommand>
 {
     private readonly IAdminAccessService _adminAccessService;
+    private readonly IBrandCustomerService _brandCustomerService;
     private readonly IBrandRepository _brandRepository;
     private readonly IBrandMembershipRepository _brandMembershipRepository;
     private readonly IUserRepository _userRepository;
 
     public CreateBrandWithOwnerHandler(
         IAdminAccessService adminAccessService,
+        IBrandCustomerService brandCustomerService,
         IBrandRepository brandRepository,
         IBrandMembershipRepository brandMembershipRepository,
         IUserRepository userRepository)
     {
         _adminAccessService = adminAccessService;
+        _brandCustomerService = brandCustomerService;
         _brandRepository = brandRepository;
         _brandMembershipRepository = brandMembershipRepository;
         _userRepository = userRepository;
@@ -68,6 +71,14 @@ public class CreateBrandWithOwnerHandler : ICommandHandler<CreateBrandWithOwnerR
             return Result.Fail(membershipResult.Errors);
 
         var membership = membershipResult.Value;
+        var brandCustomerResult = await _brandCustomerService.EnsureAsync(
+            brand.Id,
+            owner.Id,
+            owner.Id,
+            cancellationToken);
+        if (brandCustomerResult.IsFailed)
+            return Result.Fail(brandCustomerResult.Errors);
+
         var addBrandResult = _brandRepository.Add(brand);
         if (addBrandResult.IsFailed)
             return Result.Fail(addBrandResult.Errors);

@@ -4,6 +4,7 @@ using StampService.Application.Access;
 using StampService.Application.Administration;
 using StampService.Application.Audit;
 using StampService.Application.Auth;
+using StampService.Application.Brands;
 using StampService.Application.Coins;
 using StampService.Application.CustomerNotifications;
 using StampService.Application.Ledger;
@@ -35,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IBusinessAuditContext, DefaultBusinessAuditContext>();
         services.AddScoped<IBusinessAuditSink>(_ => NoopBusinessAuditSink.Instance);
         services.AddScoped<IBrandAccessService, BrandAccessService>();
+        services.AddScoped<IBrandCustomerService, BrandCustomerService>();
         services.AddScoped<IBrandMembershipService, BrandMembershipService>();
         services.AddScoped<ICoinLedgerService, CoinLedgerService>();
         services.AddScoped<IMetricLedgerService, MetricLedgerService>();

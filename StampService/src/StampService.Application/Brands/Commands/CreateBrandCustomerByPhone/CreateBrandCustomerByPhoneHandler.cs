@@ -15,32 +15,35 @@ public class CreateBrandCustomerByPhoneHandler
     : ICommandHandler<BrandCustomerCardResponse, CreateBrandCustomerByPhoneCommand>
 {
     private readonly IBrandAccessService _brandAccessService;
+    private readonly IBrandCustomerRepository _brandCustomerRepository;
+    private readonly IBrandCustomerService _brandCustomerService;
     private readonly IBrandRepository _brandRepository;
     private readonly ICoinLedgerService _coinLedgerService;
     private readonly IQueryHandler<BrandCustomerCardResponse, GetBrandCustomerCardQuery> _customerCardHandler;
     private readonly IMetricLedgerService _metricLedgerService;
     private readonly ILoyaltyMetricRepository _metricRepository;
     private readonly IPhoneAccountService _phoneAccountService;
-    private readonly IUserRepository _userRepository;
 
     public CreateBrandCustomerByPhoneHandler(
         IBrandAccessService brandAccessService,
+        IBrandCustomerRepository brandCustomerRepository,
+        IBrandCustomerService brandCustomerService,
         IBrandRepository brandRepository,
         IMetricLedgerService metricLedgerService,
         ICoinLedgerService coinLedgerService,
         ILoyaltyMetricRepository metricRepository,
         IPhoneAccountService phoneAccountService,
-        IUserRepository userRepository,
         IQueryHandler<BrandCustomerCardResponse, GetBrandCustomerCardQuery> customerCardHandler)
     {
         _brandAccessService = brandAccessService;
+        _brandCustomerRepository = brandCustomerRepository;
+        _brandCustomerService = brandCustomerService;
         _brandRepository = brandRepository;
         _coinLedgerService = coinLedgerService;
         _customerCardHandler = customerCardHandler;
         _metricLedgerService = metricLedgerService;
         _metricRepository = metricRepository;
         _phoneAccountService = phoneAccountService;
-        _userRepository = userRepository;
     }
 
     public async Task<Result<BrandCustomerCardResponse>> Handle(
@@ -74,7 +77,15 @@ public class CreateBrandCustomerByPhoneHandler
             return Result.Fail(customerResult.Errors);
 
         var customer = customerResult.Value.User;
-        if (customerResult.Value.Created && brand.IsWelcomeRewardsEnabled)
+        var customerLinkResult = await _brandCustomerService.EnsureAsync(
+            brand.Id,
+            customer.Id,
+            command.ActorUserId,
+            cancellationToken);
+        if (customerLinkResult.IsFailed)
+            return Result.Fail(customerLinkResult.Errors);
+
+        if (customerLinkResult.Value && brand.IsWelcomeRewardsEnabled)
         {
             var welcomeResult = await IssueWelcomeRewardsAsync(
                 brand,
@@ -86,7 +97,8 @@ public class CreateBrandCustomerByPhoneHandler
         }
         else
         {
-            await _userRepository.SaveAsync(cancellationToken);
+            if (customerResult.Value.Created || customerLinkResult.Value)
+                await _brandCustomerRepository.SaveAsync(cancellationToken);
         }
 
         return await _customerCardHandler.Handle(
@@ -152,7 +164,7 @@ public class CreateBrandCustomerByPhoneHandler
         }
 
         if (!issuedAnyReward)
-            await _userRepository.SaveAsync(cancellationToken);
+            await _brandCustomerRepository.SaveAsync(cancellationToken);
 
         return Result.Ok();
     }

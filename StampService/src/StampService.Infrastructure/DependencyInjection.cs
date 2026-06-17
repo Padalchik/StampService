@@ -35,6 +35,7 @@ public static class DependencyInjection
         }, ServiceLifetime.Scoped);
 
         services.AddScoped<IBrandRepository, BrandRepository>();
+        services.AddScoped<IBrandCustomerRepository, BrandCustomerRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IBrandMembershipRepository, BrandMembershipRepository>();
         services.AddScoped<ILoyaltyMetricRepository, LoyaltyMetricRepository>();

@@ -1,6 +1,7 @@
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Brands;
 using StampService.Application.Errors;
 using StampService.Application.Users;
 using StampService.Contracts.DTOs.Metrics;
@@ -12,6 +13,7 @@ namespace StampService.Application.Metrics.Queries.GetRedeemMetricOptions;
 public class GetRedeemMetricOptionsHandler : IQueryHandler<RedeemMetricOptionsResponse, GetRedeemMetricOptionsQuery>
 {
     private readonly IBrandAccessService _brandAccessService;
+    private readonly IBrandCustomerRepository _brandCustomerRepository;
     private readonly ILoyaltyMetricRepository _metricRepository;
     private readonly IMetricBalanceRepository _metricBalanceRepository;
     private readonly IRedemptionCodeRepository _redemptionCodeRepository;
@@ -20,6 +22,7 @@ public class GetRedeemMetricOptionsHandler : IQueryHandler<RedeemMetricOptionsRe
 
     public GetRedeemMetricOptionsHandler(
         IBrandAccessService brandAccessService,
+        IBrandCustomerRepository brandCustomerRepository,
         ILoyaltyMetricRepository metricRepository,
         IMetricBalanceRepository metricBalanceRepository,
         IRedemptionCodeRepository redemptionCodeRepository,
@@ -27,6 +30,7 @@ public class GetRedeemMetricOptionsHandler : IQueryHandler<RedeemMetricOptionsRe
         TimeProvider timeProvider)
     {
         _brandAccessService = brandAccessService;
+        _brandCustomerRepository = brandCustomerRepository;
         _metricRepository = metricRepository;
         _metricBalanceRepository = metricBalanceRepository;
         _redemptionCodeRepository = redemptionCodeRepository;
@@ -69,6 +73,13 @@ public class GetRedeemMetricOptionsHandler : IQueryHandler<RedeemMetricOptionsRe
         var customer = await _userRepository.GetByIdAsync(activeCode.UserId, cancellationToken);
         if (customer is null)
             return Result.Fail(UserErrors.NotFound());
+
+        var brandCustomer = await _brandCustomerRepository.GetByBrandAndUserAsync(
+            query.BrandId,
+            customer.Id,
+            cancellationToken);
+        if (brandCustomer is null)
+            return Result.Fail(UserErrors.RecipientNotFound());
 
         var metrics = await _metricRepository.GetByBrandAsync(query.BrandId, cancellationToken);
         var activeMetrics = metrics

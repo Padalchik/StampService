@@ -2,8 +2,8 @@ using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
 using StampService.Application.Auth;
+using StampService.Application.Brands;
 using StampService.Application.Errors;
-using StampService.Application.Users;
 using StampService.Contracts.DTOs.Coins;
 using StampService.Domain.Access;
 using StampService.Domain.User;
@@ -15,20 +15,20 @@ public class GetCoinHistoryHandler : IQueryHandler<CoinTransactionsResponse, Get
     private const int MaxTake = 100;
 
     private readonly IBrandAccessService _brandAccessService;
+    private readonly IBrandCustomerRepository _brandCustomerRepository;
     private readonly ICoinWalletRepository _coinWalletRepository;
     private readonly ICoinTransactionRepository _coinTransactionRepository;
-    private readonly IUserRepository _userRepository;
 
     public GetCoinHistoryHandler(
         IBrandAccessService brandAccessService,
+        IBrandCustomerRepository brandCustomerRepository,
         ICoinWalletRepository coinWalletRepository,
-        ICoinTransactionRepository coinTransactionRepository,
-        IUserRepository userRepository)
+        ICoinTransactionRepository coinTransactionRepository)
     {
         _brandAccessService = brandAccessService;
+        _brandCustomerRepository = brandCustomerRepository;
         _coinWalletRepository = coinWalletRepository;
         _coinTransactionRepository = coinTransactionRepository;
-        _userRepository = userRepository;
     }
 
     public async Task<Result<CoinTransactionsResponse>> Handle(
@@ -56,7 +56,8 @@ public class GetCoinHistoryHandler : IQueryHandler<CoinTransactionsResponse, Get
         if (phoneNumberResult.IsFailed)
             return Result.Fail(phoneNumberResult.Errors);
 
-        var customer = await _userRepository.GetByIdentityAsync(
+        var customer = await _brandCustomerRepository.GetCustomerByPhoneAsync(
+            query.BrandId,
             IdentityType.Phone,
             phoneNumberResult.Value,
             cancellationToken);

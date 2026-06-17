@@ -59,6 +59,11 @@ public static class DemoDataSeeder
             CreateMembership(owner.Id, coinsOnlyBrand.Id, ownerRoleId),
             CreateMembership(owner.Id, metricsOnlyBrand.Id, ownerRoleId));
 
+        dbContext.BrandCustomers.AddRange(
+            CreateBrandCustomer(allRewardsBrand.Id, owner.Id, owner.Id),
+            CreateBrandCustomer(coinsOnlyBrand.Id, owner.Id, owner.Id),
+            CreateBrandCustomer(metricsOnlyBrand.Id, owner.Id, owner.Id));
+
         var coffeeMetric = CreateMetric(allRewardsBrand.Id, "Штамп за кофе", redemptionAmount: 6);
         var dessertMetric = CreateMetric(allRewardsBrand.Id, "Штамп за десерт", redemptionAmount: 4);
         var bakeryMetric = CreateMetric(metricsOnlyBrand.Id, "Штамп за хлеб", redemptionAmount: 5);
@@ -135,6 +140,13 @@ public static class DemoDataSeeder
         return Require(
             BrandMembership.Create(userId, brandId, roleId),
             "Не удалось создать связь пользователя с брендом.");
+    }
+
+    private static BrandCustomer CreateBrandCustomer(Guid brandId, Guid userId, Guid createdByUserId)
+    {
+        return Require(
+            BrandCustomer.Create(brandId, userId, createdByUserId),
+            "Could not create brand customer link.");
     }
 
     private static LoyaltyMetricDefinition CreateMetric(Guid brandId, string name, int redemptionAmount)

@@ -19,6 +19,7 @@ namespace StampService.Application.Demo.Commands.CreateDemoBrands;
 public class CreateDemoBrandsHandler : ICommandHandler<bool, CreateDemoBrandsCommand>
 {
     private readonly IAdminAccessService _adminAccessService;
+    private readonly IBrandCustomerService _brandCustomerService;
     private readonly IBrandMembershipRepository _brandMembershipRepository;
     private readonly IBrandRepository _brandRepository;
     private readonly ICoinProductRepository _coinProductRepository;
@@ -27,6 +28,7 @@ public class CreateDemoBrandsHandler : ICommandHandler<bool, CreateDemoBrandsCom
 
     public CreateDemoBrandsHandler(
         IAdminAccessService adminAccessService,
+        IBrandCustomerService brandCustomerService,
         IBrandMembershipRepository brandMembershipRepository,
         IBrandRepository brandRepository,
         ICoinProductRepository coinProductRepository,
@@ -34,6 +36,7 @@ public class CreateDemoBrandsHandler : ICommandHandler<bool, CreateDemoBrandsCom
         IUserRepository userRepository)
     {
         _adminAccessService = adminAccessService;
+        _brandCustomerService = brandCustomerService;
         _brandMembershipRepository = brandMembershipRepository;
         _brandRepository = brandRepository;
         _coinProductRepository = coinProductRepository;
@@ -96,6 +99,14 @@ public class CreateDemoBrandsHandler : ICommandHandler<bool, CreateDemoBrandsCom
                 return Result.Fail(addBrandResult.Errors);
 
             _brandMembershipRepository.Add(membershipResult.Value);
+
+            var brandCustomerResult = await _brandCustomerService.EnsureAsync(
+                brand.Id,
+                owner.Id,
+                owner.Id,
+                cancellationToken);
+            if (brandCustomerResult.IsFailed)
+                return Result.Fail(brandCustomerResult.Errors);
 
             foreach (var metricSpec in spec.Metrics)
             {

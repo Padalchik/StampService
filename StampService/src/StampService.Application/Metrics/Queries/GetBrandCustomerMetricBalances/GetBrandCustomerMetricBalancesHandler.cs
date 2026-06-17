@@ -2,9 +2,9 @@ using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
 using StampService.Application.Auth;
+using StampService.Application.Brands;
 using StampService.Application.Coins;
 using StampService.Application.Errors;
-using StampService.Application.Users;
 using StampService.Contracts.DTOs.Metrics;
 using StampService.Domain.Access;
 using StampService.Domain.User;
@@ -18,20 +18,20 @@ public class GetBrandCustomerMetricBalancesHandler
     private readonly ILoyaltyMetricRepository _metricRepository;
     private readonly IMetricBalanceRepository _metricBalanceRepository;
     private readonly ICoinWalletRepository _coinWalletRepository;
-    private readonly IUserRepository _userRepository;
+    private readonly IBrandCustomerRepository _brandCustomerRepository;
 
     public GetBrandCustomerMetricBalancesHandler(
         IBrandAccessService brandAccessService,
         ILoyaltyMetricRepository metricRepository,
         IMetricBalanceRepository metricBalanceRepository,
         ICoinWalletRepository coinWalletRepository,
-        IUserRepository userRepository)
+        IBrandCustomerRepository brandCustomerRepository)
     {
         _brandAccessService = brandAccessService;
         _metricRepository = metricRepository;
         _metricBalanceRepository = metricBalanceRepository;
         _coinWalletRepository = coinWalletRepository;
-        _userRepository = userRepository;
+        _brandCustomerRepository = brandCustomerRepository;
     }
 
     public async Task<Result<BrandCustomerMetricBalancesResponse>> Handle(
@@ -59,7 +59,8 @@ public class GetBrandCustomerMetricBalancesHandler
         if (phoneNumberResult.IsFailed)
             return Result.Fail(phoneNumberResult.Errors);
 
-        var customer = await _userRepository.GetByIdentityAsync(
+        var customer = await _brandCustomerRepository.GetCustomerByPhoneAsync(
+            query.BrandId,
             IdentityType.Phone,
             phoneNumberResult.Value,
             cancellationToken);

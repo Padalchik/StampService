@@ -1,4 +1,5 @@
 using StampService.Application.Access;
+using StampService.Application.Brands;
 using StampService.Application.Coins;
 using StampService.Application.Coins.Commands.IssueCoins;
 using StampService.Application.CustomerNotifications;
@@ -21,6 +22,7 @@ public class IssueCoinsByPhoneHandlerTests
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
         var userRepository = new FakeUserRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         var walletRepository = new FakeCoinWalletRepository();
         var transactionRepository = new FakeCoinTransactionRepository();
         var notificationService = new RecordingCustomerNotificationService();
@@ -31,6 +33,7 @@ public class IssueCoinsByPhoneHandlerTests
 
         var handler = new IssueCoinsByPhoneHandler(
             new BrandAccessService(membershipRepository),
+            new BrandCustomerService(brandCustomerRepository),
             brandRepository,
             new CoinLedgerService(walletRepository, transactionRepository),
             CreatePhoneAccountService(userRepository),
@@ -51,6 +54,7 @@ public class IssueCoinsByPhoneHandlerTests
         Assert.Equal(15, result.Value.BalanceValue);
         Assert.Single(walletRepository.Wallets);
         Assert.Single(transactionRepository.Transactions);
+        Assert.Single(brandCustomerRepository.Customers);
         Assert.Equal(result.Value, notificationService.CoinsIssued);
     }
 
@@ -62,6 +66,7 @@ public class IssueCoinsByPhoneHandlerTests
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
         var userRepository = new FakeUserRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         var walletRepository = new FakeCoinWalletRepository();
         var transactionRepository = new FakeCoinTransactionRepository();
         brandRepository.AddExisting(brand);
@@ -69,6 +74,7 @@ public class IssueCoinsByPhoneHandlerTests
 
         var handler = new IssueCoinsByPhoneHandler(
             new BrandAccessService(membershipRepository),
+            new BrandCustomerService(brandCustomerRepository),
             brandRepository,
             new CoinLedgerService(walletRepository, transactionRepository),
             CreatePhoneAccountService(userRepository));
@@ -92,10 +98,12 @@ public class IssueCoinsByPhoneHandlerTests
         var brand = Brand.Create("Coffee").Value;
         var brandRepository = new FakeBrandRepository();
         var userRepository = new FakeUserRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         brandRepository.AddExisting(brand);
 
         var handler = new IssueCoinsByPhoneHandler(
             new BrandAccessService(new FakeBrandMembershipRepository()),
+            new BrandCustomerService(brandCustomerRepository),
             brandRepository,
             new CoinLedgerService(new FakeCoinWalletRepository(), new FakeCoinTransactionRepository()),
             CreatePhoneAccountService(userRepository));
@@ -119,11 +127,13 @@ public class IssueCoinsByPhoneHandlerTests
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
         var userRepository = new FakeUserRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         brandRepository.AddExisting(brand);
         membershipRepository.SetRole(actorUserId, brand.Id, SystemRoles.Staff);
 
         var handler = new IssueCoinsByPhoneHandler(
             new BrandAccessService(membershipRepository),
+            new BrandCustomerService(brandCustomerRepository),
             brandRepository,
             new CoinLedgerService(new FakeCoinWalletRepository(), new FakeCoinTransactionRepository()),
             CreatePhoneAccountService(userRepository));

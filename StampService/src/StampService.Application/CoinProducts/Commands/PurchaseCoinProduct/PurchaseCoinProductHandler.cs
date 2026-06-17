@@ -18,6 +18,7 @@ namespace StampService.Application.CoinProducts.Commands.PurchaseCoinProduct;
 public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse, PurchaseCoinProductCommand>
 {
     private readonly IBrandAccessService _brandAccessService;
+    private readonly IBrandCustomerRepository _brandCustomerRepository;
     private readonly IBrandRepository _brandRepository;
     private readonly IBusinessAuditSink _businessAuditSink;
     private readonly ICoinLedgerService _coinLedgerService;
@@ -32,6 +33,7 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
 
     public PurchaseCoinProductHandler(
         IBrandAccessService brandAccessService,
+        IBrandCustomerRepository brandCustomerRepository,
         IBrandRepository brandRepository,
         ICoinLedgerService coinLedgerService,
         ICoinProductRepository productRepository,
@@ -45,6 +47,7 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
         IBusinessAuditSink? businessAuditSink = null)
     {
         _brandAccessService = brandAccessService;
+        _brandCustomerRepository = brandCustomerRepository;
         _brandRepository = brandRepository;
         _businessAuditSink = businessAuditSink ?? NoopBusinessAuditSink.Instance;
         _coinLedgerService = coinLedgerService;
@@ -103,6 +106,13 @@ public class PurchaseCoinProductHandler : ICommandHandler<CoinOperationResponse,
         var customer = await _userRepository.GetByIdAsync(activeCode.UserId, cancellationToken);
         if (customer is null)
             return await RejectedAsync(command, [UserErrors.NotFound()], activeCode.UserId, null, product.Price, null, cancellationToken);
+
+        var brandCustomer = await _brandCustomerRepository.GetByBrandAndUserAsync(
+            command.BrandId,
+            customer.Id,
+            cancellationToken);
+        if (brandCustomer is null)
+            return await RejectedAsync(command, [UserErrors.RecipientNotFound()], customer.Id, null, product.Price, null, cancellationToken);
 
         var wallet = await _coinWalletRepository.GetByUserAndBrandAsync(
             customer.Id,

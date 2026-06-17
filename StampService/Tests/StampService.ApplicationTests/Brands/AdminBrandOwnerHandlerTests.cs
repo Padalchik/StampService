@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using StampService.Application.Access;
 using StampService.Application.Administration;
+using StampService.Application.Brands;
 using StampService.Application.Brands.Commands.CreateBrandWithOwner;
 using StampService.Application.Brands.Commands.ReassignBrandOwner;
 using StampService.Application.Brands.Commands.UpdateBrandRewardSettings;
@@ -25,10 +26,12 @@ public class AdminBrandOwnerHandlerTests
         var userRepository = new FakeUserRepository();
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         userRepository.Add(owner);
 
         var handler = new CreateBrandWithOwnerHandler(
             CreateAdminAccessService(),
+            new BrandCustomerService(brandCustomerRepository),
             brandRepository,
             membershipRepository,
             userRepository);
@@ -45,6 +48,10 @@ public class AdminBrandOwnerHandlerTests
             owner.Id,
             result.Value.BrandId,
             CancellationToken.None));
+        Assert.NotNull(await brandCustomerRepository.GetByBrandAndUserAsync(
+            result.Value.BrandId,
+            owner.Id,
+            CancellationToken.None));
     }
 
     [Fact]
@@ -58,6 +65,7 @@ public class AdminBrandOwnerHandlerTests
         var userRepository = new FakeUserRepository();
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         userRepository.Add(admin);
         userRepository.Add(owner);
 
@@ -66,6 +74,7 @@ public class AdminBrandOwnerHandlerTests
             {
                 PhoneNumbers = ["+79214408362"]
             }), userRepository),
+            new BrandCustomerService(brandCustomerRepository),
             brandRepository,
             membershipRepository,
             userRepository);
@@ -78,6 +87,10 @@ public class AdminBrandOwnerHandlerTests
         Assert.Equal(SystemRoles.Owner, await membershipRepository.GetRoleSystemNameAsync(
             owner.Id,
             result.Value.BrandId,
+            CancellationToken.None));
+        Assert.NotNull(await brandCustomerRepository.GetByBrandAndUserAsync(
+            result.Value.BrandId,
+            owner.Id,
             CancellationToken.None));
     }
 
@@ -92,6 +105,7 @@ public class AdminBrandOwnerHandlerTests
         var userRepository = new FakeUserRepository();
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
 
         userRepository.Add(oldOwner);
         userRepository.Add(newOwner);
@@ -101,6 +115,7 @@ public class AdminBrandOwnerHandlerTests
 
         var handler = new ReassignBrandOwnerHandler(
             CreateAdminAccessService(),
+            new BrandCustomerService(brandCustomerRepository),
             brandRepository,
             membershipRepository,
             userRepository);
@@ -118,6 +133,10 @@ public class AdminBrandOwnerHandlerTests
         Assert.Equal(SystemRoles.Owner, await membershipRepository.GetRoleSystemNameAsync(
             newOwner.Id,
             brandId,
+            CancellationToken.None));
+        Assert.NotNull(await brandCustomerRepository.GetByBrandAndUserAsync(
+            brandId,
+            newOwner.Id,
             CancellationToken.None));
     }
 

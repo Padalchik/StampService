@@ -20,6 +20,7 @@ namespace StampService.Application.Demo.Commands.CreateUserDemoData;
 public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDataCommand>
 {
     private readonly IAdminAccessService _adminAccessService;
+    private readonly IBrandCustomerService _brandCustomerService;
     private readonly IBrandMembershipRepository _brandMembershipRepository;
     private readonly IBrandRepository _brandRepository;
     private readonly ICoinLedgerService _coinLedgerService;
@@ -30,6 +31,7 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
 
     public CreateUserDemoDataHandler(
         IAdminAccessService adminAccessService,
+        IBrandCustomerService brandCustomerService,
         IBrandMembershipRepository brandMembershipRepository,
         IBrandRepository brandRepository,
         ICoinLedgerService coinLedgerService,
@@ -39,6 +41,7 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
         IUserRepository userRepository)
     {
         _adminAccessService = adminAccessService;
+        _brandCustomerService = brandCustomerService;
         _brandMembershipRepository = brandMembershipRepository;
         _brandRepository = brandRepository;
         _coinLedgerService = coinLedgerService;
@@ -82,6 +85,14 @@ public class CreateUserDemoDataHandler : ICommandHandler<bool, CreateUserDemoDat
             cancellationToken);
         if (customer is null)
             return Result.Fail(UserErrors.RecipientNotFound());
+
+        var customerLinkResult = await _brandCustomerService.EnsureAsync(
+            command.BrandId,
+            customer.Id,
+            admin.Id,
+            cancellationToken);
+        if (customerLinkResult.IsFailed)
+            return Result.Fail(customerLinkResult.Errors);
 
         var metricsResult = await EnsureMetricsAsync(command.BrandId, cancellationToken);
         if (metricsResult.IsFailed)

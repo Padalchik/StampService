@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using StampService.Application.Administration;
+using StampService.Application.Brands;
 using StampService.Application.Demo.Commands.CreateDemoBrands;
 using StampService.ApplicationTests.Fakes;
 using StampService.Domain.User;
@@ -17,6 +18,7 @@ public class CreateDemoBrandsHandlerTests
         var userRepository = new FakeUserRepository();
         var brandRepository = new FakeBrandRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         var metricRepository = new FakeLoyaltyMetricRepository();
         var productRepository = new FakeCoinProductRepository();
         userRepository.Add(admin);
@@ -26,6 +28,7 @@ public class CreateDemoBrandsHandlerTests
             {
                 PhoneNumbers = [adminPhoneNumber]
             }), userRepository),
+            new BrandCustomerService(brandCustomerRepository),
             membershipRepository,
             brandRepository,
             productRepository,
@@ -47,5 +50,6 @@ public class CreateDemoBrandsHandlerTests
 
         var memberships = await membershipRepository.GetUserMembershipsAsync(admin.Id, CancellationToken.None);
         Assert.Equal(5, memberships.Count);
+        Assert.Equal(5, brandCustomerRepository.Customers.Count);
     }
 }

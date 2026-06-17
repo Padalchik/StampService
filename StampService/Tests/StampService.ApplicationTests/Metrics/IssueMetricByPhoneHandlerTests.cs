@@ -1,4 +1,5 @@
 using StampService.Application.Access;
+using StampService.Application.Brands;
 using StampService.Application.CustomerNotifications;
 using StampService.Application.Metrics;
 using StampService.Application.Metrics.Commands.IssueMetric;
@@ -24,6 +25,7 @@ public class IssueMetricByPhoneHandlerTests
         var membershipRepository = new FakeBrandMembershipRepository();
         var metricRepository = new FakeLoyaltyMetricRepository();
         var userRepository = new FakeUserRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         var balanceRepository = new FakeMetricBalanceRepository();
         var transactionRepository = new FakeStampTransactionRepository();
         var notificationService = new RecordingCustomerNotificationService();
@@ -35,6 +37,7 @@ public class IssueMetricByPhoneHandlerTests
 
         var handler = new IssueMetricByPhoneHandler(
             new BrandAccessService(membershipRepository),
+            new BrandCustomerService(brandCustomerRepository),
             brandRepository,
             new MetricLedgerService(balanceRepository, transactionRepository),
             metricRepository,
@@ -55,6 +58,7 @@ public class IssueMetricByPhoneHandlerTests
         Assert.Equal(3, result.Value.BalanceValue);
         Assert.Single(balanceRepository.Balances);
         Assert.Single(transactionRepository.Transactions);
+        Assert.Single(brandCustomerRepository.Customers);
         Assert.Equal(result.Value, notificationService.MetricIssued);
     }
 
@@ -68,6 +72,7 @@ public class IssueMetricByPhoneHandlerTests
         var membershipRepository = new FakeBrandMembershipRepository();
         var metricRepository = new FakeLoyaltyMetricRepository();
         var userRepository = new FakeUserRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         var balanceRepository = new FakeMetricBalanceRepository();
         var transactionRepository = new FakeStampTransactionRepository();
         brandRepository.AddExisting(brand);
@@ -76,6 +81,7 @@ public class IssueMetricByPhoneHandlerTests
 
         var handler = new IssueMetricByPhoneHandler(
             new BrandAccessService(membershipRepository),
+            new BrandCustomerService(brandCustomerRepository),
             brandRepository,
             new MetricLedgerService(balanceRepository, transactionRepository),
             metricRepository,
@@ -102,11 +108,13 @@ public class IssueMetricByPhoneHandlerTests
         var brandRepository = new FakeBrandRepository();
         var metricRepository = new FakeLoyaltyMetricRepository();
         var userRepository = new FakeUserRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         brandRepository.AddExisting(brand);
         metricRepository.AddExisting(metric);
 
         var handler = new IssueMetricByPhoneHandler(
             new BrandAccessService(new FakeBrandMembershipRepository()),
+            new BrandCustomerService(brandCustomerRepository),
             brandRepository,
             new MetricLedgerService(new FakeMetricBalanceRepository(), new FakeStampTransactionRepository()),
             metricRepository,
@@ -133,12 +141,14 @@ public class IssueMetricByPhoneHandlerTests
         var membershipRepository = new FakeBrandMembershipRepository();
         var metricRepository = new FakeLoyaltyMetricRepository();
         var userRepository = new FakeUserRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         brandRepository.AddExisting(brand);
         metricRepository.AddExisting(metric);
         membershipRepository.SetRole(actorUserId, brand.Id, SystemRoles.Staff);
 
         var handler = new IssueMetricByPhoneHandler(
             new BrandAccessService(membershipRepository),
+            new BrandCustomerService(brandCustomerRepository),
             brandRepository,
             new MetricLedgerService(new FakeMetricBalanceRepository(), new FakeStampTransactionRepository()),
             metricRepository,

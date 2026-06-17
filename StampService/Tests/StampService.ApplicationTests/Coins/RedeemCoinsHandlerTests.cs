@@ -209,12 +209,14 @@ public class RedeemCoinsHandlerTests
         var transactionRepository = new FakeCoinTransactionRepository();
         var codeRepository = new FakeRedemptionCodeRepository();
         var userRepository = new FakeUserRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         var notificationService = new RecordingCustomerNotificationService();
 
         brandRepository.AddExisting(brand);
         if (grantAccess)
             membershipRepository.SetRole(staffUserId, brand.Id, SystemRoles.Staff);
         userRepository.Add(customer);
+        brandCustomerRepository.AddExisting(brand.Id, customer.Id, staffUserId);
 
         var wallet = CoinWallet.Create(customer.Id, brand.Id).Value;
         wallet.SetMaterializedValue(balance);
@@ -230,6 +232,7 @@ public class RedeemCoinsHandlerTests
 
         var handler = new RedeemCoinsHandler(
             new BrandAccessService(membershipRepository),
+            brandCustomerRepository,
             brandRepository,
             new CoinLedgerService(walletRepository, transactionRepository),
             transactionRepository,

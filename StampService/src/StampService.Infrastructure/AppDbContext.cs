@@ -48,6 +48,7 @@ public class AppDbContext : DbContext
 
     // Brand
     public DbSet<Brand> Brands => Set<Brand>();
+    public DbSet<BrandCustomer> BrandCustomers => Set<BrandCustomer>();
     public DbSet<Location> Locations => Set<Location>();
 
     // Audit

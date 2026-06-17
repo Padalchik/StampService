@@ -1,6 +1,6 @@
 # StampService: текущий операционный контекст
 
-Актуально на 2026-06-15, Europe/Moscow.
+Актуально на 2026-06-17, Europe/Moscow.
 
 Этот файл нужен для быстрого старта нового чата. Это не changelog и не детальная карта всех файлов. Здесь зафиксированы цель проекта, архитектурные границы, ключевые доменные решения и рабочие договоренности.
 
@@ -53,9 +53,11 @@ StampService - loyalty-сервис для брендов. Основной ин
 
 - `Brand` - бренд.
 - `BrandMembership` - членство пользователя в бренде.
+- `BrandCustomer` - связка пользователя с конкретным брендом как клиента (`BrandId + UserId`). Это отдельная модель от `BrandMembership`: сотрудник/владелец описывается membership/role, а клиентская принадлежность к бренду описывается `BrandCustomer`. Один и тот же `User` может быть клиентом нескольких брендов, но поиск клиента внутри бренда всегда должен быть scoped этой связкой.
 - `Role` - роль в бренде (`OWNER`, `STAFF`).
 - Системный администратор определяется через `Admin:TelegramUserIds`, а не через БД-роли.
 - Создание бренда с владельцем должно быть атомарным: `Brand` и owner `BrandMembership` не должны сохраняться разными независимыми persistence-шагами. Текущий простой подход - сначала создать доменные объекты, затем поставить `Brand` и `BrandMembership` в один EF change tracker и выполнить один общий `SaveChanges` через repository `SaveAsync`. Не вводить отдельный transaction service для этого сценария без явной причины.
+- Владелец бренда должен добавляться и в `BrandCustomer`: при создании бренда с владельцем, переназначении владельца и создании demo brands нужно гарантировать связку owner `UserId` с брендом как клиента. Это нужно, чтобы owner был видим в клиентских сценариях своего бренда и чтобы модель `BrandCustomer` была полной с первого дня жизни бренда.
 
 Лояльность:
 
@@ -68,7 +70,7 @@ StampService - loyalty-сервис для брендов. Основной ин
 - Materialized balance/wallet не является самостоятельным источником истины и должен оставаться консистентным с ledger-транзакциями. Для конкурентных ledger-операций используется Application-port `ILedgerOperationLock`; в PostgreSQL host он реализован через transaction-scoped advisory locks. Это защищает и существующие строки, и сценарии первого создания `MetricBalance`/`CoinWallet`, где row lock по отсутствующей строке не помог бы.
 - Lock-гранулярность: для метрик ключом является `UserId + BrandId + MetricDefinitionId`, для монет - `UserId + BrandId`. C# `lock` для этого не подходит, потому что он защищает только один процесс, а консистентность нужна на уровне БД и всех host instances.
 - У бренда есть настройки приветственных наград: общий флаг включения, набор метрик с количеством по каждой метрике, сумма монеток и комментарий для истории. Доменные настройки учитывают feature toggles бренда: при выключенных метриках нельзя сохранить welcome-метрики, при выключенных монетках нельзя сохранить welcome-монетки; отключение глобального feature toggle очищает несовместимую часть welcome-настроек.
-- Приветственные награды выдаются только в явном сценарии создания нового клиента из draft-карточки brand workspace (`CreateBrandCustomerByPhoneCommand`). Если телефонный аккаунт уже существовал, повторная welcome-выдача не выполняется. Начисление идет через `IMetricLedgerService` и `ICoinLedgerService`, а не прямой записью балансов; комментарий по умолчанию - `Приветственная награда`.
+- Приветственные награды выдаются только в явном сценарии создания клиента из draft-карточки brand workspace (`CreateBrandCustomerByPhoneCommand`) и только когда создается новая связка `BrandCustomer` для пары `BrandId + UserId`. Глобальный phone-account может уже существовать в системе, но для этого бренда клиент считается новым, пока нет `BrandCustomer`. Начисление идет через `IMetricLedgerService` и `ICoinLedgerService`, а не прямой записью балансов; комментарий по умолчанию - `Приветственная награда`.
 - Persistence welcome-настроек: scalar-поля хранятся на `brands`, а метрики с количеством - отдельными строками `brand_welcome_metric_rewards` (`brand_id`, `metric_definition_id`, `amount`). Старый промежуточный формат списка metric ids мигрирован в строки с `amount = 1`.
 
 ## Identity и авторизация
@@ -99,15 +101,21 @@ StampService - loyalty-сервис для брендов. Основной ин
 
 ## Идентификация клиента в операциях бренда
 
-Для операций начисления метрик и монеток основной внешний идентификатор клиента - номер телефона. Сотрудник в web или Telegram вводит телефон клиента, backend/Application нормализует его и выполняет единый Application flow: найти пользователя по активной `Phone` identity или создать полноценного `User` с этой `Phone` identity, если клиента еще нет. После этого начисление проводится сразу на `User.Id` через ledger. Внутренним владельцем данных остается `User.Id`; телефон не становится primary key и не является владельцем балансов.
+Важное архитектурное разделение: глобальный `User` и клиент конкретного бренда - разные понятия. `User` остается единым аккаунтом человека с identity, балансами и историей по `User.Id`. Клиентом бренда пользователь становится только после появления связки `BrandCustomer` (`BrandId + UserId`). Поэтому поиск клиента в brand workspace, просмотр балансов/истории и операции по redemption code должны проверять не только существование активной `Phone` identity или `User`, но и принадлежность пользователя конкретному бренду через `BrandCustomer`.
 
-Auto-create клиента по телефону применяется только к начислениям. Списание метрик, ручное списание монеток и выдача товаров за монетки остаются по одноразовому `RedemptionCode`, потому что этот код подтверждает конкретную операцию клиента. Телефон используется для идентификации клиента при начислении, а не как подтверждение списания.
+`BrandCustomer` живет в домене брендов (`StampService.Domain.Brand.BrandCustomer`) и хранится в таблице `brand_customers`. На уровне БД для активных строк действует уникальность пары `brand_id + user_id` с учетом soft delete. Создание/проверка связки вынесены в Application service `IBrandCustomerService` / `BrandCustomerService`, а чтение - в `IBrandCustomerRepository`. Не надо размазывать ad hoc-проверки `brandId + userId` по handlers, если можно использовать этот сервис/репозиторий.
+
+Для операций начисления метрик и монеток основной внешний идентификатор клиента - номер телефона. Сотрудник в web или Telegram вводит телефон клиента, backend/Application нормализует его и ищет существующего пользователя по активной `Phone` identity. Начисления не создают глобальный phone-account неявно; если пользователя с активным телефоном нет, это бизнес-отказ `RecipientNotFound`. Если пользователь найден, handler гарантирует наличие `BrandCustomer` для текущего бренда и затем проводит начисление на `User.Id` через ledger. Внутренним владельцем данных остается `User.Id`; телефон не становится primary key и не является владельцем балансов.
+
+Явное создание нового phone-клиента для brand workspace вынесено в отдельный сценарий `CreateBrandCustomerByPhoneCommand` и HTTP endpoint `POST /api/brands/{brandId}/customers/by-phone`. Этот сценарий может найти существующий глобальный phone-account или создать новый `User` с активной `Phone` identity, затем создать `BrandCustomer` для выбранного бренда. Именно этот draft-flow отвечает за welcome rewards при первой связке пользователя с брендом. Поиск карточки клиента остается read-only и не создает ни `User`, ни `BrandCustomer`.
+
+Списание метрик, ручное списание монеток и выдача товаров за монетки остаются по одноразовому `RedemptionCode`, потому что этот код подтверждает конкретную операцию клиента. После нахождения пользователя по активному коду Application должен дополнительно проверить, что пользователь является `BrandCustomer` текущего бренда. Redemption code не должен позволять сотруднику бренда списывать награды глобального пользователя, который не является клиентом этого бренда.
 
 4-значный `CustomerCode` больше не используется в сценариях начисления метрик/монеток и в просмотре клиентских балансов. Старые HTTP/Application ветки начисления по `CustomerCode` удалены (`IssueCoinsCommand`, `IssueCoinsRequest`, `POST /api/brands/{brandId}/coins/issue`, `POST /api/metrics/{metricDefinitionId}/issue-by-customer-code`, `RecipientResolver`). Новые UI-сценарии не должны просить сотрудника вводить `CustomerCode`. На уровне Domain/Application удалена обязательность `CustomerCode` у `User`: `PhoneAccountService` создает телефонный аккаунт по display name и активной `Phone` identity, без `CustomerCodeGenerator`.
 
 Публичные DTO операций с монетками также не должны возвращать `CustomerCode`. `CoinOperationResponse` используется API, web brand workspace, Telegram coin flows, Telegram coin-product purchase flow и customer notifications как результат ledger-операции; он содержит технические ids операции/кошелька/пользователя, имя клиента, тип операции, сумму, баланс и дату, но не старый клиентский код. Если UI нужно показать внешний идентификатор клиента, использовать телефонную identity в сценариях начисления или одноразовый `RedemptionCode` в сценариях списания, а не `CustomerCode`.
 
-Ключевые Application use cases для операций начисления: `IssueMetricByPhoneCommand` / `IssueMetricByPhoneHandler` и `IssueCoinsByPhoneCommand` / `IssueCoinsByPhoneHandler`. Они больше не создают клиента по телефону неявно: начисление работает только с уже существующей активной `Phone` identity. Явное создание нового phone-клиента для brand workspace вынесено в отдельный сценарий `CreateBrandCustomerByPhoneCommand` и HTTP endpoint `POST /api/brands/{brandId}/customers/by-phone`.
+Ключевые Application use cases для операций начисления: `IssueMetricByPhoneCommand` / `IssueMetricByPhoneHandler` и `IssueCoinsByPhoneCommand` / `IssueCoinsByPhoneHandler`. Они работают только с уже существующей активной `Phone` identity и через `BrandCustomerService.EnsureAsync` добавляют пользователя в клиенты бренда при первой successful business operation в этом бренде.
 
 Уведомления клиенту о reward-операциях являются частью Application-сценариев, а не ответственностью конкретного входного канала. После успешного начисления `IssueMetricByPhoneHandler` и `IssueCoinsByPhoneHandler` вызывают `StampService.Application.CustomerNotifications.ICustomerNotificationService`. То же правило применено к списаниям: `RedeemMetricHandler`, `RedeemCoinsHandler` и `PurchaseCoinProductHandler` отправляют уведомление после успешного ledger-действия. Поэтому клиент получает Telegram-сообщение о начислении или списании независимо от того, пришла операция из Telegram-бота или из web/API.
 
@@ -119,7 +127,7 @@ Auto-create клиента по телефону применяется толь
 - `src/StampService.Infrastructure/Services/CustomerAvailableRewardsFormatter.cs` - общий форматтер блока `Доступно сейчас` для notification-текстов; он показывает доступные клиенту награды текущего бренда по текущим балансам, а не только новые награды после последней операции;
 - Telegram endpoints начисления/списания больше не должны отправлять уведомление вручную после handler-а, иначе появятся дубли.
 
-Просмотр балансов и истории клиента сотрудником также использует телефон как внешний идентификатор, но без auto-create: Application нормализует номер, ищет существующего пользователя по активной `Phone` identity и возвращает отказ, если клиент не найден. Это касается `GetBrandCustomerMetricBalancesQuery`, `GetCoinBalanceQuery` и `GetCoinHistoryQuery`. Auto-create по телефону остается только для начислений.
+Просмотр балансов и истории клиента сотрудником также использует телефон как внешний идентификатор, но без auto-create: Application нормализует номер и ищет пользователя только среди `BrandCustomer` текущего бренда. Глобальный `User` с таким телефоном, который является клиентом другого бренда, не должен находиться. Это касается `GetBrandCustomerCardQuery`, `GetBrandCustomerMetricBalancesQuery`, `GetCoinBalanceQuery` и `GetCoinHistoryQuery`.
 
 Управление сотрудниками бренда также переведено на phone-first модель. Добавление сотрудника выполняется через `AddBrandStaffByPhoneCommand`: Application нормализует номер телефона, ищет существующего пользователя по активной `Phone` identity и добавляет ему роль `STAFF` в бренде. Auto-create здесь не применяется: если телефонный пользователь не найден, сценарий должен отказать, потому что добавление сотрудника является управлением доступом, а не клиентским начислением. Telegram staff-flow больше не просит и не показывает `CustomerCode`; список, детали, подтверждение добавления и удаления сотрудника используют телефон как внешний идентификатор. Внутренние операции по-прежнему работают с `User.Id` и `BrandMembership`.
 
@@ -193,7 +201,7 @@ Telegram bot - основной рабочий UI.
 - `src/StampService.TelegramBot/Features/IssueMetric` - выдача метрик сотрудником; бот собирает телефон/количество и вызывает `IssueMetricByPhoneCommand`. Команда ожидает, что клиент уже создан как phone-user; если активной `Phone` identity нет, это отказ бизнес-сценария, а не повод создавать клиента неявно.
 - `src/StampService.TelegramBot/Features/Coins` - начисление/списание монеток; начисление идет через `IssueCoinsByPhoneCommand` по телефону уже существующего клиента, списание остается по одноразовому коду списания.
 - `src/StampService.TelegramBot/Features/CoinProducts` - выдача товара за монетки; сотрудник вводит одноразовый `RedemptionCode`, выбирает доступный товар, Application списывает монетки через ledger, а финальный Telegram-экран показывает имя клиента, списание и баланс без `CustomerCode`.
-- `src/StampService.TelegramBot/Features/CustomerBalances` - просмотр балансов клиента; бот собирает телефон клиента, Application ищет существующую активную `Phone` identity и не создает нового пользователя.
+- `src/StampService.TelegramBot/Features/CustomerBalances` - просмотр балансов клиента; бот собирает телефон клиента, Application ищет `BrandCustomer` текущего бренда по активной `Phone` identity и не создает нового пользователя или связь с брендом.
 - `src/StampService.TelegramBot/Features/Staff` - управление сотрудниками бренда; добавление сотрудника идет по телефону через `AddBrandStaffByPhoneCommand`, без auto-create и без `CustomerCode` в UI.
 - `src/StampService.TelegramBot/Features/Admin` - системная админка; создание бренда с владельцем и смена владельца идут по телефону существующего пользователя через `CreateBrandWithOwnerCommand` и `ReassignBrandOwnerCommand`, без auto-create и без `CustomerCode` в UI.
 - `src/StampService.TelegramBot/Common/Errors/BotErrorFormatter.cs` - перевод application errors в пользовательские сообщения.
@@ -270,7 +278,7 @@ Web-навигация следует тому же принципу, что Tel
 
 Текущая frontend-архитектура навигации: `AppShell` формирует единый список доступных `navigationItems` один раз из уже загруженного состояния брендов и admin access, а затем рендерит этот список разными layout-ами. Desktop/tablet использует левый `sidebar`, mobile использует fixed bottom navigation. Для mobile не создается отдельная role/access matrix; доступность пунктов остается общей. Повторяемые labels и короткие mobile labels хранятся в `src/StampService.Web/src/app/navigationLabels.ts`. `Админка` остается отдельным пунктом навигации, если доступна, и не прячется внутрь аккаунта.
 
-Для права `CanViewBalances` в web добавлен тонкий сценарий просмотра балансов клиента по телефону через `GET /api/brands/{brandId}/customer-balances`, который вызывает существующий Application query `GetBrandCustomerMetricBalancesQuery`. Панель балансов показывается только при наличии `CanViewBalances` и включенных метрик или монеток.
+Для права `CanViewBalances` в web добавлен тонкий сценарий просмотра балансов клиента по телефону через `GET /api/brands/{brandId}/customer-balances`, который вызывает существующий Application query `GetBrandCustomerMetricBalancesQuery`. Query должен искать клиента через `BrandCustomer` текущего бренда, а не глобально по `UserIdentity`. Панель балансов показывается только при наличии `CanViewBalances` и включенных метрик или монеток.
 
 ### Web mobile layout
 
@@ -594,7 +602,7 @@ Application details-сценарий возвращает web-ready данные
 Ключевая UX-модель:
 
 - если клиент не выбран, рабочая зона показывает отдельный экран поиска клиента по телефону;
-- поиск клиента является read-only сценарием: frontend валидирует/нормализует телефон как остальные phone-поля, а Application ищет существующего пользователя по активной `Phone` identity;
+- поиск клиента является read-only сценарием: frontend валидирует/нормализует телефон как остальные phone-поля, а Application ищет пользователя только среди `BrandCustomer` текущего бренда по активной `Phone` identity;
 - поиск/открытие карточки не создает пользователя автоматически; начисления по телефону также не создают клиента неявно и требуют уже существующую активную `Phone` identity;
 - экран поиска хранит локальную историю последних успешно открытых телефонов в `localStorage` с привязкой к `brandId`; это best-effort UX-кэш только для быстрого повторного открытия карточки, а не источник истины и не бизнес-аудит;
 - таблица `Недавние номера` хранит до 6 номеров, может быть очищена пользователем кнопкой `Очистить`, и пополняется при успешном открытии существующей карточки или после явного создания нового клиента, когда frontend повторно загрузил полноценную карточку;
@@ -602,7 +610,7 @@ Application details-сценарий возвращает web-ready данные
 - если клиент не найден, frontend не создает пользователя и не остается на тупиковой ошибке: `GET /api/brands/{brandId}/customer-card` возвращает успешный lookup-ответ `found=false`, `BrandCustomerSearchScreen` сообщает в `BrandWorkspace` нормализованный телефон, а `BrandWorkspace` открывает локальную draft-карточку `Новый клиент` для этого телефона;
 - draft-карточка является только UX-состоянием web-клиента: в ней нет `User.Id`, `CustomerCode`, реальных балансов, истории и `WalletBrandDetailsBlock`; она показывает телефон и поясняет, что начисления и другие операции станут доступны только после явного создания клиента;
 - для draft-клиента блок `Операции` не рендерится. В карточке доступно действие явного создания клиента; если `BrandWorkspaceResponse.WelcomeRewards` сообщает, что приветственные награды включены и в них есть доступные rewards, кнопка показывает, что вместе с созданием будут выданы приветственные награды;
-- приветственные награды являются backend/Application-поведением сценария создания клиента из draft-карточки. Frontend не вызывает отдельные issue endpoints для welcome-наград, не моделирует ledger-операции сам и после успешного `createBrandCustomerByPhone` всегда перезагружает полноценную карточку через `getBrandCustomerCard`;
+- приветственные награды являются backend/Application-поведением сценария создания `BrandCustomer` из draft-карточки. Frontend не вызывает отдельные issue endpoints для welcome-наград, не моделирует ledger-операции сам и после успешного `createBrandCustomerByPhone` всегда перезагружает полноценную карточку через `getBrandCustomerCard`;
 - обычная карточка клиента показывает имя, телефон и блок `Штампы` / `Монетки` / `История`;
 - блок наград/истории реально переиспользуется из wallet UI через общий компонент `WalletBrandDetailsBlock` из `src/StampService.Web/src/wallet/WalletBrandDetailsBlock.tsx`, поэтому изменения в визуальном паттерне наград применяются и в кошельке, и в карточке клиента;
 - операции переиспользуют существующие панели `BrandWorkspace`: выдача штампов/монеток берет телефон из выбранной карточки, а списание штампов, списание монеток и выдача товара по-прежнему требуют одноразовый код списания клиента;
@@ -617,7 +625,7 @@ Application details-сценарий возвращает web-ready данные
 
 - для открытия карточки клиента добавлен thin HTTP endpoint `GET /api/brands/{brandId}/customer-card` поверх Application query `GetBrandCustomerCardQuery`;
 - HTTP endpoint возвращает lookup DTO (`found` + nullable `card`): существующий клиент приходит как `200 OK, found=true`, а ожидаемый сценарий отсутствующего клиента - как `200 OK, found=false`, чтобы frontend не трактовал draft-flow как сетевую ошибку; реальные ошибки доступа, валидации и прочие отказы остаются error-response через общий `EndpointResult`;
-- Application query нормализует телефон, проверяет доступ к просмотру балансов, ищет существующую активную `Phone` identity и переиспользует wallet details-сценарий для данных карточки;
+- Application query нормализует телефон, проверяет доступ к просмотру балансов, ищет клиента через `IBrandCustomerRepository.GetCustomerByPhoneAsync(brandId, Phone, normalizedPhone)` и переиспользует wallet details-сценарий для данных карточки. Нельзя возвращаться к глобальному `IUserRepository.GetByIdentityAsync` в этом flow, иначе пользователь-клиент одного бренда начнет находиться в другом бренде;
 - бизнес-логика поиска клиента не реализуется во frontend;
 - существующие brand workspace HTTP-сценарии и typed API client используются для операций и управления как прежде;
 - frontend только строит навигацию по permissions из `BrandWorkspaceResponse`, собирает ввод, вызывает существующие API-функции, показывает пользовательский результат и может хранить локальные UX-подсказки вроде недавних телефонов;

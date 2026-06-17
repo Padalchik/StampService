@@ -162,6 +162,7 @@ public class PurchaseCoinProductHandlerTests
         var transactionRepository = new FakeCoinTransactionRepository();
         var codeRepository = new FakeRedemptionCodeRepository();
         var userRepository = new FakeUserRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         var notificationService = new RecordingCustomerNotificationService();
 
         brandRepository.AddExisting(brand);
@@ -169,6 +170,7 @@ public class PurchaseCoinProductHandlerTests
             membershipRepository.SetRole(staffUserId, brandId, SystemRoles.Staff);
 
         userRepository.Add(customer);
+        brandCustomerRepository.AddExisting(brandId, customer.Id, staffUserId);
         productRepository.Add(product);
 
         var wallet = CoinWallet.Create(customer.Id, brandId).Value;
@@ -185,6 +187,7 @@ public class PurchaseCoinProductHandlerTests
 
         var handler = new PurchaseCoinProductHandler(
             new BrandAccessService(membershipRepository),
+            brandCustomerRepository,
             brandRepository,
             new CoinLedgerService(walletRepository, transactionRepository),
             productRepository,

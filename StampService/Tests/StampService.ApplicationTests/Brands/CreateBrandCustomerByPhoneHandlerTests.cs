@@ -1,6 +1,7 @@
 using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
+using StampService.Application.Brands;
 using StampService.Application.Brands.Commands.CreateBrandCustomerByPhone;
 using StampService.Application.Brands.Queries.GetBrandCustomerCard;
 using StampService.Application.Coins;
@@ -67,7 +68,7 @@ public class CreateBrandCustomerByPhoneHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenPhoneAlreadyExists_ShouldNotIssueWelcomeRewardsAgain()
+    public async Task Handle_WhenPhoneAlreadyExistsButBrandCustomerIsNew_ShouldIssueWelcomeRewards()
     {
         var actor = User.Create("Staff").Value;
         var existingCustomer = User.Create("Customer").Value;
@@ -105,7 +106,8 @@ public class CreateBrandCustomerByPhoneHandlerTests
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
-        Assert.Empty(coinTransactionRepository.Transactions);
+        Assert.Single(coinTransactionRepository.Transactions);
+        Assert.Equal(3, coinTransactionRepository.Transactions.Single().Amount);
     }
 
     private static CreateBrandCustomerByPhoneHandler CreateHandler(
@@ -118,14 +120,17 @@ public class CreateBrandCustomerByPhoneHandlerTests
         FakeCoinTransactionRepository coinTransactionRepository,
         FakeUserRepository userRepository)
     {
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
+
         return new CreateBrandCustomerByPhoneHandler(
             new BrandAccessService(membershipRepository),
+            brandCustomerRepository,
+            new BrandCustomerService(brandCustomerRepository),
             brandRepository,
             new MetricLedgerService(metricBalanceRepository, stampTransactionRepository),
             new CoinLedgerService(coinWalletRepository, coinTransactionRepository),
             metricRepository,
             new PhoneAccountService(userRepository, new FixedDisplayNameGenerator()),
-            userRepository,
             new StubCustomerCardHandler());
     }
 
