@@ -16,6 +16,7 @@ public class GetUserWalletOverviewHandler
     private readonly ICoinProductRepository _coinProductRepository;
     private readonly ICoinWalletRepository _coinWalletRepository;
     private readonly IBrandRepository _brandRepository;
+    private readonly IBrandCustomerRepository _brandCustomerRepository;
     private readonly IMetricBalanceRepository _metricBalanceRepository;
     private readonly IUserRepository _userRepository;
 
@@ -23,12 +24,14 @@ public class GetUserWalletOverviewHandler
         ICoinProductRepository coinProductRepository,
         ICoinWalletRepository coinWalletRepository,
         IBrandRepository brandRepository,
+        IBrandCustomerRepository brandCustomerRepository,
         IMetricBalanceRepository metricBalanceRepository,
         IUserRepository userRepository)
     {
         _coinProductRepository = coinProductRepository;
         _coinWalletRepository = coinWalletRepository;
         _brandRepository = brandRepository;
+        _brandCustomerRepository = brandCustomerRepository;
         _metricBalanceRepository = metricBalanceRepository;
         _userRepository = userRepository;
     }
@@ -51,15 +54,14 @@ public class GetUserWalletOverviewHandler
             query.UserId,
             cancellationToken);
 
-        var brandIds = metricBalances
-            .Select(balance => balance.BrandId)
-            .Concat(coinWallets.Select(wallet => wallet.BrandId))
-            .Distinct()
-            .ToArray();
+        var brandCustomers = await _brandCustomerRepository.GetUserBrandCustomersAsync(
+            query.UserId,
+            cancellationToken);
 
         var brands = new List<UserWalletBrandOverviewResponse>();
-        foreach (var brandId in brandIds)
+        foreach (var brandCustomer in brandCustomers)
         {
+            var brandId = brandCustomer.BrandId;
             var brand = await _brandRepository.GetByIdAsync(brandId, cancellationToken);
             if (brand is null)
                 continue;

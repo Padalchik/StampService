@@ -44,6 +44,17 @@ public class BrandCustomerRepository : IBrandCustomerRepository
         return brandCustomer?.User;
     }
 
+    public async Task<IReadOnlyCollection<UserBrandCustomerReadModel>> GetUserBrandCustomersAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.BrandCustomers
+            .AsNoTracking()
+            .Where(customer => customer.UserId == userId)
+            .Select(customer => new UserBrandCustomerReadModel(customer.BrandId))
+            .ToArrayAsync(cancellationToken);
+    }
+
     public void Add(BrandCustomer brandCustomer)
     {
         _dbContext.BrandCustomers.Add(brandCustomer);

@@ -43,6 +43,18 @@ public class FakeBrandCustomerRepository : IBrandCustomerRepository
             : null;
     }
 
+    public Task<IReadOnlyCollection<UserBrandCustomerReadModel>> GetUserBrandCustomersAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyCollection<UserBrandCustomerReadModel> result = _customers
+            .Where(customer => customer.UserId == userId)
+            .Select(customer => new UserBrandCustomerReadModel(customer.BrandId))
+            .ToArray();
+
+        return Task.FromResult(result);
+    }
+
     public void Add(BrandCustomer brandCustomer)
     {
         _customers.Add(brandCustomer);

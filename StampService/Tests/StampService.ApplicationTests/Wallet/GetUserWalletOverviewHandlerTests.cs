@@ -19,9 +19,11 @@ public class GetUserWalletOverviewHandlerTests
         var productRepository = new FakeCoinProductRepository();
         var walletRepository = new FakeCoinWalletRepository();
         var brandRepository = new FakeBrandRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         var metricBalanceRepository = new FakeMetricBalanceRepository();
         userRepository.Add(user);
         brandRepository.AddExisting(brandEntity);
+        brandCustomerRepository.AddExisting(brandId, user.Id);
 
         var wallet = CoinWallet.Create(user.Id, brandId).Value;
         wallet.SetMaterializedValue(8);
@@ -48,6 +50,7 @@ public class GetUserWalletOverviewHandlerTests
             productRepository,
             walletRepository,
             brandRepository,
+            brandCustomerRepository,
             metricBalanceRepository,
             userRepository);
 
@@ -73,14 +76,86 @@ public class GetUserWalletOverviewHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenUserIsBrandCustomerWithoutBalances_ShouldReturnBrand()
+    {
+        var user = User.Create("Customer").Value;
+        var brand = Brand.Create("Brand").Value;
+        var userRepository = new FakeUserRepository();
+        var productRepository = new FakeCoinProductRepository();
+        var walletRepository = new FakeCoinWalletRepository();
+        var brandRepository = new FakeBrandRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
+        var metricBalanceRepository = new FakeMetricBalanceRepository();
+        userRepository.Add(user);
+        brandRepository.AddExisting(brand);
+        brandCustomerRepository.AddExisting(brand.Id, user.Id);
+
+        var handler = new GetUserWalletOverviewHandler(
+            productRepository,
+            walletRepository,
+            brandRepository,
+            brandCustomerRepository,
+            metricBalanceRepository,
+            userRepository);
+
+        var result = await handler.Handle(
+            new GetUserWalletOverviewQuery(user.Id),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        var brandOverview = Assert.Single(result.Value.Brands);
+        Assert.Equal(brand.Id, brandOverview.BrandId);
+        Assert.Equal(brand.Name, brandOverview.BrandName);
+        Assert.Equal(0, brandOverview.CoinBalance);
+        Assert.Empty(brandOverview.AvailableCoinProducts);
+        Assert.Empty(brandOverview.AvailableMetrics);
+    }
+
+    [Fact]
+    public async Task Handle_WhenUserHasBalanceButIsNotBrandCustomer_ShouldNotReturnBrand()
+    {
+        var user = User.Create("Customer").Value;
+        var brand = Brand.Create("Brand").Value;
+        var userRepository = new FakeUserRepository();
+        var productRepository = new FakeCoinProductRepository();
+        var walletRepository = new FakeCoinWalletRepository();
+        var brandRepository = new FakeBrandRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
+        var metricBalanceRepository = new FakeMetricBalanceRepository();
+        userRepository.Add(user);
+        brandRepository.AddExisting(brand);
+
+        var wallet = CoinWallet.Create(user.Id, brand.Id).Value;
+        wallet.SetMaterializedValue(10);
+        walletRepository.Add(wallet);
+
+        var handler = new GetUserWalletOverviewHandler(
+            productRepository,
+            walletRepository,
+            brandRepository,
+            brandCustomerRepository,
+            metricBalanceRepository,
+            userRepository);
+
+        var result = await handler.Handle(
+            new GetUserWalletOverviewQuery(user.Id),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Value.Brands);
+    }
+
+    [Fact]
     public async Task Handle_WhenUserDoesNotExist_ShouldFail()
     {
+        var userRepository = new FakeUserRepository();
         var handler = new GetUserWalletOverviewHandler(
             new FakeCoinProductRepository(),
             new FakeCoinWalletRepository(),
             new FakeBrandRepository(),
+            new FakeBrandCustomerRepository(userRepository),
             new FakeMetricBalanceRepository(),
-            new FakeUserRepository());
+            userRepository);
 
         var result = await handler.Handle(
             new GetUserWalletOverviewQuery(Guid.NewGuid()),
@@ -99,9 +174,11 @@ public class GetUserWalletOverviewHandlerTests
         var productRepository = new FakeCoinProductRepository();
         var walletRepository = new FakeCoinWalletRepository();
         var brandRepository = new FakeBrandRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         var metricBalanceRepository = new FakeMetricBalanceRepository();
         userRepository.Add(user);
         brandRepository.AddExisting(brand);
+        brandCustomerRepository.AddExisting(brand.Id, user.Id);
 
         var wallet = CoinWallet.Create(user.Id, brand.Id).Value;
         wallet.SetMaterializedValue(10);
@@ -116,6 +193,7 @@ public class GetUserWalletOverviewHandlerTests
             productRepository,
             walletRepository,
             brandRepository,
+            brandCustomerRepository,
             metricBalanceRepository,
             userRepository);
 
@@ -147,9 +225,11 @@ public class GetUserWalletOverviewHandlerTests
         var productRepository = new FakeCoinProductRepository();
         var walletRepository = new FakeCoinWalletRepository();
         var brandRepository = new FakeBrandRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         var metricBalanceRepository = new FakeMetricBalanceRepository();
         userRepository.Add(user);
         brandRepository.AddExisting(brand);
+        brandCustomerRepository.AddExisting(brand.Id, user.Id);
 
         var wallet = CoinWallet.Create(user.Id, brand.Id).Value;
         wallet.SetMaterializedValue(10);
@@ -160,6 +240,7 @@ public class GetUserWalletOverviewHandlerTests
             productRepository,
             walletRepository,
             brandRepository,
+            brandCustomerRepository,
             metricBalanceRepository,
             userRepository);
 

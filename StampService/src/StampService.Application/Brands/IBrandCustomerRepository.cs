@@ -16,6 +16,10 @@ public interface IBrandCustomerRepository
         string identityKey,
         CancellationToken cancellationToken);
 
+    Task<IReadOnlyCollection<UserBrandCustomerReadModel>> GetUserBrandCustomersAsync(
+        Guid userId,
+        CancellationToken cancellationToken);
+
     void Add(BrandCustomer brandCustomer);
 
     Task SaveAsync(CancellationToken cancellationToken);
