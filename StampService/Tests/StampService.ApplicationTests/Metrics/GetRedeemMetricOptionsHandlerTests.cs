@@ -23,9 +23,11 @@ public class GetRedeemMetricOptionsHandlerTests
         var metricRepository = new FakeLoyaltyMetricRepository();
         var balanceRepository = new FakeMetricBalanceRepository();
         var codeRepository = new FakeRedemptionCodeRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
 
         userRepository.Add(redeemer);
         userRepository.Add(customer);
+        brandCustomerRepository.AddExisting(brandId, customer.Id, redeemer.Id);
         membershipRepository.SetRole(redeemer.Id, brandId, SystemRoles.Staff);
         metricRepository.AddExisting(availableMetric);
         metricRepository.AddExisting(unavailableMetric);
@@ -41,6 +43,7 @@ public class GetRedeemMetricOptionsHandlerTests
 
         var handler = new GetRedeemMetricOptionsHandler(
             new BrandAccessService(membershipRepository),
+            brandCustomerRepository,
             metricRepository,
             balanceRepository,
             codeRepository,
@@ -71,12 +74,15 @@ public class GetRedeemMetricOptionsHandlerTests
     public async Task Handle_WhenRedeemerCannotRedeem_ShouldFail()
     {
         var now = new DateTimeOffset(2026, 5, 8, 12, 0, 0, TimeSpan.Zero);
+        var userRepository = new FakeUserRepository();
+
         var handler = new GetRedeemMetricOptionsHandler(
             new BrandAccessService(new FakeBrandMembershipRepository()),
+            new FakeBrandCustomerRepository(userRepository),
             new FakeLoyaltyMetricRepository(),
             new FakeMetricBalanceRepository(),
             new FakeRedemptionCodeRepository(),
-            new FakeUserRepository(),
+            userRepository,
             new FixedTimeProvider(now));
 
         var result = await handler.Handle(

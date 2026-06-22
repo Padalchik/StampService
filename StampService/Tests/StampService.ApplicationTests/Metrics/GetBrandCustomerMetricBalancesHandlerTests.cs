@@ -28,9 +28,11 @@ public class GetBrandCustomerMetricBalancesHandlerTests
         var metricRepository = new FakeLoyaltyMetricRepository();
         var balanceRepository = new FakeMetricBalanceRepository();
         var coinWalletRepository = new FakeCoinWalletRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
 
         userRepository.Add(staff);
         userRepository.Add(customer);
+        brandCustomerRepository.AddExisting(brandId, customer.Id, staff.Id);
         membershipRepository.SetRole(staff.Id, brandId, SystemRoles.Staff);
         metricRepository.AddExisting(activeMetric);
         metricRepository.AddExisting(inactiveMetric);
@@ -48,7 +50,7 @@ public class GetBrandCustomerMetricBalancesHandlerTests
             metricRepository,
             balanceRepository,
             coinWalletRepository,
-            userRepository);
+            brandCustomerRepository);
 
         var result = await handler.Handle(
             new GetBrandCustomerMetricBalancesQuery(staff.Id, brandId, "+7 999 123-45-67"),
@@ -73,12 +75,14 @@ public class GetBrandCustomerMetricBalancesHandlerTests
     [Fact]
     public async Task Handle_WhenUserCannotViewBalances_ShouldFail()
     {
+        var userRepository = new FakeUserRepository();
+
         var handler = new GetBrandCustomerMetricBalancesHandler(
             new BrandAccessService(new FakeBrandMembershipRepository()),
             new FakeLoyaltyMetricRepository(),
             new FakeMetricBalanceRepository(),
             new FakeCoinWalletRepository(),
-            new FakeUserRepository());
+            new FakeBrandCustomerRepository(userRepository));
 
         var result = await handler.Handle(
             new GetBrandCustomerMetricBalancesQuery(Guid.NewGuid(), Guid.NewGuid(), "+79991234567"),
@@ -96,8 +100,10 @@ public class GetBrandCustomerMetricBalancesHandlerTests
         customer.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
         var userRepository = new FakeUserRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         userRepository.Add(staff);
         userRepository.Add(customer);
+        brandCustomerRepository.AddExisting(brandId, customer.Id, staff.Id);
         membershipRepository.SetRole(staff.Id, brandId, SystemRoles.Staff);
 
         var handler = new GetBrandCustomerMetricBalancesHandler(
@@ -105,7 +111,7 @@ public class GetBrandCustomerMetricBalancesHandlerTests
             new FakeLoyaltyMetricRepository(),
             new FakeMetricBalanceRepository(),
             new FakeCoinWalletRepository(),
-            userRepository);
+            brandCustomerRepository);
 
         var result = await handler.Handle(
             new GetBrandCustomerMetricBalancesQuery(staff.Id, brandId, "+79991234567"),
@@ -122,6 +128,7 @@ public class GetBrandCustomerMetricBalancesHandlerTests
         var staff = User.Create("Staff").Value;
         var userRepository = new FakeUserRepository();
         var membershipRepository = new FakeBrandMembershipRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         userRepository.Add(staff);
         membershipRepository.SetRole(staff.Id, brandId, SystemRoles.Staff);
 
@@ -130,7 +137,7 @@ public class GetBrandCustomerMetricBalancesHandlerTests
             new FakeLoyaltyMetricRepository(),
             new FakeMetricBalanceRepository(),
             new FakeCoinWalletRepository(),
-            userRepository);
+            brandCustomerRepository);
 
         var result = await handler.Handle(
             new GetBrandCustomerMetricBalancesQuery(staff.Id, brandId, "+79991234567"),

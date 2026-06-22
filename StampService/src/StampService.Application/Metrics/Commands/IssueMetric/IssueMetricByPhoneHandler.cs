@@ -15,6 +15,7 @@ namespace StampService.Application.Metrics.Commands.IssueMetric;
 public class IssueMetricByPhoneHandler : ICommandHandler<IssueMetricResponse, IssueMetricByPhoneCommand>
 {
     private readonly IBrandAccessService _brandAccessService;
+    private readonly IBrandCustomerService _brandCustomerService;
     private readonly IBrandRepository _brandRepository;
     private readonly IBusinessAuditSink _businessAuditSink;
     private readonly ICustomerNotificationService _customerNotificationService;
@@ -24,6 +25,7 @@ public class IssueMetricByPhoneHandler : ICommandHandler<IssueMetricResponse, Is
 
     public IssueMetricByPhoneHandler(
         IBrandAccessService brandAccessService,
+        IBrandCustomerService brandCustomerService,
         IBrandRepository brandRepository,
         IMetricLedgerService metricLedgerService,
         ILoyaltyMetricRepository metricRepository,
@@ -32,6 +34,7 @@ public class IssueMetricByPhoneHandler : ICommandHandler<IssueMetricResponse, Is
         IBusinessAuditSink? businessAuditSink = null)
     {
         _brandAccessService = brandAccessService;
+        _brandCustomerService = brandCustomerService;
         _brandRepository = brandRepository;
         _businessAuditSink = businessAuditSink ?? NoopBusinessAuditSink.Instance;
         _customerNotificationService = customerNotificationService ?? NullCustomerNotificationService.Instance;
@@ -81,12 +84,20 @@ public class IssueMetricByPhoneHandler : ICommandHandler<IssueMetricResponse, Is
         if (transactionValidation.IsFailed)
             return await RejectedAsync(command, transactionValidation.Errors, metric.BrandId, null, null, comment, cancellationToken);
 
-        var customerResult = await _phoneAccountService.GetOrCreateForBusinessOperationAsync(
+        var customerResult = await _phoneAccountService.GetExistingForBusinessOperationAsync(
             command.Request.PhoneNumber,
             nameof(command.Request.PhoneNumber),
             cancellationToken);
         if (customerResult.IsFailed)
             return await RejectedAsync(command, customerResult.Errors, metric.BrandId, null, null, comment, cancellationToken);
+
+        var customerLinkResult = await _brandCustomerService.EnsureAsync(
+            metric.BrandId,
+            customerResult.Value.Id,
+            command.IssuerUserId,
+            cancellationToken);
+        if (customerLinkResult.IsFailed)
+            return await RejectedAsync(command, customerLinkResult.Errors, metric.BrandId, customerResult.Value.Id, null, comment, cancellationToken);
 
         var ledgerResult = await _metricLedgerService.IssueAsync(
             customerResult.Value.Id,

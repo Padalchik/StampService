@@ -19,13 +19,15 @@ public class GetCoinBalanceAndHistoryHandlerTests
         customer.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
         var membershipRepository = new FakeBrandMembershipRepository();
         var userRepository = new FakeUserRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         membershipRepository.SetRole(actorUserId, brandId, SystemRoles.Staff);
         userRepository.Add(customer);
+        brandCustomerRepository.AddExisting(brandId, customer.Id, actorUserId);
 
         var handler = new GetCoinBalanceHandler(
             new BrandAccessService(membershipRepository),
-            new FakeCoinWalletRepository(),
-            userRepository);
+            brandCustomerRepository,
+            new FakeCoinWalletRepository());
 
         var result = await handler.Handle(
             new GetCoinBalanceQuery(brandId, actorUserId, "+7 999 123-45-67"),
@@ -43,12 +45,13 @@ public class GetCoinBalanceAndHistoryHandlerTests
         var brandId = Guid.NewGuid();
         var actorUserId = Guid.NewGuid();
         var membershipRepository = new FakeBrandMembershipRepository();
+        var userRepository = new FakeUserRepository();
         membershipRepository.SetRole(actorUserId, brandId, SystemRoles.Staff);
 
         var handler = new GetCoinBalanceHandler(
             new BrandAccessService(membershipRepository),
-            new FakeCoinWalletRepository(),
-            new FakeUserRepository());
+            new FakeBrandCustomerRepository(userRepository),
+            new FakeCoinWalletRepository());
 
         var result = await handler.Handle(
             new GetCoinBalanceQuery(brandId, actorUserId, "+79991234567"),
@@ -66,10 +69,12 @@ public class GetCoinBalanceAndHistoryHandlerTests
         customer.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
         var membershipRepository = new FakeBrandMembershipRepository();
         var userRepository = new FakeUserRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
         var walletRepository = new FakeCoinWalletRepository();
         var transactionRepository = new FakeCoinTransactionRepository();
         membershipRepository.SetRole(actorUserId, brandId, SystemRoles.Staff);
         userRepository.Add(customer);
+        brandCustomerRepository.AddExisting(brandId, customer.Id, actorUserId);
         var wallet = CoinWallet.Create(customer.Id, brandId).Value;
         walletRepository.Add(wallet);
         transactionRepository.Add(CoinTransaction.CreateIssue(wallet.Id, 10, "Issue", Guid.NewGuid()).Value);
@@ -77,9 +82,9 @@ public class GetCoinBalanceAndHistoryHandlerTests
 
         var handler = new GetCoinHistoryHandler(
             new BrandAccessService(membershipRepository),
+            brandCustomerRepository,
             walletRepository,
-            transactionRepository,
-            userRepository);
+            transactionRepository);
 
         var result = await handler.Handle(
             new GetCoinHistoryQuery(brandId, actorUserId, "+7 999 123-45-67", Skip: 0, Take: 10),

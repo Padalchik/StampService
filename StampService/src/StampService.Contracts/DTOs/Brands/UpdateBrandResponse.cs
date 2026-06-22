@@ -7,4 +7,5 @@ public record UpdateBrandResponse(
     bool IsCoinsEnabled,
     bool IsCoinProductRedemptionEnabled,
     bool IsManualCoinRedemptionEnabled,
+    BrandWelcomeRewardSettingsResponse WelcomeRewards,
     DateTime? UpdatedAt);

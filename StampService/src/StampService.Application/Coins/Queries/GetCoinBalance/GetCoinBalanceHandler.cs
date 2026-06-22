@@ -2,8 +2,8 @@ using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
 using StampService.Application.Auth;
+using StampService.Application.Brands;
 using StampService.Application.Errors;
-using StampService.Application.Users;
 using StampService.Contracts.DTOs.Coins;
 using StampService.Domain.Access;
 using StampService.Domain.User;
@@ -13,17 +13,17 @@ namespace StampService.Application.Coins.Queries.GetCoinBalance;
 public class GetCoinBalanceHandler : IQueryHandler<CoinBalanceResponse, GetCoinBalanceQuery>
 {
     private readonly IBrandAccessService _brandAccessService;
+    private readonly IBrandCustomerRepository _brandCustomerRepository;
     private readonly ICoinWalletRepository _coinWalletRepository;
-    private readonly IUserRepository _userRepository;
 
     public GetCoinBalanceHandler(
         IBrandAccessService brandAccessService,
-        ICoinWalletRepository coinWalletRepository,
-        IUserRepository userRepository)
+        IBrandCustomerRepository brandCustomerRepository,
+        ICoinWalletRepository coinWalletRepository)
     {
         _brandAccessService = brandAccessService;
+        _brandCustomerRepository = brandCustomerRepository;
         _coinWalletRepository = coinWalletRepository;
-        _userRepository = userRepository;
     }
 
     public async Task<Result<CoinBalanceResponse>> Handle(
@@ -45,7 +45,8 @@ public class GetCoinBalanceHandler : IQueryHandler<CoinBalanceResponse, GetCoinB
         if (phoneNumberResult.IsFailed)
             return Result.Fail(phoneNumberResult.Errors);
 
-        var customer = await _userRepository.GetByIdentityAsync(
+        var customer = await _brandCustomerRepository.GetCustomerByPhoneAsync(
+            query.BrandId,
             IdentityType.Phone,
             phoneNumberResult.Value,
             cancellationToken);

@@ -15,5 +15,15 @@ public interface IPhoneAccountService
         string? invalidField,
         CancellationToken cancellationToken);
 
+    Task<Result<PhoneAccountOperationResult>> GetOrCreateForBusinessOperationWithStatusAsync(
+        string phoneNumber,
+        string? invalidField,
+        CancellationToken cancellationToken);
+
+    Task<Result<User>> GetExistingForBusinessOperationAsync(
+        string phoneNumber,
+        string? invalidField,
+        CancellationToken cancellationToken);
+
     bool HasActivePhoneIdentity(User user);
 }

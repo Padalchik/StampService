@@ -11,6 +11,7 @@ namespace StampService.Application.Metrics.Commands.RedeemMetric;
 public class RedeemMetricValidationService : IRedeemMetricValidationService
 {
     private readonly IBrandAccessService _brandAccessService;
+    private readonly IBrandCustomerRepository _brandCustomerRepository;
     private readonly IBrandRepository _brandRepository;
     private readonly ILoyaltyMetricRepository _metricRepository;
     private readonly IRedemptionCodeRepository _redemptionCodeRepository;
@@ -20,6 +21,7 @@ public class RedeemMetricValidationService : IRedeemMetricValidationService
 
     public RedeemMetricValidationService(
         IBrandAccessService brandAccessService,
+        IBrandCustomerRepository brandCustomerRepository,
         IBrandRepository brandRepository,
         ILoyaltyMetricRepository metricRepository,
         IRedemptionCodeRepository redemptionCodeRepository,
@@ -28,6 +30,7 @@ public class RedeemMetricValidationService : IRedeemMetricValidationService
         TimeProvider timeProvider)
     {
         _brandAccessService = brandAccessService;
+        _brandCustomerRepository = brandCustomerRepository;
         _brandRepository = brandRepository;
         _metricRepository = metricRepository;
         _redemptionCodeRepository = redemptionCodeRepository;
@@ -77,6 +80,13 @@ public class RedeemMetricValidationService : IRedeemMetricValidationService
 
         if (activeCode is null)
             return Result.Fail(UserErrors.RedemptionCodeNotFoundOrExpired());
+
+        var brandCustomer = await _brandCustomerRepository.GetByBrandAndUserAsync(
+            metric.BrandId,
+            activeCode.UserId,
+            cancellationToken);
+        if (brandCustomer is null)
+            return Result.Fail(UserErrors.RecipientNotFound());
 
         var balance = await _metricBalanceRepository.GetByUserAndMetricAsync(
             activeCode.UserId,

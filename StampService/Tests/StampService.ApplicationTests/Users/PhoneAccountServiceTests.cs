@@ -94,6 +94,42 @@ public class PhoneAccountServiceTests
         Assert.Equal(0, repository.SaveCount);
     }
 
+    [Fact]
+    public async Task GetExistingForBusinessOperationAsync_WhenPhoneIdentityExists_ShouldReturnExistingUser()
+    {
+        var repository = new FakeUserRepository();
+        var existingUser = User.Create("Existing customer").Value;
+        existingUser.AddIdentity(IdentityType.Phone, "+79991234567", "{}");
+        repository.Add(existingUser);
+        var service = CreateService(repository);
+
+        var result = await service.GetExistingForBusinessOperationAsync(
+            "+7 999 123-45-67",
+            "phoneNumber",
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(existingUser.Id, result.Value.Id);
+        Assert.Single(repository.Users);
+        Assert.Equal(0, repository.SaveCount);
+    }
+
+    [Fact]
+    public async Task GetExistingForBusinessOperationAsync_WhenPhoneIdentityDoesNotExist_ShouldFailWithoutCreatingUser()
+    {
+        var repository = new FakeUserRepository();
+        var service = CreateService(repository);
+
+        var result = await service.GetExistingForBusinessOperationAsync(
+            "+7 999 123-45-67",
+            "phoneNumber",
+            CancellationToken.None);
+
+        Assert.True(result.IsFailed);
+        Assert.Empty(repository.Users);
+        Assert.Equal(0, repository.SaveCount);
+    }
+
     private static PhoneAccountService CreateService(FakeUserRepository repository)
     {
         return new PhoneAccountService(

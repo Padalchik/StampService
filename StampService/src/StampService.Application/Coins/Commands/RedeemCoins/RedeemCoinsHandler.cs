@@ -17,6 +17,7 @@ namespace StampService.Application.Coins.Commands.RedeemCoins;
 public class RedeemCoinsHandler : ICommandHandler<CoinOperationResponse, RedeemCoinsCommand>
 {
     private readonly IBrandAccessService _brandAccessService;
+    private readonly IBrandCustomerRepository _brandCustomerRepository;
     private readonly IBrandRepository _brandRepository;
     private readonly IBusinessAuditSink _businessAuditSink;
     private readonly ICoinLedgerService _coinLedgerService;
@@ -30,6 +31,7 @@ public class RedeemCoinsHandler : ICommandHandler<CoinOperationResponse, RedeemC
 
     public RedeemCoinsHandler(
         IBrandAccessService brandAccessService,
+        IBrandCustomerRepository brandCustomerRepository,
         IBrandRepository brandRepository,
         ICoinLedgerService coinLedgerService,
         ICoinTransactionRepository coinTransactionRepository,
@@ -42,6 +44,7 @@ public class RedeemCoinsHandler : ICommandHandler<CoinOperationResponse, RedeemC
         IBusinessAuditSink? businessAuditSink = null)
     {
         _brandAccessService = brandAccessService;
+        _brandCustomerRepository = brandCustomerRepository;
         _brandRepository = brandRepository;
         _businessAuditSink = businessAuditSink ?? NoopBusinessAuditSink.Instance;
         _coinLedgerService = coinLedgerService;
@@ -92,6 +95,13 @@ public class RedeemCoinsHandler : ICommandHandler<CoinOperationResponse, RedeemC
         var customer = await _userRepository.GetByIdAsync(activeCode.UserId, cancellationToken);
         if (customer is null)
             return await RejectedAsync(command, [UserErrors.NotFound()], activeCode.UserId, null, null, cancellationToken);
+
+        var brandCustomer = await _brandCustomerRepository.GetByBrandAndUserAsync(
+            command.BrandId,
+            customer.Id,
+            cancellationToken);
+        if (brandCustomer is null)
+            return await RejectedAsync(command, [UserErrors.RecipientNotFound()], customer.Id, null, null, cancellationToken);
 
         var wallet = await _coinWalletRepository.GetByUserAndBrandAsync(
             customer.Id,

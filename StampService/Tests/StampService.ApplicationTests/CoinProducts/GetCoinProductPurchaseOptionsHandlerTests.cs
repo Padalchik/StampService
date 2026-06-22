@@ -31,10 +31,12 @@ public class GetCoinProductPurchaseOptionsHandlerTests
         var transactionRepository = new FakeCoinTransactionRepository();
         var codeRepository = new FakeRedemptionCodeRepository();
         var userRepository = new FakeUserRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
 
         membershipRepository.SetRole(staffUserId, brandId, SystemRoles.Staff);
         brandRepository.AddExisting(brand);
         userRepository.Add(customer);
+        brandCustomerRepository.AddExisting(brandId, customer.Id, staffUserId);
         productRepository.Add(availableProduct);
         productRepository.Add(unavailableProduct);
         productRepository.Add(inactiveProduct);
@@ -51,6 +53,7 @@ public class GetCoinProductPurchaseOptionsHandlerTests
 
         var handler = new GetCoinProductPurchaseOptionsHandler(
             new BrandAccessService(membershipRepository),
+            brandCustomerRepository,
             brandRepository,
             productRepository,
             transactionRepository,
@@ -96,11 +99,13 @@ public class GetCoinProductPurchaseOptionsHandlerTests
         var productRepository = new FakeCoinProductRepository();
         var codeRepository = new FakeRedemptionCodeRepository();
         var userRepository = new FakeUserRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
 
         membershipRepository.SetRole(staffUserId, brandId, SystemRoles.Staff);
         brandRepository.AddExisting(brand);
         productRepository.Add(product);
         userRepository.Add(customer);
+        brandCustomerRepository.AddExisting(brandId, customer.Id, staffUserId);
         codeRepository.Add(RedemptionCode.Create(
             customer.Id,
             "1234",
@@ -109,6 +114,7 @@ public class GetCoinProductPurchaseOptionsHandlerTests
 
         var handler = new GetCoinProductPurchaseOptionsHandler(
             new BrandAccessService(membershipRepository),
+            brandCustomerRepository,
             brandRepository,
             productRepository,
             new FakeCoinTransactionRepository(),
@@ -145,6 +151,7 @@ public class GetCoinProductPurchaseOptionsHandlerTests
         var brandRepository = new FakeBrandRepository();
         var codeRepository = new FakeRedemptionCodeRepository();
         var userRepository = new FakeUserRepository();
+        var brandCustomerRepository = new FakeBrandCustomerRepository(userRepository);
 
         membershipRepository.SetRole(staffUserId, brand.Id, SystemRoles.Staff);
         brandRepository.AddExisting(brand);
@@ -157,6 +164,7 @@ public class GetCoinProductPurchaseOptionsHandlerTests
 
         var handler = new GetCoinProductPurchaseOptionsHandler(
             new BrandAccessService(membershipRepository),
+            brandCustomerRepository,
             brandRepository,
             new FakeCoinProductRepository(),
             new FakeCoinTransactionRepository(),
@@ -176,14 +184,17 @@ public class GetCoinProductPurchaseOptionsHandlerTests
     [Fact]
     public async Task Handle_WhenActorCannotRedeem_ShouldFail()
     {
+        var userRepository = new FakeUserRepository();
+
         var handler = new GetCoinProductPurchaseOptionsHandler(
             new BrandAccessService(new FakeBrandMembershipRepository()),
+            new FakeBrandCustomerRepository(userRepository),
             new FakeBrandRepository(),
             new FakeCoinProductRepository(),
             new FakeCoinTransactionRepository(),
             new FakeCoinWalletRepository(),
             new FakeRedemptionCodeRepository(),
-            new FakeUserRepository(),
+            userRepository,
             new FixedTimeProvider(DateTimeOffset.UtcNow));
 
         var result = await handler.Handle(

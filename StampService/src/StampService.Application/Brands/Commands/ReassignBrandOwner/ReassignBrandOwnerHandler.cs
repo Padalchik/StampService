@@ -14,17 +14,20 @@ namespace StampService.Application.Brands.Commands.ReassignBrandOwner;
 public class ReassignBrandOwnerHandler : ICommandHandler<ReassignBrandOwnerResponse, ReassignBrandOwnerCommand>
 {
     private readonly IAdminAccessService _adminAccessService;
+    private readonly IBrandCustomerService _brandCustomerService;
     private readonly IBrandRepository _brandRepository;
     private readonly IBrandMembershipRepository _brandMembershipRepository;
     private readonly IUserRepository _userRepository;
 
     public ReassignBrandOwnerHandler(
         IAdminAccessService adminAccessService,
+        IBrandCustomerService brandCustomerService,
         IBrandRepository brandRepository,
         IBrandMembershipRepository brandMembershipRepository,
         IUserRepository userRepository)
     {
         _adminAccessService = adminAccessService;
+        _brandCustomerService = brandCustomerService;
         _brandRepository = brandRepository;
         _brandMembershipRepository = brandMembershipRepository;
         _userRepository = userRepository;
@@ -97,6 +100,14 @@ public class ReassignBrandOwnerHandler : ICommandHandler<ReassignBrandOwnerRespo
             if (changeRoleResult.IsFailed)
                 return Result.Fail(changeRoleResult.Errors);
         }
+
+        var brandCustomerResult = await _brandCustomerService.EnsureAsync(
+            command.BrandId,
+            newOwner.Id,
+            newOwner.Id,
+            cancellationToken);
+        if (brandCustomerResult.IsFailed)
+            return Result.Fail(brandCustomerResult.Errors);
 
         await _brandMembershipRepository.SaveAsync(cancellationToken);
 

@@ -19,6 +19,7 @@ import {
 import { getApiErrorMessage } from '../api/errorMessages';
 import {
   addBrandStaffByPhone,
+  createBrandCustomerByPhone,
   createCoinProduct,
   createMetric,
   deleteCoinProduct,
@@ -128,7 +129,7 @@ export function BrandWorkspace({
   const showStaffManagement = workspace.canManageStaff;
   const showBrandSettings = workspace.canManageBrand;
 
-  const operationTabs = selectedCustomer?.kind === 'draft' ? getDraftOperationTabs(workspace) : getOperationTabs(workspace);
+  const operationTabs = selectedCustomer?.kind === 'draft' ? [] : getOperationTabs(workspace);
   const managementTabs = getManagementTabs({
     showMetricManagement,
     showCoinProductManagement,
@@ -139,7 +140,7 @@ export function BrandWorkspace({
     ? activeOperationType
     : operationTabs[0]?.id;
   const operationActionTabs = currentOperationType
-    ? getCustomerOperationActionTabs(workspace, currentOperationType, selectedCustomer)
+    ? getOperationActionTabs(workspace, currentOperationType)
     : [];
   const currentOperationAction = operationActionTabs.some((tab) => tab.id === activeOperationAction)
     ? activeOperationAction
@@ -224,17 +225,34 @@ export function BrandWorkspace({
           metricsError={metricsError}
           onOperationTypeChange={(nextType) => {
             setActiveOperationType(nextType);
-            const nextActions = getCustomerOperationActionTabs(workspace, nextType, selectedCustomer);
+            const nextActions = getOperationActionTabs(workspace, nextType);
             if (nextActions[0]) {
               setActiveOperationAction(nextActions[0].id);
             }
           }}
           onOperationActionChange={setActiveOperationAction}
           onCustomerChanged={refreshSelectedCustomer}
+          onCreateCustomer={createSelectedDraftCustomer}
         />
       ) : null}
     </div>
   );
+
+  async function createSelectedDraftCustomer(): Promise<void> {
+    if (!selectedCustomer || selectedCustomer.kind !== 'draft') {
+      return;
+    }
+
+    setCustomerCardError('');
+    const card = await createAndReloadCustomerCard(selectedCustomer.customerPhoneNumber);
+    setSelectedCustomer(card);
+    rememberRecentCustomerPhone(workspace.brandId, card.customerPhoneNumber);
+  }
+
+  async function createAndReloadCustomerCard(customerPhoneNumber: string): Promise<BrandCustomerCardResponse> {
+    await createBrandCustomerByPhone(workspace.brandId, customerPhoneNumber);
+    return await loadCustomerCardByPhone(customerPhoneNumber);
+  }
 
   async function refreshSelectedCustomer() {
     if (!selectedCustomer) {
@@ -247,7 +265,7 @@ export function BrandWorkspace({
       const wasDraftCustomer = selectedCustomer.kind === 'draft';
       const response = await getBrandCustomerCard(workspace.brandId, selectedCustomer.customerPhoneNumber);
       if (!response.found || !response.card) {
-        setCustomerCardError('Клиент пока не найден. Повторите обновление после начисления.');
+        setCustomerCardError('Клиент пока не найден. Повторите обновление после создания.');
         return;
       }
 
@@ -258,6 +276,15 @@ export function BrandWorkspace({
     } catch (requestError) {
       setCustomerCardError(getUserMessage(requestError));
     }
+  }
+
+  async function loadCustomerCardByPhone(customerPhoneNumber: string): Promise<BrandCustomerCardResponse> {
+    const response = await getBrandCustomerCard(workspace.brandId, customerPhoneNumber);
+    if (!response.found || !response.card) {
+      throw new Error('Клиент пока не найден. Повторите обновление после создания.');
+    }
+
+    return response.card;
   }
 }
 
@@ -304,7 +331,8 @@ function SelectedCustomerWorkspace({
   metricsError,
   onOperationTypeChange,
   onOperationActionChange,
-  onCustomerChanged
+  onCustomerChanged,
+  onCreateCustomer
 }: {
   customer: SelectedCustomerCard;
   customerCardError: string;
@@ -318,27 +346,32 @@ function SelectedCustomerWorkspace({
   onOperationTypeChange: (type: OperationType) => void;
   onOperationActionChange: (action: OperationAction) => void;
   onCustomerChanged: () => Promise<void>;
+  onCreateCustomer: () => Promise<void>;
 }) {
+  if (customer.kind === 'draft') {
+    return (
+      <NewCustomerWorkspace
+        customer={customer}
+        workspace={workspace}
+        customerCardError={customerCardError}
+        onCreateCustomer={onCreateCustomer}
+      />
+    );
+  }
+
   return (
     <div className="workspace-active-area">
       <section className="brand-customer-card">
         <div className="brand-customer-card__header">
           <div>
-            <span className="brand-customer-card__eyebrow">{customer.kind === 'draft' ? 'Новый клиент' : 'Клиент'}</span>
+            <span className="brand-customer-card__eyebrow">Клиент</span>
             <h3>{customer.customerName}</h3>
             <p>{formatRuPhoneInput(customer.customerPhoneNumber)}</p>
           </div>
         </div>
 
         {customerCardError ? <p className="form-status form-status--error">{customerCardError}</p> : null}
-        {customer.kind === 'draft' ? (
-          <div className="brand-customer-card__draft">
-            <p>У этого клиента пока нет истории в системе.</p>
-            <p>Клиент будет создан автоматически при первом начислении.</p>
-          </div>
-        ) : (
-          <WalletBrandDetailsBlock details={customer.details} ariaLabel="Разделы карточки клиента" />
-        )}
+        <WalletBrandDetailsBlock details={customer.details} ariaLabel="Разделы карточки клиента" />
       </section>
 
       <section className="brand-customer-operations">
@@ -368,6 +401,74 @@ function SelectedCustomerWorkspace({
       </section>
     </div>
   );
+}
+
+function NewCustomerWorkspace({
+  customer,
+  workspace,
+  customerCardError,
+  onCreateCustomer
+}: {
+  customer: DraftCustomerCard;
+  workspace: BrandWorkspaceResponse;
+  customerCardError: string;
+  onCreateCustomer: () => Promise<void>;
+}) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const willIssueWelcomeRewards = hasConfiguredWelcomeRewards(workspace);
+
+  async function submitCreateOnly() {
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      await onCreateCustomer();
+    } catch (requestError) {
+      setError(getUserMessage(requestError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="workspace-active-area">
+      <section className="brand-customer-card">
+        <div className="brand-customer-card__header">
+          <div>
+            <span className="brand-customer-card__eyebrow">Новый клиент</span>
+            <h3>{customer.customerName}</h3>
+            <p>{formatRuPhoneInput(customer.customerPhoneNumber)}</p>
+          </div>
+        </div>
+
+        <div className="brand-customer-card__draft">
+          <p>Клиент с этим телефоном ещё не создан.</p>
+          <p>Начисления и другие операции будут доступны только после явного создания клиента.</p>
+        </div>
+
+        <div className="work-form">
+          <div className="form-actions">
+            <button type="button" disabled={isSubmitting} onClick={() => void submitCreateOnly()}>
+              {willIssueWelcomeRewards
+                ? 'Создать клиента и выдать приветственные награды'
+                : 'Создать клиента'}
+            </button>
+          </div>
+        </div>
+
+        {customerCardError ? <p className="form-status form-status--error">{customerCardError}</p> : null}
+        {error ? <p className="form-status form-status--error">{error}</p> : null}
+      </section>
+    </div>
+  );
+}
+
+function hasConfiguredWelcomeRewards(workspace: BrandWorkspaceResponse): boolean {
+  const hasMetrics = workspace.isMetricsEnabled && workspace.welcomeRewards.metrics.length > 0;
+  const hasCoins = workspace.isCoinsEnabled && workspace.welcomeRewards.coinsAmount > 0;
+
+  return workspace.welcomeRewards.isEnabled && (hasMetrics || hasCoins);
 }
 
 function OperationWorkspace({
@@ -522,31 +623,6 @@ function getOperationTabs(workspace: BrandWorkspaceResponse): WorkspaceTabItem<O
       ? { id: 'coins', label: 'Монетки' }
       : null
   ].filter((tab): tab is WorkspaceTabItem<OperationType> => tab !== null);
-}
-
-function getDraftOperationTabs(workspace: BrandWorkspaceResponse): WorkspaceTabItem<OperationType>[] {
-  return [
-    workspace.isMetricsEnabled && workspace.canIssue ? { id: 'metrics', label: 'Штампы' } : null,
-    workspace.isCoinsEnabled && workspace.canIssue ? { id: 'coins', label: 'Монетки' } : null
-  ].filter((tab): tab is WorkspaceTabItem<OperationType> => tab !== null);
-}
-
-function getCustomerOperationActionTabs(
-  workspace: BrandWorkspaceResponse,
-  operationType: OperationType,
-  customer: SelectedCustomerCard | null
-): WorkspaceTabItem<OperationAction>[] {
-  if (customer?.kind === 'draft') {
-    if (operationType === 'metrics') {
-      return workspace.isMetricsEnabled && workspace.canIssue ? [{ id: 'issue', label: 'Выдать' }] : [];
-    }
-
-    if (operationType === 'coins') {
-      return workspace.isCoinsEnabled && workspace.canIssue ? [{ id: 'issue', label: 'Начислить' }] : [];
-    }
-  }
-
-  return getOperationActionTabs(workspace, operationType);
 }
 
 function getOperationActionTabs(
@@ -1203,6 +1279,19 @@ function BrandSettingsPanel({
   const [isManualCoinRedemptionEnabled, setIsManualCoinRedemptionEnabled] = useState(
     workspace.isManualCoinRedemptionEnabled
   );
+  const [isWelcomeRewardsEnabled, setIsWelcomeRewardsEnabled] = useState(workspace.welcomeRewards.isEnabled);
+  const [welcomeMetrics, setWelcomeMetrics] = useState(
+    workspace.welcomeRewards.metrics.map((metric) => ({
+      metricDefinitionId: metric.metricDefinitionId,
+      amount: String(metric.amount)
+    }))
+  );
+  const [welcomeCoinsAmount, setWelcomeCoinsAmount] = useState(
+    workspace.welcomeRewards.coinsAmount > 0 ? String(workspace.welcomeRewards.coinsAmount) : ''
+  );
+  const [welcomeRewardComment, setWelcomeRewardComment] = useState(workspace.welcomeRewards.comment);
+  const [settingsMetrics, setSettingsMetrics] = useState<MetricResponse[]>([]);
+  const [settingsMetricsError, setSettingsMetricsError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
@@ -1212,25 +1301,76 @@ function BrandSettingsPanel({
     setIsCoinsEnabled(workspace.isCoinsEnabled);
     setIsCoinProductRedemptionEnabled(workspace.isCoinProductRedemptionEnabled);
     setIsManualCoinRedemptionEnabled(workspace.isManualCoinRedemptionEnabled);
+    setIsWelcomeRewardsEnabled(workspace.welcomeRewards.isEnabled);
+    setWelcomeMetrics(workspace.welcomeRewards.metrics.map((metric) => ({
+      metricDefinitionId: metric.metricDefinitionId,
+      amount: String(metric.amount)
+    })));
+    setWelcomeCoinsAmount(workspace.welcomeRewards.coinsAmount > 0 ? String(workspace.welcomeRewards.coinsAmount) : '');
+    setWelcomeRewardComment(workspace.welcomeRewards.comment);
   }, [
     workspace.brandId,
     workspace.isMetricsEnabled,
     workspace.isCoinsEnabled,
     workspace.isCoinProductRedemptionEnabled,
-    workspace.isManualCoinRedemptionEnabled
+    workspace.isManualCoinRedemptionEnabled,
+    workspace.welcomeRewards
   ]);
+
+  useEffect(() => {
+    if (!workspace.canManageMetrics) {
+      setSettingsMetrics([]);
+      return;
+    }
+
+    let isCurrent = true;
+    setSettingsMetricsError('');
+
+    getManageMetrics(workspace.brandId)
+      .then((response) => {
+        if (isCurrent) {
+          setSettingsMetrics(response.filter((metric) => metric.isActive));
+        }
+      })
+      .catch((requestError) => {
+        if (isCurrent) {
+          setSettingsMetrics([]);
+          setSettingsMetricsError(getUserMessage(requestError));
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [workspace.brandId, workspace.canManageMetrics]);
 
   useEffect(() => {
     setError('');
     setStatus('');
   }, [workspace.brandId]);
 
+  const parsedWelcomeCoinsAmount = welcomeCoinsAmount.trim() ? Number(welcomeCoinsAmount) : 0;
+  const requestWelcomeMetrics = isMetricsEnabled
+    ? welcomeMetrics
+        .map((metric) => ({
+          metricDefinitionId: metric.metricDefinitionId,
+          amount: Number(metric.amount)
+        }))
+        .filter((metric) => metric.metricDefinitionId)
+    : [];
+  const requestWelcomeCoinsAmount = isCoinsEnabled && Number.isInteger(parsedWelcomeCoinsAmount)
+    ? parsedWelcomeCoinsAmount
+    : 0;
   const canSave = (isMetricsEnabled || isCoinsEnabled)
-    && (!isCoinsEnabled || isCoinProductRedemptionEnabled || isManualCoinRedemptionEnabled);
+    && (!isCoinsEnabled || isCoinProductRedemptionEnabled || isManualCoinRedemptionEnabled)
+    && Number.isInteger(parsedWelcomeCoinsAmount)
+    && parsedWelcomeCoinsAmount >= 0
+    && requestWelcomeMetrics.every((metric) => Number.isInteger(metric.amount) && metric.amount > 0)
+    && (!isWelcomeRewardsEnabled || requestWelcomeMetrics.length > 0 || requestWelcomeCoinsAmount > 0);
 
   async function submit() {
     if (!canSave) {
-      setError('Включите хотя бы один тип наград. Для монеток нужен хотя бы один способ списания.');
+      setError('Проверьте типы наград, способы списания и состав приветственных наград.');
       setStatus('');
       return;
     }
@@ -1244,7 +1384,13 @@ function BrandSettingsPanel({
         isMetricsEnabled,
         isCoinsEnabled,
         isCoinProductRedemptionEnabled,
-        isManualCoinRedemptionEnabled
+        isManualCoinRedemptionEnabled,
+        welcomeRewards: {
+          isEnabled: isWelcomeRewardsEnabled,
+          metrics: requestWelcomeMetrics,
+          coinsAmount: requestWelcomeCoinsAmount,
+          comment: welcomeRewardComment.trim() || undefined
+        }
       });
       onWorkspaceUpdated(mapUpdatedBrandToWorkspace(workspace, response));
       setStatus('Настройки сохранены.');
@@ -1298,9 +1444,86 @@ function BrandSettingsPanel({
         />
       </div>
 
+      <div className="welcome-rewards-settings">
+        <ToggleRow
+          title="Приветственные награды"
+          description="Награды будут выданы автоматически при ручном создании нового клиента."
+          checked={isWelcomeRewardsEnabled}
+          onChange={setIsWelcomeRewardsEnabled}
+        />
+
+        {isWelcomeRewardsEnabled ? (
+          <div className="welcome-rewards-settings__body">
+            {isMetricsEnabled && workspace.canManageMetrics ? (
+              <div className="work-form">
+                <span className="field-label">Штампы</span>
+                {settingsMetricsError ? <p className="form-status form-status--error">{settingsMetricsError}</p> : null}
+                {settingsMetrics.length === 0 ? (
+                  <p className="muted-text">Активных штампов пока нет.</p>
+                ) : (
+                  <div className="settings-check-list">
+                    {settingsMetrics.map((metric) => (
+                      <label className="settings-check-row" key={metric.id}>
+                        <input
+                          type="checkbox"
+                          checked={welcomeMetrics.some((reward) => reward.metricDefinitionId === metric.id)}
+                          onChange={(event) => {
+                            setWelcomeMetrics((current) => event.target.checked
+                              ? [...current, { metricDefinitionId: metric.id, amount: '1' }]
+                              : current.filter((reward) => reward.metricDefinitionId !== metric.id));
+                          }}
+                        />
+                        <span>{metric.name}</span>
+                        {welcomeMetrics.some((reward) => reward.metricDefinitionId === metric.id) ? (
+                          <input
+                            aria-label={`Количество штампов ${metric.name}`}
+                            inputMode="numeric"
+                            value={welcomeMetrics.find((reward) => reward.metricDefinitionId === metric.id)?.amount ?? '1'}
+                            onChange={(event) => {
+                              setWelcomeMetrics((current) => current.map((reward) => reward.metricDefinitionId === metric.id
+                                ? { ...reward, amount: event.target.value }
+                                : reward));
+                            }}
+                          />
+                        ) : null}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {isCoinsEnabled ? (
+              <div className="work-form">
+                <label>
+                  Монетки
+                  <input
+                    value={welcomeCoinsAmount}
+                    inputMode="numeric"
+                    onChange={(event) => setWelcomeCoinsAmount(event.target.value)}
+                    placeholder="0"
+                  />
+                </label>
+              </div>
+            ) : null}
+
+            <div className="work-form">
+              <label>
+                Комментарий
+                <input
+                  value={welcomeRewardComment}
+                  maxLength={200}
+                  onChange={(event) => setWelcomeRewardComment(event.target.value)}
+                />
+              </label>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
       {!canSave ? (
         <p className="form-status form-status--error">
-          Включите хотя бы один тип наград. Для монеток нужен хотя бы один способ списания.
+          Проверьте типы наград, способы списания и состав приветственных наград.
         </p>
       ) : null}
       {error ? <p className="form-status form-status--error">{error}</p> : null}
@@ -1345,7 +1568,8 @@ function mapUpdatedBrandToWorkspace(
     isMetricsEnabled: response.isMetricsEnabled,
     isCoinsEnabled: response.isCoinsEnabled,
     isCoinProductRedemptionEnabled: response.isCoinProductRedemptionEnabled,
-    isManualCoinRedemptionEnabled: response.isManualCoinRedemptionEnabled
+    isManualCoinRedemptionEnabled: response.isManualCoinRedemptionEnabled,
+    welcomeRewards: response.welcomeRewards
   };
 }
 

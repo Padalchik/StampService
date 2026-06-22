@@ -13,4 +13,5 @@ public record BrandWorkspaceResponse(
     bool CanViewBalances,
     bool CanManageBrand,
     bool CanManageMetrics,
-    bool CanManageStaff);
+    bool CanManageStaff,
+    BrandWelcomeRewardSettingsResponse WelcomeRewards);

@@ -32,6 +32,8 @@ public class RedeemMetricHandlerTests
         brandRepository.AddExisting(brand);
         var membershipRepository = new FakeBrandMembershipRepository();
         membershipRepository.SetRole(redeemerUserId, brandId, SystemRoles.Staff);
+        var brandCustomerRepository = new FakeBrandCustomerRepository(new FakeUserRepository());
+        brandCustomerRepository.AddExisting(brandId, customerUserId, redeemerUserId);
 
         var balanceRepository = new FakeMetricBalanceRepository();
         var transactionRepository = new FakeStampTransactionRepository();
@@ -53,6 +55,7 @@ public class RedeemMetricHandlerTests
         var notificationService = new RecordingCustomerNotificationService();
         var validationService = new RedeemMetricValidationService(
             new BrandAccessService(membershipRepository),
+            brandCustomerRepository,
             brandRepository,
             metricRepository,
             codeRepository,
@@ -97,6 +100,7 @@ public class RedeemMetricHandlerTests
         brandRepository.AddExisting(brand);
         var membershipRepository = new FakeBrandMembershipRepository();
         membershipRepository.SetRole(redeemerUserId, brandId, SystemRoles.Staff);
+        var brandCustomerRepository = new FakeBrandCustomerRepository(new FakeUserRepository());
 
         var codeRepository = new FakeRedemptionCodeRepository();
         var redemptionCode = RedemptionCode.Create(
@@ -113,6 +117,7 @@ public class RedeemMetricHandlerTests
             new MetricLedgerService(balanceRepository, transactionRepository),
             new RedeemMetricValidationService(
                 new BrandAccessService(membershipRepository),
+                brandCustomerRepository,
                 brandRepository,
                 metricRepository,
                 codeRepository,
@@ -147,6 +152,8 @@ public class RedeemMetricHandlerTests
         brandRepository.AddExisting(brand);
         var membershipRepository = new FakeBrandMembershipRepository();
         membershipRepository.SetRole(redeemerUserId, brandId, SystemRoles.Staff);
+        var brandCustomerRepository = new FakeBrandCustomerRepository(new FakeUserRepository());
+        brandCustomerRepository.AddExisting(brandId, customerUserId, redeemerUserId);
 
         var balanceRepository = new FakeMetricBalanceRepository();
         var transactionRepository = new FakeStampTransactionRepository();
@@ -165,6 +172,7 @@ public class RedeemMetricHandlerTests
             new MetricLedgerService(balanceRepository, transactionRepository),
             new RedeemMetricValidationService(
                 new BrandAccessService(membershipRepository),
+                brandCustomerRepository,
                 brandRepository,
                 metricRepository,
                 codeRepository,
@@ -199,6 +207,7 @@ public class RedeemMetricHandlerTests
         brandRepository.AddExisting(brand);
         var membershipRepository = new FakeBrandMembershipRepository();
         membershipRepository.SetRole(redeemerUserId, brand.Id, SystemRoles.Staff);
+        var brandCustomerRepository = new FakeBrandCustomerRepository(new FakeUserRepository());
 
         var codeRepository = new FakeRedemptionCodeRepository();
         codeRepository.Add(RedemptionCode.Create(
@@ -211,6 +220,7 @@ public class RedeemMetricHandlerTests
             new MetricLedgerService(new FakeMetricBalanceRepository(), new FakeStampTransactionRepository()),
             new RedeemMetricValidationService(
                 new BrandAccessService(membershipRepository),
+                brandCustomerRepository,
                 brandRepository,
                 metricRepository,
                 codeRepository,

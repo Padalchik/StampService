@@ -32,12 +32,14 @@ public class BrandRepository : IBrandRepository
     {
         return await _dbContext.Brands
             .AsNoTracking()
+            .Include(brand => brand.WelcomeMetricRewards)
             .FirstOrDefaultAsync(brand => brand.Id == brandId, cancellationToken);
     }
 
     public async Task<Brand?> GetByIdForUpdateAsync(Guid brandId, CancellationToken cancellationToken)
     {
         return await _dbContext.Brands
+            .Include(brand => brand.WelcomeMetricRewards)
             .FirstOrDefaultAsync(brand => brand.Id == brandId, cancellationToken);
     }
 

@@ -15,6 +15,7 @@ namespace StampService.Application.Coins.Commands.IssueCoins;
 public class IssueCoinsByPhoneHandler : ICommandHandler<CoinOperationResponse, IssueCoinsByPhoneCommand>
 {
     private readonly IBrandAccessService _brandAccessService;
+    private readonly IBrandCustomerService _brandCustomerService;
     private readonly IBrandRepository _brandRepository;
     private readonly IBusinessAuditSink _businessAuditSink;
     private readonly ICoinLedgerService _coinLedgerService;
@@ -23,6 +24,7 @@ public class IssueCoinsByPhoneHandler : ICommandHandler<CoinOperationResponse, I
 
     public IssueCoinsByPhoneHandler(
         IBrandAccessService brandAccessService,
+        IBrandCustomerService brandCustomerService,
         IBrandRepository brandRepository,
         ICoinLedgerService coinLedgerService,
         IPhoneAccountService phoneAccountService,
@@ -30,6 +32,7 @@ public class IssueCoinsByPhoneHandler : ICommandHandler<CoinOperationResponse, I
         IBusinessAuditSink? businessAuditSink = null)
     {
         _brandAccessService = brandAccessService;
+        _brandCustomerService = brandCustomerService;
         _brandRepository = brandRepository;
         _businessAuditSink = businessAuditSink ?? NoopBusinessAuditSink.Instance;
         _coinLedgerService = coinLedgerService;
@@ -68,7 +71,7 @@ public class IssueCoinsByPhoneHandler : ICommandHandler<CoinOperationResponse, I
         if (transactionValidation.IsFailed)
             return await RejectedAsync(command, transactionValidation.Errors, null, comment, cancellationToken);
 
-        var customerResult = await _phoneAccountService.GetOrCreateForBusinessOperationAsync(
+        var customerResult = await _phoneAccountService.GetExistingForBusinessOperationAsync(
             command.Request.PhoneNumber,
             nameof(command.Request.PhoneNumber),
             cancellationToken);
@@ -76,6 +79,14 @@ public class IssueCoinsByPhoneHandler : ICommandHandler<CoinOperationResponse, I
             return await RejectedAsync(command, customerResult.Errors, null, comment, cancellationToken);
 
         var customer = customerResult.Value;
+        var customerLinkResult = await _brandCustomerService.EnsureAsync(
+            command.BrandId,
+            customer.Id,
+            command.RequestUserId,
+            cancellationToken);
+        if (customerLinkResult.IsFailed)
+            return await RejectedAsync(command, customerLinkResult.Errors, customer.Id, comment, cancellationToken);
+
         var operationResult = await _coinLedgerService.IssueAsync(
             customer.Id,
             command.RequestUserId,

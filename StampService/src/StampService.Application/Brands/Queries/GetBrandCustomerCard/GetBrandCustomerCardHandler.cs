@@ -2,8 +2,8 @@ using FluentResults;
 using StampService.Application.Abstractions;
 using StampService.Application.Access;
 using StampService.Application.Auth;
+using StampService.Application.Brands;
 using StampService.Application.Errors;
-using StampService.Application.Users;
 using StampService.Application.Wallet.Queries.GetUserWalletBrandDetails;
 using StampService.Contracts.DTOs.Brands;
 using StampService.Contracts.DTOs.Wallet;
@@ -16,16 +16,16 @@ public class GetBrandCustomerCardHandler
     : IQueryHandler<BrandCustomerCardResponse, GetBrandCustomerCardQuery>
 {
     private readonly IBrandAccessService _brandAccessService;
-    private readonly IUserRepository _userRepository;
+    private readonly IBrandCustomerRepository _brandCustomerRepository;
     private readonly IQueryHandler<UserWalletBrandDetailsResponse, GetUserWalletBrandDetailsQuery> _walletDetailsHandler;
 
     public GetBrandCustomerCardHandler(
         IBrandAccessService brandAccessService,
-        IUserRepository userRepository,
+        IBrandCustomerRepository brandCustomerRepository,
         IQueryHandler<UserWalletBrandDetailsResponse, GetUserWalletBrandDetailsQuery> walletDetailsHandler)
     {
         _brandAccessService = brandAccessService;
-        _userRepository = userRepository;
+        _brandCustomerRepository = brandCustomerRepository;
         _walletDetailsHandler = walletDetailsHandler;
     }
 
@@ -54,7 +54,8 @@ public class GetBrandCustomerCardHandler
         if (phoneNumberResult.IsFailed)
             return Result.Fail(phoneNumberResult.Errors);
 
-        var customer = await _userRepository.GetByIdentityAsync(
+        var customer = await _brandCustomerRepository.GetCustomerByPhoneAsync(
+            query.BrandId,
             IdentityType.Phone,
             phoneNumberResult.Value,
             cancellationToken);

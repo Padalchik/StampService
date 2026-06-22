@@ -245,6 +245,12 @@ namespace StampService.Infrastructure.Migrations
                         .HasDefaultValue(true)
                         .HasColumnName("is_metrics_enabled");
 
+                    b.Property<bool>("IsWelcomeRewardsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_welcome_rewards_enabled");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -255,9 +261,68 @@ namespace StampService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<int>("WelcomeCoinsAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("welcome_coins_amount");
+
+                    b.Property<string>("WelcomeRewardComment")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasDefaultValue("Приветственная награда")
+                        .HasColumnName("welcome_reward_comment");
+
                     b.HasKey("Id");
 
                     b.ToTable("brands", (string)null);
+                });
+
+            modelBuilder.Entity("StampService.Domain.Brand.BrandCustomer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BrandId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("brand_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("BrandId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_brand_customers_brand_id_user_id")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.ToTable("brand_customers", (string)null);
                 });
 
             modelBuilder.Entity("StampService.Domain.Brand.Location", b =>
@@ -917,6 +982,59 @@ namespace StampService.Infrastructure.Migrations
                     b.Navigation("Brand");
 
                     b.Navigation("Role");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("StampService.Domain.Brand.Brand", b =>
+                {
+                    b.OwnsMany("StampService.Domain.Brand.BrandWelcomeMetricReward", "WelcomeMetricRewards", b1 =>
+                        {
+                            b1.Property<Guid>("brand_id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<Guid>("MetricDefinitionId")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("uuid")
+                                .HasColumnName("metric_definition_id");
+
+                            b1.Property<int>("Amount")
+                                .HasColumnType("integer")
+                                .HasColumnName("amount");
+
+                            b1.HasKey("brand_id", "MetricDefinitionId");
+
+                            b1.ToTable("brand_welcome_metric_rewards", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("brand_id");
+                        });
+
+                    b.Navigation("WelcomeMetricRewards");
+                });
+
+            modelBuilder.Entity("StampService.Domain.Brand.BrandCustomer", b =>
+                {
+                    b.HasOne("StampService.Domain.Brand.Brand", "Brand")
+                        .WithMany()
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("StampService.Domain.User.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("StampService.Domain.User.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Brand");
+
+                    b.Navigation("CreatedByUser");
 
                     b.Navigation("User");
                 });

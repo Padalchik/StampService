@@ -15,6 +15,7 @@ public class GetCoinProductPurchaseOptionsHandler
     : IQueryHandler<CoinProductPurchaseOptionsResponse, GetCoinProductPurchaseOptionsQuery>
 {
     private readonly IBrandAccessService _brandAccessService;
+    private readonly IBrandCustomerRepository _brandCustomerRepository;
     private readonly IBrandRepository _brandRepository;
     private readonly ICoinProductRepository _productRepository;
     private readonly ICoinTransactionRepository _coinTransactionRepository;
@@ -25,6 +26,7 @@ public class GetCoinProductPurchaseOptionsHandler
 
     public GetCoinProductPurchaseOptionsHandler(
         IBrandAccessService brandAccessService,
+        IBrandCustomerRepository brandCustomerRepository,
         IBrandRepository brandRepository,
         ICoinProductRepository productRepository,
         ICoinTransactionRepository coinTransactionRepository,
@@ -34,6 +36,7 @@ public class GetCoinProductPurchaseOptionsHandler
         TimeProvider timeProvider)
     {
         _brandAccessService = brandAccessService;
+        _brandCustomerRepository = brandCustomerRepository;
         _brandRepository = brandRepository;
         _productRepository = productRepository;
         _coinTransactionRepository = coinTransactionRepository;
@@ -81,6 +84,13 @@ public class GetCoinProductPurchaseOptionsHandler
         var customer = await _userRepository.GetByIdAsync(activeCode.UserId, cancellationToken);
         if (customer is null)
             return Result.Fail(UserErrors.NotFound());
+
+        var brandCustomer = await _brandCustomerRepository.GetByBrandAndUserAsync(
+            query.BrandId,
+            customer.Id,
+            cancellationToken);
+        if (brandCustomer is null)
+            return Result.Fail(UserErrors.RecipientNotFound());
 
         var wallet = await _coinWalletRepository.GetByUserAndBrandAsync(
             customer.Id,

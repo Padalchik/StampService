@@ -2483,6 +2483,54 @@ p {
   line-height: 1.45;
 }
 
+.welcome-rewards-settings {
+  display: grid;
+  gap: 14px;
+}
+
+.welcome-rewards-settings__body {
+  display: grid;
+  gap: 14px;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 7px;
+  color: #1f2933;
+  font-weight: 600;
+}
+
+.settings-check-list {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-check-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(72px, 96px);
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.settings-check-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: #1769aa;
+}
+
+.settings-check-row input[inputmode="numeric"] {
+  width: 100%;
+  height: auto;
+  padding: 8px 9px;
+  border: 1px solid #ccd6e0;
+  border-radius: 8px;
+  font: inherit;
+}
+
 .design-preview {
   min-height: 100vh;
   padding: 28px;
